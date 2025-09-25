@@ -275,7 +275,7 @@
     .player.folded .fold-indicator { display: block; }
     .player.active { border: 2px solid gold; box-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
     .hole-cards { margin-top: 4px; min-height: 45px; display: flex; gap: 4px; justify-content: center; }
-    .hole-card { width: 36px; height: 45px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+    .hole-card { width: 40px; height: 50px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .community-cards { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 6px; z-index: 5; }
     .card { width: 40px; height: 50px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .pot-display {
@@ -533,14 +533,14 @@
           <div id="preset-controls" class="hidden-by-js">
               <div id="preset-community-cards-container" style="margin-top: 15px;">
                   <h4>公共牌:</h4>
-                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 5px;">
                       <strong>Flop:</strong>
                       <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="0"></div>
                       <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="1"></div>
                       <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="2"></div>
-                      <strong style="margin-left: 20px;">Turn:</strong>
+                      <strong style="margin-left: 10px;">Turn:</strong>
                       <div class="preset-card-slot" data-type="community" data-stage="turn" data-card-index="0"></div>
-                      <strong style="margin-left: 20px;">River:</strong>
+                      <strong style="margin-left: 10px;">River:</strong>
                       <div class="preset-card-slot" data-type="community" data-stage="river" data-card-index="0"></div>
                   </div>
               </div>

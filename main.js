@@ -718,16 +718,16 @@ function updatePlayerLayout() {
     if (playerCount === 0) return;
 
     // 定义8个玩家的标准座位角度 (顺时针, 0度在右侧)
-    // 这个顺序将P1放在底部，然后P2在右下，P3在右边...
+    // 这个顺序将P1放在底部，然后P2在左下，P3在左边...
     const seatAngles = [
-        270, // P1 (Bottom)
-        315, // P2
-        0,   // P3
-        45,  // P4
-        90,  // P5 (Top)
-        135, // P6
-        180, // P7
-        225  // P8
+        90,  // P1 (Bottom)
+        135, // P2 (Bottom-left)
+        180, // P3 (Left)
+        225, // P4 (Top-left)
+        270, // P5 (Top)
+        315, // P6 (Top-right)
+        0,   // P7 (Right)
+        45   // P8 (Bottom-right)
     ];
 
     players.forEach(player => {
