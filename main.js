@@ -93,27 +93,27 @@ function startNewGame() {
     game.reset();
     console.log('游戏重置完成，currentRound:', game.currentRound);
     game.dealHoleCards();
-    
+
     console.log('开始preflop阶段前');
     game.startNewRound('preflop');
     console.log('开始preflop阶段后，currentRound:', game.currentRound);
     isGameRunning = true;
-    
+
     // 重置行动记录
     resetActionSheet();
     console.log('行动记录已重置');
-    
+
     // 手动记录小盲和大盲的BET动作
     console.log('记录小盲和大盲的BET动作');
     // 确保游戏阶段已设置
     game.currentRound = 'preflop';
     updateActionSheet('P1', 'BET', Settings.sb);  // P1是小盲
     updateActionSheet('P2', 'BET', Settings.bb);  // P2是大盲
-    
+
     log('✅ 新牌局开始！盲注: SB=' + Settings.sb + ', BB=' + Settings.bb);
     updateUI();
     console.log('UI已更新');
-    
+
     // 自动模式下立即开始
     if (Settings.mode === 'auto') {
       console.log('自动模式开始，调用processNextAction');
@@ -163,10 +163,10 @@ async function processNextAction() {
     // 执行动作
     game.executeAction(currentPlayerId, decision.action, decision.amount);
     log(`[${game.currentRound}] ${currentPlayerId} ${decision.action}${decision.amount ? ' ' + decision.amount : ''}`);
-    
+
     // 调试信息：显示当前游戏阶段
     console.log(`当前游戏阶段: ${game.currentRound}, 当前玩家: ${currentPlayerId}, 动作: ${decision.action}`);
-    
+
     // 更新行动记录
     updateActionSheet(currentPlayerId, decision.action, decision.amount);
 
@@ -221,9 +221,9 @@ function advanceToNextStage() {
   // 进入下一轮，使用内置的startNewRound方法
   const nextRound = getNextRound(currentRound);
   game.startNewRound(nextRound);
-  
+
   log(`➡️ 进入 ${nextRound} 阶段 | 公共牌: ${game.communityCards.join(' ')}`);
-  
+
   // 添加调试信息：显示新轮次的起始玩家
   const newCurrentPlayerId = game.getCurrentPlayerId();
   log(`调试: 新阶段起始玩家: ${newCurrentPlayerId}`);
@@ -272,14 +272,14 @@ function submitManualAction(action, amount) {
     // 执行动作
     game.executeAction(currentPlayerId, action, amount);
     log(`[${game.currentRound}] ${currentPlayerId} ${action}${amount ? ' ' + amount : ''}`);
-    
+
     // 更新行动记录
     updateActionSheet(currentPlayerId, action, amount);
 
     // 添加调试信息：显示所有玩家的状态
     const activePlayers = game.players.filter(p => !p.isFolded).map(p => p.id).join(', ');
     log(`调试: 活跃玩家: ${activePlayers}`);
-    
+
     // 隐藏手动区
     toggleManualActionArea(false);
     isWaitingForManualInput = false;
@@ -291,7 +291,7 @@ function submitManualAction(action, amount) {
     // 检查轮次是否结束...
     const isRoundComplete = game.isBettingRoundComplete();
     log(`调试: 下注轮是否结束: ${isRoundComplete}`);
-    
+
     if (isRoundComplete) {
       log(`调试: 进入下一阶段，当前阶段: ${game.currentRound}`);
       advanceToNextStage();
@@ -324,7 +324,7 @@ function resetActionSheet() {
       river: []
     };
   }
-  
+
   // 重置阶段列信息（保持默认4列）
   stageActionCounts = {
     preflop: 4,
@@ -332,7 +332,7 @@ function resetActionSheet() {
     turn: 4,
     river: 4
   };
-  
+
   // 更新UI
   for (let playerId of Object.keys(actionRecords)) {
     const stages = ['preflop', 'flop', 'turn', 'river'];
@@ -353,23 +353,23 @@ function resetActionSheet() {
 
 function updateActionSheet(playerId, action, amount) {
   console.log(`updateActionSheet 被调用: playerId=${playerId}, action=${action}, amount=${amount}, currentRound=${game.currentRound}`);
-  
+
   // 获取当前阶段并确保是小写形式
   const currentStage = (game.currentRound || '').toLowerCase();
-  
+
   // 验证阶段名称是否有效
   const validStages = ['preflop', 'flop', 'turn', 'river'];
   if (!validStages.includes(currentStage)) {
     console.log(`无效的游戏阶段: ${currentStage}`);
     return;
   }
-  
+
   // 确保玩家ID有效
   if (!actionRecords[playerId]) {
     console.log(`无效的玩家ID: ${playerId}`);
     return;
   }
-  
+
   // 格式化动作文本（使用完整名称）
   let actionText = '';
   switch (action) {
@@ -391,23 +391,23 @@ function updateActionSheet(playerId, action, amount) {
     default:
       actionText = action;
   }
-  
+
   // 获取该玩家在当前阶段的操作次数
   const actionCount = actionRecords[playerId][currentStage].length;
-  
+
   // 添加新的操作记录
   actionRecords[playerId][currentStage].push(actionText);
   console.log(`更新行动记录: ${playerId}.${currentStage}[${actionCount}] = ${actionText}`);
-  
+
   // 确保操作次数不超过4次（因为每个阶段只有4列）
   if (actionCount >= 4) {
     console.log(`警告: ${currentStage}阶段操作次数已达4次上限`);
     return;
   }
-  
+
   // 更新UI - 使用统一的ID格式: 玩家ID-阶段-索引
   const cellId = `${playerId}-${currentStage}-${actionCount}`;
-  
+
   console.log(`尝试更新单元格: ${cellId}`);
   const cell = document.getElementById(cellId);
   if (cell) {
@@ -426,11 +426,11 @@ function updateActionSheet(playerId, action, amount) {
  */
 function getCardImagePath(cardText) {
   if (!cardText) return '';
-  
+
   // 提取花色和点数
   const suit = cardText[0]; // 第一个字符是花色
   const rank = cardText.slice(1); // 剩余部分是点数
-  
+
   // 花色映射
   const suitMap = {
     '♠': 'S', // Spade
@@ -438,7 +438,7 @@ function getCardImagePath(cardText) {
     '♦': 'D', // Diamond
     '♣': 'C'  // Club
   };
-  
+
   // 获取对应的花色字母
   const suitLetter = suitMap[suit] || '';
 
@@ -453,7 +453,7 @@ function getCardImagePath(cardText) {
  */
 function setCardImage(cardElement, cardText) {
   if (!cardElement) return;
-  
+
   if (cardText) {
     const imagePath = getCardImagePath(cardText);
     console.log(`Setting card image for ${cardText} to ${imagePath}`); // DEBUG LOG
@@ -480,8 +480,8 @@ function updateUI() {
     // 置灰 FOLD 玩家
     el.classList.toggle('folded', player.isFolded);
 
-    // 更新底牌（仅当明牌模式开启）
-    if (Settings.showHoleCards) {
+    // 更新底牌（P1始终显示，其他玩家根据明牌模式）
+    if (playerId === 'P1' || Settings.showHoleCards) {
       const cardEls = el.querySelectorAll('.hole-card');
       console.log(`Player ${playerId}: found ${cardEls.length} hole-card elements.`); // DEBUG
       if (cardEls.length >= 2) {
@@ -491,7 +491,7 @@ function updateUI() {
         setCardImage(cardEls[1], player.holeCards[1]);
       }
     } else {
-      // 如果不是明牌模式，清空卡牌图片
+      // 如果不是P1且不是明牌模式，清空卡牌图片
       const cardEls = el.querySelectorAll('.hole-card');
       cardEls.forEach(cardEl => {
         cardEl.style.backgroundImage = '';
