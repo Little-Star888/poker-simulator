@@ -26,6 +26,7 @@ export class PokerGame {
       totalInvested: 0,     // 本局总投入（用于摊牌后结算，当前未使用）
       isFolded: false,
       isAllIn: false,
+      hasActed: false,      // 新增：本轮是否已行动
       role: null,           // 新增：玩家角色
     }));
 
@@ -156,8 +157,11 @@ export class PokerGame {
     this.lastRaiseAmount = Settings.bb; // 重置最后的加注额
     this.lastAggressorIndex = -1; // 重置最后攻击者
 
-    // 重置每轮下注，但保留preflop时的盲注
+    // 重置每轮状态
     this.players.forEach(p => {
+      if (!p.isFolded) {
+        p.hasActed = false;
+      }
       if (roundName !== 'preflop') {
         p.bet = 0;
       }
@@ -167,14 +171,10 @@ export class PokerGame {
 
     // 设置起始行动玩家
     if (roundName === 'preflop') {
-      // Pre-flop: UTG (大盲下家) 开始
-      // 2人局特殊处理，SB行动
       this.currentPlayerIndex = playerCount === 2 ? this.sbIndex : (this.bbIndex + 1) % playerCount;
       this.lastAggressorIndex = this.bbIndex; // 大盲是最初的“攻击者”
-      // 设置盲注
       this._postBlinds();
     } else {
-      // Post-flop: 庄家左边的第一个未弃牌玩家开始
       this.currentPlayerIndex = (this.dealerIndex + 1) % playerCount;
     }
 
@@ -197,12 +197,8 @@ export class PokerGame {
     const sbPlayer = this.players[this.sbIndex];
     const bbPlayer = this.players[this.bbIndex];
     
-    // 2人局特殊处理，庄家是小盲
-    const sbAmount = (playerCount === 2) ? Settings.sb : Settings.sb;
-    const bbAmount = Settings.bb;
-
-    const sb = Math.min(sbAmount, sbPlayer.stack);
-    const bb = Math.min(bbAmount, bbPlayer.stack);
+    const sb = Math.min(Settings.sb, sbPlayer.stack);
+    const bb = Math.min(Settings.bb, bbPlayer.stack);
 
     sbPlayer.bet = sb;
     sbPlayer.stack -= sb;
@@ -220,8 +216,8 @@ export class PokerGame {
   /**
    * 执行玩家动作
    * @param {string} playerId - 如 'P3'
-   * @param {string} action - 'FOLD', 'CALL', 'RAISE'
-   * @param {number} amount - RAISE 时的总下注额（非加注额）
+   * @param {string} action - 'FOLD', 'CALL', 'RAISE', 'CHECK', 'BET'
+   * @param {number} amount - RAISE 或 BET 时的总下注额
    */
   executeAction(playerId, action, amount = 0) {
     const playerIndex = this._getPlayerIndexById(playerId);
@@ -237,6 +233,7 @@ export class PokerGame {
 
     const currentBet = player.bet;
     const stack = player.stack;
+    player.hasActed = true; // 标记玩家已行动
 
     switch (action) {
       case 'FOLD':
@@ -247,7 +244,6 @@ export class PokerGame {
         if (player.bet < this.highestBet) {
             throw new Error(`Cannot check, must call ${this.highestBet} or fold.`);
         }
-        // No change in stack or bet needed for a check
         break;
 
       case 'CALL':
@@ -265,29 +261,31 @@ export class PokerGame {
           throw new Error(`Raise must be at least ${this.lastRaiseAmount}. Your raise of ${raiseAmount} is too small.`);
         }
 
-        const totalBet = this.highestBet + raiseAmount;
-        if (player.stack + player.bet < totalBet) {
+        const totalBetAfterRaise = this.highestBet + raiseAmount;
+        if (player.stack + player.bet < totalBetAfterRaise) {
             throw new Error('Not enough stack to raise to this amount.');
         }
 
-        const amountToPutIn = totalBet - player.bet;
-        player.bet += amountToPutIn;
-        player.stack -= amountToPutIn;
-        player.totalInvested += amountToPutIn;
+        const amountToPutInForRaise = totalBetAfterRaise - player.bet;
+        player.bet += amountToPutInForRaise;
+        player.stack -= amountToPutInForRaise;
+        player.totalInvested += amountToPutInForRaise;
 
         if (player.stack === 0) player.isAllIn = true;
         
-        this.highestBet = totalBet;
+        this.highestBet = totalBetAfterRaise;
         this.lastRaiseAmount = raiseAmount; // 更新最后的加注额
         this.lastAggressorIndex = playerIndex; // 更新最后攻击者
+        this.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActed = false; }); // 新一轮行动
+        player.hasActed = true;
         break;
 
-      case 'BET': // 新增BET动作处理
+      case 'BET':
         if (this.highestBet > 0) {
             throw new Error('Cannot BET, there is already a bet. Action should be RAISE.');
         }
         const betAmount = Math.min(amount, player.stack);
-        if (betAmount < this.minRaise) {
+        if (betAmount < this.minRaise && betAmount < player.stack) { // all-in is a valid bet
             throw new Error(`Bet must be at least ${this.minRaise}`);
         }
         player.bet = betAmount;
@@ -295,15 +293,15 @@ export class PokerGame {
         player.totalInvested += betAmount;
         if (player.stack === 0) player.isAllIn = true;
         this.highestBet = betAmount;
+        this.lastRaiseAmount = betAmount;
         this.lastAggressorIndex = playerIndex; // 更新最后攻击者
+        this.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActed = false; }); // 新一轮行动
+        player.hasActed = true;
         break;
 
       default:
         throw new Error(`Unknown action: ${action}`);
     }
-
-    // 推进到下一位有效玩家（由 main.js 控制，此处仅标记）
-    // 注意：此处不自动推进 currentPlayerIndex，由外部调用 moveToNextPlayer()
   }
 
   /**
@@ -321,52 +319,34 @@ export class PokerGame {
       }
       attempts++;
     } while (attempts < totalPlayers);
-
-    // 如果所有玩家都 FOLD/ALL-IN，currentPlayerIndex 可能无效，由外部处理
   }
 
   /**
    * 判断当前下注轮是否结束（平注）
-   * 条件：所有未弃牌且未全入的玩家下注额等于 highestBet
    * @returns {boolean}
    */
   isBettingRoundComplete() {
     const activePlayers = this.players.filter(p => !p.isFolded);
     if (activePlayers.length <= 1) {
-      return true; // 只剩一人，轮次结束
+      return true;
     }
 
     const bettingPlayers = activePlayers.filter(p => !p.isAllIn);
     if (bettingPlayers.length === 0) {
-      return true; // 所有人都全下，轮次结束
+      return true;
     }
 
-    // 检查当前行动玩家是否是最后的攻击者
-    const actionClosed = this.currentPlayerIndex === this.lastAggressorIndex;
-
-    // 检查是否所有人都跟注了
-    const allBetsEqual = bettingPlayers.every(p => p.bet === this.highestBet);
-
-    // 翻前大盲选项的特殊情况
-    if (this.currentRound === 'preflop' && this.lastAggressorIndex === this.bbIndex && this.highestBet === Settings.bb) {
-        // 如果行动回到大盲，且无人加注，大盲有行动权，轮次未结束
-        if (this.currentPlayerIndex === this.bbIndex) {
-            return false;
-        }
+    // 检查所有活跃玩家是否都已行动过
+    const allHaveActed = activePlayers.every(p => p.hasActed);
+    if (!allHaveActed) {
+      return false;
     }
 
-    if (actionClosed && allBetsEqual) {
-        return true;
-    }
+    // 检查所有未弃牌、未全下的玩家的下注额是否一致
+    const firstBet = bettingPlayers[0].bet;
+    const allBetsEqual = bettingPlayers.every(p => p.bet === firstBet);
 
-    // 如果所有人都过牌
-    const allChecked = activePlayers.every(p => p.bet === 0) && this.highestBet === 0;
-    // 需要一个方法来追踪是否所有人都行动过，这里简化处理：如果当前玩家是最后一个行动者，且所有人都check，则结束
-    if (allChecked && this.currentPlayerIndex === this.sbIndex) { // 假设行动一圈后回到小盲
-        return true;
-    }
-
-    return false;
+    return allBetsEqual;
   }
 
   /**
