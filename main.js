@@ -2,6 +2,7 @@
 import { Settings } from './setting.js';
 import { PokerGame } from './poker.js';
 import { getDecision } from './ai.js';
+import { getSuggestion } from './api_service.js';
 
 // ========== 全局状态 ==========
 let game = new PokerGame();
@@ -184,7 +185,19 @@ async function processNextAction() {
   }
 
   try {
-    console.log(TAG + Settings.mode)
+    const gameState = game.getGameState();
+
+    // 新增：为当前玩家获取GTO建议并显示
+    const suggestionDisplay = document.getElementById('suggestion-display');
+    suggestionDisplay.innerHTML = `<span>正在为 <b>${currentPlayerId}</b> 获取建议...</span>`;
+    try {
+      const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
+      renderSuggestion(suggestion);
+    } catch (apiError) {
+      suggestionDisplay.textContent = `获取建议失败: ${apiError.message}`;
+      log(`获取GTO建议时出错: ${apiError.message}`);
+    }
+
     if (Settings.mode === 'manual') {
       // 手动模式：显示操作面板，等待用户输入
       log(`调试: 手动模式，等待 ${currentPlayerId} 输入`);
@@ -194,7 +207,6 @@ async function processNextAction() {
     }
 
     // 自动模式：调用 AI 获取决策
-    const gameState = game.getGameState();
     const decision = await getDecision(gameState, currentPlayerId);
 
     // 执行动作
@@ -313,6 +325,69 @@ async function showdown() {
   await new Promise(resolve => setTimeout(resolve, 1000));
   endGame();
 }
+
+/**
+ * 将从API获取的GTO建议渲染到UI上
+ * @param {object} suggestion - GTO建议响应对象
+ */
+function renderSuggestion(suggestion) {
+    const display = document.getElementById('suggestion-display');
+    if (!suggestion) {
+        display.innerHTML = '<span>无法获取建议或建议为空。</span>';
+        return;
+    }
+
+    let html = '';
+
+    // 格式一：处理包含多个动作和频率的 actionLines (通常是翻后)
+    if (suggestion.actionLines && suggestion.actionLines.length > 0) {
+        html += '<ul style="list-style-type: none; padding: 0; margin: 0;">';
+        for (const actionLine of suggestion.actionLines) {
+            const percentage = (actionLine.frequency * 100).toFixed(1);
+            const actionName = actionLine.action.name;
+            const amount = actionLine.action.amount > 0 ? ` ${actionLine.action.amount}` : '';
+
+            html += `<li style="margin-bottom: 5px; display: flex; align-items: center;">
+                        <strong style="min-width: 120px;">${actionName}${amount}</strong>
+                        <div style="flex-grow: 1; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                            <div style="width: ${percentage}%; background: #4CAF50; color: white; text-align: right; padding: 2px 5px; font-size: 12px;">${percentage}%</div>
+                        </div>
+                     </li>`;
+        }
+        html += '</ul>';
+    }
+    // 格式二：处理仅包含单个建议动作的 localResult (通常是翻前)
+    else if (suggestion.localResult && suggestion.localResult.action) {
+        const actionName = suggestion.localResult.action;
+        const description = suggestion.localResult.description || '';
+        
+        html += '<ul style="list-style-type: none; padding: 0; margin: 0;">';
+        html += `<li style="margin-bottom: 5px; display: flex; align-items: center;">
+                    <strong style="min-width: 120px;">${actionName}</strong>
+                    <div style="flex-grow: 1; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                        <div style="width: 100%; background: #4CAF50; color: white; text-align: right; padding: 2px 5px; font-size: 12px;">100%</div>
+                    </div>
+                 </li>`;
+        html += '</ul>';
+        if (description) {
+            html += `<div style="margin-top: 10px; font-size: 12px; color: #555;">${description}</div>`;
+        }
+    } 
+    // 格式无法解析时的后备情况
+    else {
+        display.innerHTML = '<span>无法解析建议的格式。</span>';
+        return;
+    }
+
+    // 如果有胜率信息，也一并显示
+    if (suggestion.winRate) {
+        const winRate = (suggestion.winRate * 100).toFixed(2);
+        html += `<div style="margin-top: 10px; font-weight: bold;">预计胜率: ${winRate}%</div>`;
+    }
+
+    display.innerHTML = html;
+}
+
 
 function endGame() {
   isGameRunning = false;

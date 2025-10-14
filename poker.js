@@ -451,12 +451,15 @@ export class PokerGame {
    * 返回深拷贝，避免外部修改内部状态
    */
   getGameState() {
+    // 动态计算总底池
+    const totalPot = this.players.reduce((sum, p) => sum + p.totalInvested, 0);
+
     return {
       players: this.players.map(p => ({ ...p })), // 浅拷贝对象（holeCards 是字符串数组，安全）
       communityCards: [...this.communityCards],
       currentRound: this.currentRound,
       currentPlayerId: this.getCurrentPlayerId(),
-      pot: this.pot, // 本版本未精确计算，可后续完善
+      pot: totalPot, // 使用动态计算的底池
       highestBet: this.highestBet,
       lastRaiseAmount: this.lastRaiseAmount, // 新增
       preflopRaiseCount: this.preflopRaiseCount, // 新增
