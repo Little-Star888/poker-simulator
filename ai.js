@@ -24,6 +24,21 @@ const ACTION_WEIGHTS = {
  * @param {string} playerId - 当前行动玩家 ID，如 'P3'
  * @returns {Promise<{ action: string, amount?: number }>}
  */
+const ACTION_WEIGHTS = {
+  CHECK: 5, // 过牌/让牌，最高概率
+  CALL: 4,  // 跟注
+  FOLD: 3,  // 弃牌
+  BET: 2,   // 主动下注
+  RAISE: 1, // 加注
+  ALLIN: 0, // 全下，概率为0以禁用
+};
+
+/**
+ * 获取玩家的决策建议
+ * @param {Object} gameState - 来自 poker.js 的游戏状态快照
+ * @param {string} playerId - 当前行动玩家 ID，如 'P3'
+ * @returns {Promise<{ action: string, amount?: number }>}
+ */
 export async function getDecision(gameState, playerId) {
   // 模拟网络延迟
   await new Promise(resolve => setTimeout(resolve, 200));
@@ -34,81 +49,103 @@ export async function getDecision(gameState, playerId) {
   }
 
   const { stack, bet: currentBet } = player;
-  const { highestBet, lastRaiseAmount } = gameState;
+  const { highestBet, lastRaiseAmount, currentRound, preflopRaiseCount } = gameState;
   const toCall = highestBet - currentBet;
 
-  // 新增逻辑：如果筹码过少，则强制执行特定动作
+  // 强制弃牌逻辑
   if (stack < 100) {
-    // 如果可以免费看牌，就CHECK
-    if (toCall === 0) {
-      return { action: 'CHECK' };
-    }
-    // 否则，强制弃牌
+    if (toCall === 0) return { action: 'CHECK' };
     return { action: 'FOLD' };
   }
 
-  // 1. 根据德州扑克规则，确定所有合法的动作类型
+  // 1. 确定理论上所有可能的动作（严格禁止All-in）
   const possibleActions = [];
   if (toCall === 0) {
     possibleActions.push('CHECK');
-    if (stack > 0) {
+    // 只有在有足够筹码进行一次最小下注且不会All-in时，才考虑BET
+    if (stack > Settings.bb) {
       possibleActions.push('BET');
-      possibleActions.push('ALLIN'); // 在可以下注时，总可以All-in
     }
   } else {
     possibleActions.push('FOLD');
-
-    if (stack >= toCall) {
+    // 只有在跟注后还有剩余筹码时，才CALL
+    if (stack > toCall) {
       possibleActions.push('CALL');
-      if (stack > toCall) {
+      
+      // 只有在能发起一次最小加注且不会All-in时，才RAISE
+      const minRaiseTarget = highestBet + lastRaiseAmount;
+      if (stack + currentBet > minRaiseTarget) {
         possibleActions.push('RAISE');
-        possibleActions.push('ALLIN'); // 在可以加注时，总可以All-in
       }
-    } else {
-      // 筹码不足以跟注，此时 CALL 或 ALLIN 都会是 all-in
-      possibleActions.push('CALL');
-      possibleActions.push('ALLIN');
     }
   }
 
-  // 2. 根据权重创建一个“动作池”
-  const weightedActions = [];
-  for (const action of possibleActions) {
-    const weight = ACTION_WEIGHTS[action] || 1; // 如果没定义权重，默认为1
-    for (let i = 0; i < weight; i++) {
-      weightedActions.push(action);
+  let finalActions = [...possibleActions];
+  let forceAction = null;
+
+  // 2. 应用底池类型规则 (仅限Pre-flop)
+  if (currentRound === 'preflop' && Settings.potType !== 'unrestricted') {
+    const raiseCount = preflopRaiseCount;
+
+    let requiredRaises = 0;
+    if (Settings.potType === 'single_raised') requiredRaises = 1;
+    if (Settings.potType === '3bet') requiredRaises = 2;
+    if (Settings.potType === '4bet') requiredRaises = 3;
+
+    if (requiredRaises > 0 && raiseCount < requiredRaises) {
+      if (possibleActions.includes('RAISE')) {
+        forceAction = 'RAISE';
+      }
+    }
+
+    let maxRaises = -1;
+    if (Settings.potType === 'single_raised') maxRaises = 1;
+    if (Settings.potType === '3bet') maxRaises = 2;
+
+    if (maxRaises !== -1 && raiseCount >= maxRaises) {
+      finalActions = finalActions.filter(action => action !== 'RAISE');
     }
   }
 
-  // 3. 从“动作池”中随机选择一个动作
-  if (weightedActions.length === 0) {
-    return { action: 'CHECK' }; // Fallback
-  }
-  const selectedAction = weightedActions[Math.floor(Math.random() * weightedActions.length)];
+  let selectedAction;
+  if (forceAction) {
+    selectedAction = forceAction;
+  } else {
+    const weightedActions = [];
+    for (const action of finalActions) {
+      const weight = ACTION_WEIGHTS[action] || 1;
+      for (let i = 0; i < weight; i++) {
+        weightedActions.push(action);
+      }
+    }
 
-  // 4. 如果是下注或加注，计算一个合法的随机金额
+    if (weightedActions.length === 0) {
+      return { action: toCall === 0 ? 'CHECK' : 'FOLD' };
+    }
+    selectedAction = weightedActions[Math.floor(Math.random() * weightedActions.length)];
+  }
+
+  // 4. 计算金额并返回（严格禁止All-in）
   switch (selectedAction) {
     case 'BET': {
-      const minBet = Math.min(Settings.bb, stack);
-      const reasonableMaxBet = Math.max(minBet, Math.floor(stack / 2));
-      let betAmount = Math.floor(Math.random() * (reasonableMaxBet - minBet + 1)) + minBet;
-      betAmount = Math.min(betAmount, stack);
+      const minBet = Math.min(Settings.bb, stack - 1);
+      const maxBet = stack - 1; // 保证不All-in
+      if (minBet >= maxBet) {
+        return { action: 'CHECK' }; // 如果无法在不All-in的情况下bet，则check
+      }
+      let betAmount = Math.floor(Math.random() * (maxBet - minBet + 1)) + minBet;
       return { action: 'BET', amount: betAmount };
     }
     case 'RAISE': {
       const minRaiseTarget = highestBet + lastRaiseAmount;
-      const maxRaiseTarget = stack + currentBet;
+      const maxRaiseTarget = stack + currentBet - 1; // 保证不All-in
       if (minRaiseTarget >= maxRaiseTarget) {
-        return { action: 'RAISE', amount: maxRaiseTarget };
+        return { action: 'CALL' }; // 如果无法在不All-in的情况下raise，则call
       }
       let raiseAmount = Math.floor(Math.random() * (maxRaiseTarget - minRaiseTarget + 1)) + minRaiseTarget;
       return { action: 'RAISE', amount: raiseAmount };
     }
-    case 'ALLIN': {
-        return { action: 'ALLIN', amount: stack + currentBet };
-    }
     default:
-      // FOLD, CALL, CHECK 不需要金额
       return { action: selectedAction };
   }
 }

@@ -15,6 +15,7 @@ export const Settings = {
   playerCount: 8,         // 玩家数量
   minStack: 1800,         // 最小初始筹码
   maxStack: 2200,         // 最大初始筹码
+  potType: 'unrestricted', // 底池类型: unrestricted, single_raised, 3bet, 4bet
 
   // ===== 配置更新接口 =====
   /**

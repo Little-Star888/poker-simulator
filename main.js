@@ -42,7 +42,8 @@ const confirmBtn = document.getElementById('confirm-action-btn');
 const modeSelect = document.getElementById('mode-select');
   const playerCountInput = document.getElementById('player-count-input');
   const minStackInput = document.getElementById('min-stack-input');
-  const maxStackInput = document.getElementById('max-stack-input');const sbInput = document.getElementById('sb-input');
+  const maxStackInput = document.getElementById('max-stack-input');
+  const potTypeSelect = document.getElementById('pot-type-select');const sbInput = document.getElementById('sb-input');
 const bbInput = document.getElementById('bb-input');
 const showHoleCardsCheckbox = document.getElementById('show-hole-cards');
 const autoDelayInput = document.getElementById('auto-delay');
@@ -57,6 +58,7 @@ function init() {
   playerCountInput.value = Settings.playerCount;
   minStackInput.value = Settings.minStack;
   maxStackInput.value = Settings.maxStack;
+  potTypeSelect.value = Settings.potType;
   sbInput.value = Settings.sb;
   bbInput.value = Settings.bb;
   showHoleCardsCheckbox.checked = Settings.showHoleCards;
@@ -74,6 +76,7 @@ function init() {
   });
   minStackInput.addEventListener('change', () => Settings.update({ minStack: parseInt(minStackInput.value) || 2000 }));
   maxStackInput.addEventListener('change', () => Settings.update({ maxStack: parseInt(maxStackInput.value) || 2000 }));
+  potTypeSelect.addEventListener('change', () => Settings.update({ potType: potTypeSelect.value }));
   sbInput.addEventListener('change', () => Settings.update({ sb: parseInt(sbInput.value) || 50 }));
   bbInput.addEventListener('change', () => Settings.update({ bb: parseInt(bbInput.value) || 100 }));
   showHoleCardsCheckbox.addEventListener('change', () => Settings.update({ showHoleCards: showHoleCardsCheckbox.checked }));

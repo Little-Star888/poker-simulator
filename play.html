@@ -429,6 +429,15 @@
           <input type="number" id="player-count-input" value="8" min="2" max="8" style="width:100px;" />
         </div>
         <div class="form-row">
+          <label>底池类型:</label>
+          <select id="pot-type-select">
+            <option value="unrestricted">无限制</option>
+            <option value="single_raised">单一加注底池</option>
+            <option value="3bet">3-Bet 底池</option>
+            <option value="4bet">4-Bet及以上</option>
+          </select>
+        </div>
+        <div class="form-row">
           <label>初始筹码范围:</label>
           <input type="number" id="min-stack-input" value="1800" min="1" style="width:80px;" /> - 
           <input type="number" id="max-stack-input" value="2200" min="1" style="width:80px;" />

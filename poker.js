@@ -45,6 +45,7 @@ export class PokerGame {
     this.lastRaiseAmount = Settings.bb; // 新增：本轮最后的加注额
     this.deck = [];
     this.lastAggressorIndex = -1; // 新增：最后一位攻击性玩家的索引
+    this.preflopRaiseCount = 0; // 新增：翻牌前加注次数计数器
 
     // 动态确定位置
     this.dealerIndex = (this.handCount) % playerCount; // 庄家位置轮换
@@ -307,6 +308,9 @@ export class PokerGame {
         // 只有当加注是一个“完整”的加注时（即加注量不小于上一个加注量），
         // 才更新 lastRaiseAmount 并重新开启这一轮的行动。
         if (raiseAmount >= this.lastRaiseAmount) {
+          if (this.currentRound === 'preflop') {
+            this.preflopRaiseCount++;
+          }
           this.lastRaiseAmount = raiseAmount;
           this.lastAggressorIndex = playerIndex; // 更新最后攻击者
           this.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActed = false; }); // 为其他玩家开启新一轮行动
@@ -455,6 +459,7 @@ export class PokerGame {
       pot: this.pot, // 本版本未精确计算，可后续完善
       highestBet: this.highestBet,
       lastRaiseAmount: this.lastRaiseAmount, // 新增
+      preflopRaiseCount: this.preflopRaiseCount, // 新增
       minRaise: this.minRaise
     };
   }
