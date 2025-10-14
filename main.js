@@ -584,6 +584,17 @@ function showActionBubble(playerId, action, amount) {
     bubble.offsetHeight; /* 触发浏览器重绘 */
     bubble.style.animation = null;
 
+    // 根据玩家位置调整气泡方向
+    bubble.style.left = '50%';
+    bubble.style.transform = 'translateX(-50%)';
+    if (playerId === 'P5') {
+        bubble.style.top = 'auto';
+        bubble.style.bottom = '-30px';
+    } else {
+        bubble.style.bottom = 'auto';
+        bubble.style.top = '-30px';
+    }
+
     // 更新内容并显示
     bubble.textContent = text;
     bubble.classList.add('show');
