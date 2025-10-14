@@ -66,7 +66,18 @@
       margin-top: 4px;
       font-family: 'Courier New', monospace;
       font-size: 14px;
-      min-height: 18px;
+      min-height: 50px;
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .hole-card {
+      width: 40px;
+      height: 50px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
 
     /* 公共牌区 */
@@ -83,14 +94,9 @@
     .card {
       width: 40px;
       height: 50px;
-      background: white;
-      border: 1px solid #333;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: bold;
-      color: #000;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
 
     /* 操作栏 - 始终显示空白区域 */
@@ -207,42 +213,66 @@
         <!-- 玩家 P1 (正下方) -->
         <div class="player" data-player="P1" style="bottom: 20px; left: 50%; transform: translateX(-50%);">
           P1<br>
-          <div class="hole-cards">♠A ♥K</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
         <!-- P2 (顺时针方向 - 左下角) -->
         <div class="player" data-player="P2" style="bottom: 40px; left: 10%;">
           P2<br>
-          <div class="hole-cards">♦Q ♣J</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
         <!-- P3 (顺时针方向 - 左中) -->
         <div class="player" data-player="P3" style="top: 40%; left: 10%;">
           P3<br>
-          <div class="hole-cards">♠10 ♥9</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
         <!-- P4 (顺时针方向 - 左上角) -->
         <div class="player" data-player="P4" style="top: 40px; left: 10%;">
           P4<br>
-          <div class="hole-cards">♣A ♦2</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
         <!-- P5 (顺时针方向 - 顶部) -->
         <div class="player" data-player="P5" style="top: 20px; left: 50%; transform: translateX(-50%);">
           P5<br>
-          <div class="hole-cards">♠7 ♣7</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
         <!-- P6 (顺时针方向 - 右上角) -->
         <div class="player" data-player="P6" style="top: 40px; right: 10%;">
           P6<br>
-          <div class="hole-cards">♥K ♠Q</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
         <!-- P7 (顺时针方向 - 右中) -->
         <div class="player" data-player="P7" style="top: 40%; right: 10%;">
           P7<br>
-          <div class="hole-cards">♦5 ♣5</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
         <!-- P8 (顺时针方向 - 右下角) -->
         <div class="player" data-player="P8" style="bottom: 40px; right: 10%;">
           P8<br>
-          <div class="hole-cards">♠2 ♥2</div>
+          <div class="hole-cards">
+            <div class="hole-card" data-card="1"></div>
+            <div class="hole-card" data-card="2"></div>
+          </div>
         </div>
 
         <!-- 公共牌区 -->

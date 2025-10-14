@@ -333,14 +333,16 @@ function resetActionSheet() {
     river: 4
   };
   
-  // 更新UI - 只重置默认的5列
+  // 更新UI
   for (let playerId of Object.keys(actionRecords)) {
     const stages = ['preflop', 'flop', 'turn', 'river'];
     for (let stage of stages) {
-      const cellId = `${playerId}-${stage}`;
-      const cell = document.getElementById(cellId);
-      if (cell) {
-        cell.textContent = '-';
+      for (let i = 0; i < 4; i++) {
+        const cellId = `${playerId}-${stage}-${i}`;
+        const cell = document.getElementById(cellId);
+        if (cell) {
+          cell.textContent = '-';
+        }
       }
     }
   }
@@ -416,9 +418,56 @@ function updateActionSheet(playerId, action, amount) {
   }
 }
 
+// ========== 工具函数 ==========
+/**
+ * 将卡牌文本转换为对应的图片路径
+ * @param {string} cardText - 卡牌文本，如 '♠A', '♥10' 等
+ * @returns {string} 图片路径
+ */
+function getCardImagePath(cardText) {
+  if (!cardText) return '';
+  
+  // 提取花色和点数
+  const suit = cardText[0]; // 第一个字符是花色
+  const rank = cardText.slice(1); // 剩余部分是点数
+  
+  // 花色映射
+  const suitMap = {
+    '♠': 'S', // Spade
+    '♥': 'H', // Heart
+    '♦': 'D', // Diamond
+    '♣': 'C'  // Club
+  };
+  
+  // 获取对应的花色字母
+  const suitLetter = suitMap[suit] || '';
+
+  // 返回图片路径
+  return `cards/${rank}${suitLetter}.png`;
+}
+
+/**
+ * 设置卡牌元素的背景图片
+ * @param {HTMLElement} cardElement - 卡牌DOM元素
+ * @param {string} cardText - 卡牌文本，如 '♠A', '♥10' 等
+ */
+function setCardImage(cardElement, cardText) {
+  if (!cardElement) return;
+  
+  if (cardText) {
+    const imagePath = getCardImagePath(cardText);
+    console.log(`Setting card image for ${cardText} to ${imagePath}`); // DEBUG LOG
+    cardElement.style.backgroundImage = `url(${imagePath})`;
+  } else {
+    console.log('Clearing card image because cardText is empty.'); // DEBUG LOG
+    cardElement.style.backgroundImage = '';
+  }
+}
+
 // ========== UI 更新与日志 ==========
 function updateUI() {
   const gameState = game.getGameState();
+  console.log('Inside updateUI. showHoleCards:', Settings.showHoleCards); // DEBUG
 
   // 更新玩家状态（简化：仅更新高亮和折叠）
   document.querySelectorAll('.player').forEach(el => {
@@ -433,10 +482,20 @@ function updateUI() {
 
     // 更新底牌（仅当明牌模式开启）
     if (Settings.showHoleCards) {
-      const cardEl = el.querySelector('.hole-cards');
-      if (cardEl) {
-        cardEl.textContent = player.holeCards.join(' ');
+      const cardEls = el.querySelectorAll('.hole-card');
+      console.log(`Player ${playerId}: found ${cardEls.length} hole-card elements.`); // DEBUG
+      if (cardEls.length >= 2) {
+        // 设置第一张牌
+        setCardImage(cardEls[0], player.holeCards[0]);
+        // 设置第二张牌
+        setCardImage(cardEls[1], player.holeCards[1]);
       }
+    } else {
+      // 如果不是明牌模式，清空卡牌图片
+      const cardEls = el.querySelectorAll('.hole-card');
+      cardEls.forEach(cardEl => {
+        cardEl.style.backgroundImage = '';
+      });
     }
 
     // 更新筹码（可选）
@@ -446,7 +505,13 @@ function updateUI() {
   // 更新公共牌
   const communityCardEls = document.querySelectorAll('.community-card');
   communityCardEls.forEach((el, i) => {
-    el.textContent = i < gameState.communityCards.length ? gameState.communityCards[i] : '';
+    if (i < gameState.communityCards.length) {
+      const imagePath = getCardImagePath(gameState.communityCards[i]);
+      el.style.backgroundImage = `url(${imagePath})`;
+    } else {
+      // 如果没有公共牌，清空背景图片
+      el.style.backgroundImage = '';
+    }
   });
 }
 
