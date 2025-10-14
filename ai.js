@@ -4,19 +4,28 @@ import { Settings } from './setting.js';
 /**
  * AI 决策代理模块
  * 职责：根据当前游戏状态，返回玩家应采取的动作
- * 当前为 Mock 实现（随机 + 简单规则），未来可替换为真实 AI API
+ * 当前为 Mock 实现（带权重的随机），未来可替换为真实 AI API
  */
+
+// 定义不同动作的权重，数值越大，被随机到的概率越高
+// 定义不同动作的权重，数值越大，被随机到的概率越高
+const ACTION_WEIGHTS = {
+  CHECK: 5, // 过牌/让牌，最高概率
+  CALL: 4,  // 跟注
+  FOLD: 3,  // 弃牌
+  BET: 2,   // 主动下注
+  RAISE: 1, // 加注
+  ALLIN: 0, // 全下，最低概率
+};
 
 /**
  * 获取玩家的决策建议
  * @param {Object} gameState - 来自 poker.js 的游戏状态快照
  * @param {string} playerId - 当前行动玩家 ID，如 'P3'
- * @returns {Promise<{ action: string, amount?: number }>} 
- *   - action: 'FOLD' | 'CALL' | 'RAISE'
- *   - amount: 仅 RAISE 时需要（总下注额）
+ * @returns {Promise<{ action: string, amount?: number }>}
  */
 export async function getDecision(gameState, playerId) {
-  // 模拟网络延迟（可选，让自动模式更真实）
+  // 模拟网络延迟
   await new Promise(resolve => setTimeout(resolve, 200));
 
   const player = gameState.players.find(p => p.id === playerId);
@@ -24,78 +33,85 @@ export async function getDecision(gameState, playerId) {
     throw new Error(`Player ${playerId} not found in game state`);
   }
 
-  const { holeCards, stack, bet: currentBet } = player;
-  const { highestBet, currentRound, communityCards, lastRaiseAmount } = gameState;
-
-  // 计算需要跟注的金额
+  const { stack, bet: currentBet } = player;
+  const { highestBet, lastRaiseAmount } = gameState;
   const toCall = highestBet - currentBet;
-  const canRaise = stack > toCall; // 是否有足够筹码加注
 
-  // 简单策略：根据牌力和轮次决定行为
-  const handStrength = estimateHandStrength(holeCards, communityCards, currentRound);
-
-  // 随机扰动（模拟不确定性）
-  const randomFactor = Math.random();
-
-  // 决策逻辑
-  if (handStrength < 0.3) {
-    // 弱牌：如果需要跟注的太多，就弃牌。否则就过牌或跟注。
+  // 新增逻辑：如果筹码过少，则强制执行特定动作
+  if (stack < 100) {
+    // 如果可以免费看牌，就CHECK
     if (toCall === 0) {
       return { action: 'CHECK' };
-    } else {
-      return (toCall > stack * 0.2 && randomFactor > 0.1) ? { action: 'FOLD' } : { action: 'CALL' };
     }
-  } else if (handStrength < 0.6) {
-    // 中等牌：主要跟注和过牌，偶尔诈唬
-    if (highestBet > 0) {
-      // 面对下注：主要跟注
-      if (toCall <= stack * 0.5) { // 如果跟注额小于一半筹码，倾向于跟注
-        return { action: 'CALL' };
-      } else {
-        return { action: 'FOLD' };
-      }
-    } else {
-      // 无人下注：主要过牌，偶尔下注偷池
-      const betAmount = Math.min(stack, Settings.bb);
-      return randomFactor < 0.3
-        ? { action: 'BET', amount: betAmount }
-        : { action: 'CHECK' };
+    // 否则，强制弃牌
+    return { action: 'FOLD' };
+  }
+
+  // 1. 根据德州扑克规则，确定所有合法的动作类型
+  const possibleActions = [];
+  if (toCall === 0) {
+    possibleActions.push('CHECK');
+    if (stack > 0) {
+      possibleActions.push('BET');
+      possibleActions.push('ALLIN'); // 在可以下注时，总可以All-in
     }
   } else {
-    // 强牌：积极下注
-    if (canRaise) {
-        const minRaiseTarget = highestBet + lastRaiseAmount;
+    possibleActions.push('FOLD');
 
-        // 如果剩余筹码不足以完成一次最小加注，唯一的合法加注就是All-in
-        if (stack + currentBet < minRaiseTarget) {
-            return { action: 'RAISE', amount: stack + currentBet }; // All-in
-        }
-
-        const maxRaiseTarget = Math.min(stack + currentBet, highestBet + lastRaiseAmount * 2.5);
-        let raiseTarget = minRaiseTarget + Math.random() * (maxRaiseTarget - minRaiseTarget);
-        raiseTarget = Math.floor(raiseTarget / 10) * 10;
-        raiseTarget = Math.max(minRaiseTarget, raiseTarget);
-        raiseTarget = Math.min(stack + currentBet, raiseTarget);
-
-        if (highestBet > 0) {
-            // 已经有人下注，我们RAISE或CALL
-            return randomFactor < 0.8
-                ? { action: 'RAISE', amount: raiseTarget }
-                : { action: 'CALL' };
-        } else {
-            // 无人下注，我们BET或CHECK
-            const betAmount = Math.min(stack, Math.max(lastRaiseAmount, Settings.bb));
-            return randomFactor < 0.85
-                ? { action: 'BET', amount: betAmount }
-                : { action: 'CHECK' };
-        }
+    if (stack >= toCall) {
+      possibleActions.push('CALL');
+      if (stack > toCall) {
+        possibleActions.push('RAISE');
+        possibleActions.push('ALLIN'); // 在可以加注时，总可以All-in
+      }
     } else {
-        // 筹码不足以加注，只能跟注或弃牌
-        return { action: 'CALL' }; // 假设筹码足够跟注
+      // 筹码不足以跟注，此时 CALL 或 ALLIN 都会是 all-in
+      possibleActions.push('CALL');
+      possibleActions.push('ALLIN');
     }
   }
-}
 
+  // 2. 根据权重创建一个“动作池”
+  const weightedActions = [];
+  for (const action of possibleActions) {
+    const weight = ACTION_WEIGHTS[action] || 1; // 如果没定义权重，默认为1
+    for (let i = 0; i < weight; i++) {
+      weightedActions.push(action);
+    }
+  }
+
+  // 3. 从“动作池”中随机选择一个动作
+  if (weightedActions.length === 0) {
+    return { action: 'CHECK' }; // Fallback
+  }
+  const selectedAction = weightedActions[Math.floor(Math.random() * weightedActions.length)];
+
+  // 4. 如果是下注或加注，计算一个合法的随机金额
+  switch (selectedAction) {
+    case 'BET': {
+      const minBet = Math.min(Settings.bb, stack);
+      const reasonableMaxBet = Math.max(minBet, Math.floor(stack / 2));
+      let betAmount = Math.floor(Math.random() * (reasonableMaxBet - minBet + 1)) + minBet;
+      betAmount = Math.min(betAmount, stack);
+      return { action: 'BET', amount: betAmount };
+    }
+    case 'RAISE': {
+      const minRaiseTarget = highestBet + lastRaiseAmount;
+      const maxRaiseTarget = stack + currentBet;
+      if (minRaiseTarget >= maxRaiseTarget) {
+        return { action: 'RAISE', amount: maxRaiseTarget };
+      }
+      let raiseAmount = Math.floor(Math.random() * (maxRaiseTarget - minRaiseTarget + 1)) + minRaiseTarget;
+      return { action: 'RAISE', amount: raiseAmount };
+    }
+    case 'ALLIN': {
+        return { action: 'ALLIN', amount: stack + currentBet };
+    }
+    default:
+      // FOLD, CALL, CHECK 不需要金额
+      return { action: selectedAction };
+  }
+}
 /**
  * 简单估算手牌强度（0.0 ~ 1.0）
  * 注意：这是非常简化的模拟，仅用于测试

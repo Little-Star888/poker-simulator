@@ -40,8 +40,9 @@ const confirmBtn = document.getElementById('confirm-action-btn');
 
 // 右侧控制面板
 const modeSelect = document.getElementById('mode-select');
-const playerCountInput = document.getElementById('player-count-input');
-const sbInput = document.getElementById('sb-input');
+  const playerCountInput = document.getElementById('player-count-input');
+  const minStackInput = document.getElementById('min-stack-input');
+  const maxStackInput = document.getElementById('max-stack-input');const sbInput = document.getElementById('sb-input');
 const bbInput = document.getElementById('bb-input');
 const showHoleCardsCheckbox = document.getElementById('show-hole-cards');
 const autoDelayInput = document.getElementById('auto-delay');
@@ -54,6 +55,8 @@ function init() {
   // 绑定配置变更
   modeSelect.value = Settings.mode;
   playerCountInput.value = Settings.playerCount;
+  minStackInput.value = Settings.minStack;
+  maxStackInput.value = Settings.maxStack;
   sbInput.value = Settings.sb;
   bbInput.value = Settings.bb;
   showHoleCardsCheckbox.checked = Settings.showHoleCards;
@@ -69,6 +72,8 @@ function init() {
     Settings.update({ playerCount: parseInt(playerCountInput.value) || 8 });
     updatePlayerDisplay(); // 更新牌桌上的玩家显示
   });
+  minStackInput.addEventListener('change', () => Settings.update({ minStack: parseInt(minStackInput.value) || 2000 }));
+  maxStackInput.addEventListener('change', () => Settings.update({ maxStack: parseInt(maxStackInput.value) || 2000 }));
   sbInput.addEventListener('change', () => Settings.update({ sb: parseInt(sbInput.value) || 50 }));
   bbInput.addEventListener('change', () => Settings.update({ bb: parseInt(bbInput.value) || 100 }));
   showHoleCardsCheckbox.addEventListener('change', () => Settings.update({ showHoleCards: showHoleCardsCheckbox.checked }));
@@ -163,9 +168,15 @@ async function processNextAction() {
   const currentPlayerId = game.getCurrentPlayerId();
   log(`调试: 处理下一个动作，当前玩家: ${currentPlayerId}`);
   if (!currentPlayerId) {
-    // 无有效玩家，结束牌局
-    log(`调试: 无有效玩家，结束牌局`);
-    endGame();
+    // 检查是否是摊牌情况（所有剩余玩家都已All-in）
+    if (game.isShowdown()) {
+      log('所有剩余玩家均已All-in，进入自动摊牌流程。');
+      showdown();
+    } else {
+      // 无有效玩家，结束牌局
+      log(`调试: 无有效玩家，结束牌局`);
+      endGame();
+    }
     return;
   }
 
@@ -262,6 +273,42 @@ function getNextRound(currentRound) {
   const rounds = ['preflop', 'flop', 'turn', 'river'];
   const idx = rounds.indexOf(currentRound);
   return idx !== -1 && idx < rounds.length - 1 ? rounds[idx + 1] : 'river';
+}
+
+/**
+ * 处理摊牌流程，自动发完所有剩余的公共牌
+ */
+async function showdown() {
+  isGameRunning = false; // 停止主行动循环
+  log('进入摊牌流程，自动发完公共牌...');
+  
+  // --- SHOWDOWN DEBUG ---
+  log(`[DEBUG] Showdown called. Current round: ${game.currentRound}, Community cards: ${game.communityCards.length}`);
+
+  // 循环发牌直到河牌圈结束
+  while (game.currentRound !== 'river' && game.communityCards.length < 5) {
+    log(`[DEBUG] Showdown loop starting. Round: ${game.currentRound}`);
+    await new Promise(resolve => setTimeout(resolve, 1200)); // 等待1.2秒
+
+    if (game.currentRound === 'preflop') {
+      game.dealFlop();
+      game.setCurrentRound('flop');
+    } else if (game.currentRound === 'flop') {
+      game.dealTurnOrRiver();
+      game.setCurrentRound('turn');
+    } else if (game.currentRound === 'turn') {
+      game.dealTurnOrRiver();
+      game.setCurrentRound('river');
+    }
+    
+    log(`➡️ 发出 ${game.currentRound} 牌 | 公共牌: ${game.communityCards.join(' ')}`);
+    updateUI();
+  }
+
+  log(`[DEBUG] Showdown loop finished. Round: ${game.currentRound}, Community cards: ${game.communityCards.length}`);
+  // 所有牌发完后，结束游戏
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  endGame();
 }
 
 function endGame() {
@@ -572,7 +619,9 @@ function showActionBubble(playerId, action, amount) {
     if (!bubble) return;
 
     let text = action;
-    if (action === 'CALL' || action === 'RAISE' || action === 'BET') {
+    if (action === 'ALLIN') {
+        text = 'ALL-IN';
+    } else if (action === 'CALL' || action === 'RAISE' || action === 'BET') {
         if (amount > 0) {
             text += ` ${amount}`;
         }

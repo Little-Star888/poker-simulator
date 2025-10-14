@@ -13,6 +13,8 @@ export const Settings = {
   showHoleCards: true,    // 明牌模式：true = 所有底牌可见
   autoDelay: 1000,        // 自动模式下每步延时（毫秒）
   playerCount: 8,         // 玩家数量
+  minStack: 1800,         // 最小初始筹码
+  maxStack: 2200,         // 最大初始筹码
 
   // ===== 配置更新接口 =====
   /**

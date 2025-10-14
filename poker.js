@@ -18,17 +18,23 @@ export class PokerGame {
   reset() {
     const playerCount = Settings.playerCount;
     // 玩家状态：根据设置创建
-    this.players = Array.from({ length: playerCount }, (_, i) => ({
-      id: `P${i + 1}`,
-      stack: 2000,          // 初始筹码（可配置）
-      holeCards: [],        // 底牌 [card1, card2]
-      bet: 0,               // 当前下注轮已投入
-      totalInvested: 0,     // 本局总投入（用于摊牌后结算，当前未使用）
-      isFolded: false,
-      isAllIn: false,
-      hasActed: false,      // 新增：本轮是否已行动
-      role: null,           // 新增：玩家角色
-    }));
+    this.players = Array.from({ length: playerCount }, (_, i) => {
+      const min = Math.min(Settings.minStack, Settings.maxStack);
+      const max = Math.max(Settings.minStack, Settings.maxStack);
+      const randomStack = Math.floor(Math.random() * (max - min + 1)) + min;
+
+      return {
+        id: `P${i + 1}`,
+        stack: randomStack, // 初始筹码（随机范围）
+        holeCards: [],        // 底牌 [card1, card2]
+        bet: 0,               // 当前下注轮已投入
+        totalInvested: 0,     // 本局总投入（用于摊牌后结算，当前未使用）
+        isFolded: false,
+        isAllIn: false,
+        hasActed: false,      // 新增：本轮是否已行动
+        role: null,           // 新增：玩家角色
+      };
+    });
 
     this.communityCards = [];     // 公共牌（最多5张）
     this.pot = 0;                 // 当前底池（本版本不用于逻辑，仅状态）
@@ -231,6 +237,12 @@ export class PokerGame {
       throw new Error(`${playerId} cannot act (folded or all-in)`);
     }
 
+    // 如果动作是ALLIN，先将其转换为BET或RAISE，再进入switch处理
+    if (action === 'ALLIN') {
+        amount = player.stack + player.bet; // 计算出all-in的总金额
+        action = this.highestBet > 0 ? 'RAISE' : 'BET'; // 根据场上情况判断是BET还是RAISE
+    }
+
     const currentBet = player.bet;
     const stack = player.stack;
     player.hasActed = true; // 标记玩家已行动
@@ -255,15 +267,30 @@ export class PokerGame {
         if (player.stack === 0) player.isAllIn = true;
         break;
 
-      case 'RAISE':
+      case 'RAISE': {
         const raiseAmount = amount - this.highestBet;
-        if (raiseAmount < this.lastRaiseAmount) {
+        const isAllIn = (player.stack + player.bet) === amount;
+
+        // DEBUGGING LOG
+        console.log('--- RAISE DEBUG ---');
+        console.log(`Player ID: ${player.id}`);
+        console.log(`Player Stack: ${player.stack}, Player Bet: ${player.bet}`);
+        console.log(`Total Chips: ${player.stack + player.bet}`);
+        console.log(`Raise To Amount: ${amount}`);
+        console.log(`Is All-In: ${isAllIn}`);
+        console.log(`Raise Amount: ${raiseAmount}`);
+        console.log(`Last Raise Amount: ${this.lastRaiseAmount}`);
+        console.log('-------------------');
+
+
+        // 检查加注额是否合法。一个加注如果小于最小加注额，那么只有在是All-In的情况下才被允许。
+        if (raiseAmount < this.lastRaiseAmount && !isAllIn) {
           throw new Error(`Raise must be at least ${this.lastRaiseAmount}. Your raise of ${raiseAmount} is too small.`);
         }
 
-        const totalBetAfterRaise = this.highestBet + raiseAmount;
+        const totalBetAfterRaise = amount;
         if (player.stack + player.bet < totalBetAfterRaise) {
-            throw new Error('Not enough stack to raise to this amount.');
+          throw new Error('Not enough stack to raise to this amount.');
         }
 
         const amountToPutInForRaise = totalBetAfterRaise - player.bet;
@@ -271,14 +298,23 @@ export class PokerGame {
         player.stack -= amountToPutInForRaise;
         player.totalInvested += amountToPutInForRaise;
 
-        if (player.stack === 0) player.isAllIn = true;
-        
+        if (player.stack === 0) {
+          player.isAllIn = true;
+        }
+
         this.highestBet = totalBetAfterRaise;
-        this.lastRaiseAmount = raiseAmount; // 更新最后的加注额
-        this.lastAggressorIndex = playerIndex; // 更新最后攻击者
-        this.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActed = false; }); // 新一轮行动
-        player.hasActed = true;
+
+        // 只有当加注是一个“完整”的加注时（即加注量不小于上一个加注量），
+        // 才更新 lastRaiseAmount 并重新开启这一轮的行动。
+        if (raiseAmount >= this.lastRaiseAmount) {
+          this.lastRaiseAmount = raiseAmount;
+          this.lastAggressorIndex = playerIndex; // 更新最后攻击者
+          this.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActed = false; }); // 为其他玩家开启新一轮行动
+        }
+
+        player.hasActed = true; // 当前玩家总是被标记为已行动
         break;
+      }
 
       case 'BET':
         if (this.highestBet > 0) {
@@ -332,21 +368,47 @@ export class PokerGame {
     }
 
     const bettingPlayers = activePlayers.filter(p => !p.isAllIn);
-    if (bettingPlayers.length === 0) {
+    // 如果场上只剩一个或零个玩家可以下注
+    if (bettingPlayers.length <= 1) {
+      // 如果恰好还剩一个玩家
+      if (bettingPlayers.length === 1) {
+        const lastManStanding = bettingPlayers[0];
+        // 如果这个玩家还需要跟注，那么牌局未结束
+        if (lastManStanding.bet < this.highestBet) {
+          return false;
+        }
+      }
+      // 如果唯一的玩家不需跟注，或所有人都All-in了，则牌局结束
       return true;
     }
 
-    // 检查所有活跃玩家是否都已行动过
-    const allHaveActed = activePlayers.every(p => p.hasActed);
+    // 检查所有可以下注的玩家是否都已经行动过
+    const allHaveActed = bettingPlayers.every(p => p.hasActed);
     if (!allHaveActed) {
       return false;
     }
 
-    // 检查所有未弃牌、未全下的玩家的下注额是否一致
+    // 检查所有可以下注的玩家的下注额是否一致
     const firstBet = bettingPlayers[0].bet;
     const allBetsEqual = bettingPlayers.every(p => p.bet === firstBet);
 
     return allBetsEqual;
+  }
+
+  /**
+   * 检查是否进入摊牌（Showdown）阶段
+   * 当所有未弃牌的玩家都已All-in时，即为摊牌
+   * @returns {boolean}
+   */
+  isShowdown() {
+    const activePlayers = this.players.filter(p => !p.isFolded);
+    // 必须至少有2个玩家摊牌
+    if (activePlayers.length < 2) {
+      return false;
+    }
+    // 检查所有活跃玩家是否都已All-in
+    const bettingPlayers = activePlayers.filter(p => !p.isAllIn);
+    return bettingPlayers.length === 0;
   }
 
   /**
