@@ -212,7 +212,7 @@
       <div class="poker-table">
         <!-- 玩家 P1 (正下方) -->
         <div class="player" data-player="P1" style="bottom: 20px; left: 50%; transform: translateX(-50%);">
-          P1<br>
+          P1 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -220,7 +220,7 @@
         </div>
         <!-- P2 (顺时针方向 - 左下角) -->
         <div class="player" data-player="P2" style="bottom: 40px; left: 10%;">
-          P2<br>
+          P2 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -228,7 +228,7 @@
         </div>
         <!-- P3 (顺时针方向 - 左中) -->
         <div class="player" data-player="P3" style="top: 40%; left: 10%;">
-          P3<br>
+          P3 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -236,7 +236,7 @@
         </div>
         <!-- P4 (顺时针方向 - 左上角) -->
         <div class="player" data-player="P4" style="top: 40px; left: 10%;">
-          P4<br>
+          P4 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -244,7 +244,7 @@
         </div>
         <!-- P5 (顺时针方向 - 顶部) -->
         <div class="player" data-player="P5" style="top: 20px; left: 50%; transform: translateX(-50%);">
-          P5<br>
+          P5 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -252,7 +252,7 @@
         </div>
         <!-- P6 (顺时针方向 - 右上角) -->
         <div class="player" data-player="P6" style="top: 40px; right: 10%;">
-          P6<br>
+          P6 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -260,7 +260,7 @@
         </div>
         <!-- P7 (顺时针方向 - 右中) -->
         <div class="player" data-player="P7" style="top: 40%; right: 10%;">
-          P7<br>
+          P7 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -268,7 +268,7 @@
         </div>
         <!-- P8 (顺时针方向 - 右下角) -->
         <div class="player" data-player="P8" style="bottom: 40px; right: 10%;">
-          P8<br>
+          P8 <span class="player-role"></span><br>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -324,6 +324,10 @@
           <label>自动延时 (ms):</label>
           <input type="number" id="auto-delay" value="1000" min="100" style="width:100px;" />
         </div>
+        <div class="form-row">
+          <label>玩家数量:</label>
+          <input type="number" id="player-count-input" value="8" min="2" max="8" style="width:100px;" />
+        </div>
       </div>
 
       <div class="section">
@@ -351,192 +355,8 @@
                 <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">RIVER</th>
               </tr>
             </thead>
-            <tbody>
-              <!-- P1-P8玩家行 -->
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P1</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P1-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P1-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P1-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P1-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P1-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P2</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P2-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P2-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P2-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P2-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P2-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P3</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P3-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P3-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P3-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P3-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P3-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P4</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P4-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P4-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P4-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P4-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P4-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P5</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P5-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P5-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P5-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P5-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P5-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P6</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P6-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P6-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P6-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P6-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P6-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P7</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P7-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P7-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P7-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P7-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P7-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">P8</td>
-                <!-- PREFLOP 4列 -->
-                <td id="P8-preflop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-preflop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-preflop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-preflop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- FLOP 4列 -->
-                <td id="P8-flop-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-flop-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-flop-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-flop-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- TURN 4列 -->
-                <td id="P8-turn-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-turn-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-turn-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-turn-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <!-- RIVER 4列 -->
-                <td id="P8-river-0" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-river-1" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-river-2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-                <td id="P8-river-3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>
-              </tr>
+            <tbody id="action-sheet-body">
+              <!-- 玩家行动记录将由JavaScript动态生成 -->
             </tbody>
           </table>
         </div>

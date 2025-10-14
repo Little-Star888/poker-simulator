@@ -12,6 +12,7 @@ export const Settings = {
   bb: 100,                // 大盲注 (Big Blind)
   showHoleCards: true,    // 明牌模式：true = 所有底牌可见
   autoDelay: 1000,        // 自动模式下每步延时（毫秒）
+  playerCount: 8,         // 玩家数量
 
   // ===== 配置更新接口 =====
   /**

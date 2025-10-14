@@ -40,6 +40,7 @@ const confirmBtn = document.getElementById('confirm-action-btn');
 
 // 右侧控制面板
 const modeSelect = document.getElementById('mode-select');
+const playerCountInput = document.getElementById('player-count-input');
 const sbInput = document.getElementById('sb-input');
 const bbInput = document.getElementById('bb-input');
 const showHoleCardsCheckbox = document.getElementById('show-hole-cards');
@@ -52,6 +53,7 @@ const consoleLog = document.getElementById('console-log');
 function init() {
   // 绑定配置变更
   modeSelect.value = Settings.mode;
+  playerCountInput.value = Settings.playerCount;
   sbInput.value = Settings.sb;
   bbInput.value = Settings.bb;
   showHoleCardsCheckbox.checked = Settings.showHoleCards;
@@ -62,6 +64,10 @@ function init() {
     console.log(Settings.mode)
     isWaitingForManualInput = modeSelect.value === 'manual';
     toggleManualActionArea(modeSelect.value === 'manual'); // 切换模式时隐藏手动区
+  });
+  playerCountInput.addEventListener('change', () => {
+    Settings.update({ playerCount: parseInt(playerCountInput.value) || 8 });
+    updatePlayerDisplay(); // 更新牌桌上的玩家显示
   });
   sbInput.addEventListener('change', () => Settings.update({ sb: parseInt(sbInput.value) || 50 }));
   bbInput.addEventListener('change', () => Settings.update({ bb: parseInt(bbInput.value) || 100 }));
@@ -77,6 +83,7 @@ function init() {
   callBtn.addEventListener('click', () => submitManualAction('CALL'));
   raiseBtn.addEventListener('click', handleRaiseClick);
 
+  updatePlayerDisplay(); // 初始化时根据默认玩家数量更新显示
   log('德州扑克 AI 测试模拟器已加载');
 }
 
@@ -92,6 +99,11 @@ function startNewGame() {
     // 重置游戏状态
     game.reset();
     console.log('游戏重置完成，currentRound:', game.currentRound);
+
+    // 渲染UI组件
+    updatePlayerDisplay();
+    renderActionSheet();
+
     game.dealHoleCards();
 
     console.log('开始preflop阶段前');
@@ -99,16 +111,10 @@ function startNewGame() {
     console.log('开始preflop阶段后，currentRound:', game.currentRound);
     isGameRunning = true;
 
-    // 重置行动记录
-    resetActionSheet();
-    console.log('行动记录已重置');
-
     // 手动记录小盲和大盲的BET动作
     console.log('记录小盲和大盲的BET动作');
-    // 确保游戏阶段已设置
-    game.currentRound = 'preflop';
-    updateActionSheet('P1', 'BET', Settings.sb);  // P1是小盲
-    updateActionSheet('P2', 'BET', Settings.bb);  // P2是大盲
+    updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
+    updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
 
     log('✅ 新牌局开始！盲注: SB=' + Settings.sb + ', BB=' + Settings.bb);
     updateUI();
@@ -122,6 +128,16 @@ function startNewGame() {
   } catch (e) {
     log('❌ 启动失败: ' + e.message);
     isGameRunning = false;
+  }
+}
+
+function updatePlayerDisplay() {
+  const playerCount = Settings.playerCount;
+  for (let i = 1; i <= 8; i++) {
+    const playerElement = document.querySelector(`.player[data-player="P${i}"]`);
+    if (playerElement) {
+      playerElement.style.display = i <= playerCount ? 'block' : 'none';
+    }
   }
 }
 
@@ -314,9 +330,15 @@ function toggleManualActionArea(show) {
 }
 
 // ========== ActionSheet 相关函数 ==========
-function resetActionSheet() {
+function renderActionSheet() {
+  const playerCount = Settings.playerCount;
+  const tableBody = document.getElementById('action-sheet-body');
+  tableBody.innerHTML = ''; // 清空现有内容
+
   // 重置行动记录数据
-  for (let playerId of Object.keys(actionRecords)) {
+  actionRecords = {};
+  for (let i = 1; i <= playerCount; i++) {
+    const playerId = `P${i}`;
     actionRecords[playerId] = {
       preflop: [],
       flop: [],
@@ -325,31 +347,24 @@ function resetActionSheet() {
     };
   }
 
-  // 重置阶段列信息（保持默认4列）
-  stageActionCounts = {
-    preflop: 4,
-    flop: 4,
-    turn: 4,
-    river: 4
-  };
-
-  // 更新UI
-  for (let playerId of Object.keys(actionRecords)) {
+  // 动态创建表格行
+  for (let i = 1; i <= playerCount; i++) {
+    const playerId = `P${i}`;
+    const row = document.createElement('tr');
+    
+    let rowHtml = `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${playerId}</td>`;
+    
     const stages = ['preflop', 'flop', 'turn', 'river'];
-    for (let stage of stages) {
-      for (let i = 0; i < 4; i++) {
-        const cellId = `${playerId}-${stage}-${i}`;
-        const cell = document.getElementById(cellId);
-        if (cell) {
-          cell.textContent = '-';
-        }
+    stages.forEach(stage => {
+      for (let j = 0; j < 4; j++) {
+        rowHtml += `<td id="${playerId}-${stage}-${j}" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>`;
       }
-    }
+    });
+
+    row.innerHTML = rowHtml;
+    tableBody.appendChild(row);
   }
 }
-
-// 为阶段添加新列
-
 
 function updateActionSheet(playerId, action, amount) {
   console.log(`updateActionSheet 被调用: playerId=${playerId}, action=${action}, amount=${amount}, currentRound=${game.currentRound}`);
@@ -500,6 +515,12 @@ function updateUI() {
 
     // 更新筹码（可选）
     // el.querySelector('.stack').textContent = player.stack;
+
+    // 更新角色显示
+    const roleEl = el.querySelector('.player-role');
+    if (roleEl) {
+      roleEl.textContent = player.role || '';
+    }
   });
 
   // 更新公共牌
