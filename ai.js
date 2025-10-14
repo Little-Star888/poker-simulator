@@ -8,22 +8,6 @@ import { Settings } from './setting.js';
  */
 
 // 定义不同动作的权重，数值越大，被随机到的概率越高
-// 定义不同动作的权重，数值越大，被随机到的概率越高
-const ACTION_WEIGHTS = {
-  CHECK: 5, // 过牌/让牌，最高概率
-  CALL: 4,  // 跟注
-  FOLD: 3,  // 弃牌
-  BET: 2,   // 主动下注
-  RAISE: 1, // 加注
-  ALLIN: 0, // 全下，最低概率
-};
-
-/**
- * 获取玩家的决策建议
- * @param {Object} gameState - 来自 poker.js 的游戏状态快照
- * @param {string} playerId - 当前行动玩家 ID，如 'P3'
- * @returns {Promise<{ action: string, amount?: number }>}
- */
 const ACTION_WEIGHTS = {
   CHECK: 5, // 过牌/让牌，最高概率
   CALL: 4,  // 跟注
@@ -149,6 +133,7 @@ export async function getDecision(gameState, playerId) {
       return { action: selectedAction };
   }
 }
+
 /**
  * 简单估算手牌强度（0.0 ~ 1.0）
  * 注意：这是非常简化的模拟，仅用于测试
