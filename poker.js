@@ -35,6 +35,7 @@ export class PokerGame {
     this.currentPlayerIndex = -1; // 当前应行动的玩家索引
     this.highestBet = 0;          // 当前下注轮最高下注额
     this.minRaise = Settings.bb;  // 最小加注额（初始为大盲）
+    this.lastRaiseAmount = Settings.bb; // 新增：本轮最后的加注额
     this.deck = [];
     this.lastAggressorIndex = -1; // 新增：最后一位攻击性玩家的索引
 
@@ -152,6 +153,7 @@ export class PokerGame {
     this.setCurrentRound(roundName);
     this.highestBet = 0;
     this.minRaise = Settings.bb;
+    this.lastRaiseAmount = Settings.bb; // 重置最后的加注额
     this.lastAggressorIndex = -1; // 重置最后攻击者
 
     // 重置每轮下注，但保留preflop时的盲注
@@ -241,6 +243,13 @@ export class PokerGame {
         player.isFolded = true;
         break;
 
+      case 'CHECK':
+        if (player.bet < this.highestBet) {
+            throw new Error(`Cannot check, must call ${this.highestBet} or fold.`);
+        }
+        // No change in stack or bet needed for a check
+        break;
+
       case 'CALL':
         const callAmount = this.highestBet - currentBet;
         const actualCall = Math.min(callAmount, stack);
@@ -251,16 +260,25 @@ export class PokerGame {
         break;
 
       case 'RAISE':
-        if (amount < this.highestBet + this.minRaise) {
-          throw new Error(`Raise must be at least ${this.highestBet + this.minRaise}`);
+        const raiseAmount = amount - this.highestBet;
+        if (raiseAmount < this.lastRaiseAmount) {
+          throw new Error(`Raise must be at least ${this.lastRaiseAmount}. Your raise of ${raiseAmount} is too small.`);
         }
-        const totalRaise = Math.min(amount, player.stack + currentBet);
-        const raiseDiff = totalRaise - currentBet;
-        player.bet = totalRaise;
-        player.stack -= raiseDiff;
-        player.totalInvested += raiseDiff;
+
+        const totalBet = this.highestBet + raiseAmount;
+        if (player.stack + player.bet < totalBet) {
+            throw new Error('Not enough stack to raise to this amount.');
+        }
+
+        const amountToPutIn = totalBet - player.bet;
+        player.bet += amountToPutIn;
+        player.stack -= amountToPutIn;
+        player.totalInvested += amountToPutIn;
+
         if (player.stack === 0) player.isAllIn = true;
-        this.highestBet = totalRaise;
+        
+        this.highestBet = totalBet;
+        this.lastRaiseAmount = raiseAmount; // 更新最后的加注额
         this.lastAggressorIndex = playerIndex; // 更新最后攻击者
         break;
 
@@ -393,7 +411,9 @@ export class PokerGame {
       currentRound: this.currentRound,
       currentPlayerId: this.getCurrentPlayerId(),
       pot: this.pot, // 本版本未精确计算，可后续完善
-      highestBet: this.highestBet
+      highestBet: this.highestBet,
+      lastRaiseAmount: this.lastRaiseAmount, // 新增
+      minRaise: this.minRaise
     };
   }
 

@@ -1,4 +1,5 @@
 // ai.js
+import { Settings } from './setting.js';
 
 /**
  * AI 决策代理模块
@@ -24,7 +25,7 @@ export async function getDecision(gameState, playerId) {
   }
 
   const { holeCards, stack, bet: currentBet } = player;
-  const { highestBet, currentRound, communityCards } = gameState;
+  const { highestBet, currentRound, communityCards, lastRaiseAmount } = gameState;
 
   // 计算需要跟注的金额
   const toCall = highestBet - currentBet;
@@ -38,42 +39,59 @@ export async function getDecision(gameState, playerId) {
 
   // 决策逻辑
   if (handStrength < 0.3) {
-    // 弱牌：大概率弃牌，小概率跟注（看便宜牌）
+    // 弱牌：如果需要跟注的太多，就弃牌。否则就过牌或跟注。
     if (toCall === 0) {
-      return { action: 'CALL' }; // 免费看牌
-    } else if (toCall <= 10 && randomFactor < 0.3) {
-      return { action: 'CALL' };
+      return { action: 'CHECK' };
     } else {
-      return { action: 'FOLD' };
+      return (toCall > stack * 0.2 && randomFactor > 0.1) ? { action: 'FOLD' } : { action: 'CALL' };
     }
   } else if (handStrength < 0.6) {
-    // 中等牌：跟注为主，偶尔加注
-    if (toCall === 0) {
-      // 无人下注：尝试偷池
-      return randomFactor < 0.4 
-        ? { action: 'RAISE', amount: Math.min(stack, Math.max(highestBet + 100, 200)) }
-        : { action: 'CALL' };
-    } else if (toCall <= stack * 0.3) {
-      return { action: 'CALL' };
+    // 中等牌：主要跟注和过牌，偶尔诈唬
+    if (highestBet > 0) {
+      // 面对下注：主要跟注
+      if (toCall <= stack * 0.5) { // 如果跟注额小于一半筹码，倾向于跟注
+        return { action: 'CALL' };
+      } else {
+        return { action: 'FOLD' };
+      }
     } else {
-      return randomFactor < 0.2 ? { action: 'CALL' } : { action: 'FOLD' };
+      // 无人下注：主要过牌，偶尔下注偷池
+      const betAmount = Math.min(stack, Settings.bb);
+      return randomFactor < 0.3
+        ? { action: 'BET', amount: betAmount }
+        : { action: 'CHECK' };
     }
   } else {
     // 强牌：积极下注
-    if (toCall === 0) {
-      // 无人下注：下注
-      const raiseAmount = Math.min(stack, Math.max(highestBet + 150, 300));
-      return { action: 'RAISE', amount: raiseAmount };
-    } else if (toCall <= stack * 0.5) {
-      // 跟注或加注
-      return randomFactor < 0.6 
-        ? { action: 'CALL' }
-        : { action: 'RAISE', amount: Math.min(stack + currentBet, highestBet * 2) };
+    if (canRaise) {
+        const minRaiseTarget = highestBet + lastRaiseAmount;
+
+        // 如果剩余筹码不足以完成一次最小加注，唯一的合法加注就是All-in
+        if (stack + currentBet < minRaiseTarget) {
+            return { action: 'RAISE', amount: stack + currentBet }; // All-in
+        }
+
+        const maxRaiseTarget = Math.min(stack + currentBet, highestBet + lastRaiseAmount * 2.5);
+        let raiseTarget = minRaiseTarget + Math.random() * (maxRaiseTarget - minRaiseTarget);
+        raiseTarget = Math.floor(raiseTarget / 10) * 10;
+        raiseTarget = Math.max(minRaiseTarget, raiseTarget);
+        raiseTarget = Math.min(stack + currentBet, raiseTarget);
+
+        if (highestBet > 0) {
+            // 已经有人下注，我们RAISE或CALL
+            return randomFactor < 0.8
+                ? { action: 'RAISE', amount: raiseTarget }
+                : { action: 'CALL' };
+        } else {
+            // 无人下注，我们BET或CHECK
+            const betAmount = Math.min(stack, Math.max(lastRaiseAmount, Settings.bb));
+            return randomFactor < 0.85
+                ? { action: 'BET', amount: betAmount }
+                : { action: 'CHECK' };
+        }
     } else {
-      // 大额下注：全下或跟注
-      return randomFactor < 0.7 
-        ? { action: 'CALL' }
-        : { action: 'RAISE', amount: stack + currentBet }; // 全下
+        // 筹码不足以加注，只能跟注或弃牌
+        return { action: 'CALL' }; // 假设筹码足够跟注
     }
   }
 }

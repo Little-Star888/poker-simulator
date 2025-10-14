@@ -44,13 +44,73 @@
     .player {
       position: absolute;
       text-align: center;
-      width: 80px;
+      width: 110px; /* 调整尺寸以适应圆形 */
+      height: 110px; /* 调整尺寸以适应圆形 */
       background: white;
       border: 1px solid #999;
-      border-radius: 6px;
+      border-radius: 50%; /* 改为圆形 */
       padding: 8px;
       font-size: 12px;
       z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .player-info {
+      line-height: 1.2;
+    }
+
+    .player-role {
+        font-size: 10px;
+        color: #e67e22;
+    }
+
+    .stack {
+        font-size: 11px;
+        color: #3498db;
+    }
+
+    .player-bet {
+        position: absolute;
+        bottom: -20px; /* 显示在玩家圆圈下方 */
+        background-color: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 10px;
+    }
+
+    .action-bubble {
+        position: absolute;
+        top: -30px; /* 显示在玩家圆圈上方 */
+        background-color: #f39c12;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.3s, transform 0.3s;
+        z-index: 100;
+        white-space: nowrap;
+    }
+
+    .action-bubble.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @keyframes fade-out {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(-10px); }
+    }
+
+    .action-bubble.fade-out {
+        animation: fade-out 0.5s forwards;
+        animation-delay: 1s; /* 延迟1秒后开始消失 */
     }
 
     .player.folded {
@@ -212,7 +272,12 @@
       <div class="poker-table">
         <!-- 玩家 P1 (正下方) -->
         <div class="player" data-player="P1" style="bottom: 20px; left: 50%; transform: translateX(-50%);">
-          P1 <span class="player-role"></span><br>
+          <div class="player-info">
+            P1 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -220,7 +285,12 @@
         </div>
         <!-- P2 (顺时针方向 - 左下角) -->
         <div class="player" data-player="P2" style="bottom: 40px; left: 10%;">
-          P2 <span class="player-role"></span><br>
+          <div class="player-info">
+            P2 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -228,7 +298,12 @@
         </div>
         <!-- P3 (顺时针方向 - 左中) -->
         <div class="player" data-player="P3" style="top: 40%; left: 10%;">
-          P3 <span class="player-role"></span><br>
+          <div class="player-info">
+            P3 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -236,7 +311,12 @@
         </div>
         <!-- P4 (顺时针方向 - 左上角) -->
         <div class="player" data-player="P4" style="top: 40px; left: 10%;">
-          P4 <span class="player-role"></span><br>
+          <div class="player-info">
+            P4 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -244,7 +324,12 @@
         </div>
         <!-- P5 (顺时针方向 - 顶部) -->
         <div class="player" data-player="P5" style="top: 20px; left: 50%; transform: translateX(-50%);">
-          P5 <span class="player-role"></span><br>
+          <div class="player-info">
+            P5 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -252,7 +337,12 @@
         </div>
         <!-- P6 (顺时针方向 - 右上角) -->
         <div class="player" data-player="P6" style="top: 40px; right: 10%;">
-          P6 <span class="player-role"></span><br>
+          <div class="player-info">
+            P6 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -260,7 +350,12 @@
         </div>
         <!-- P7 (顺时针方向 - 右中) -->
         <div class="player" data-player="P7" style="top: 40%; right: 10%;">
-          P7 <span class="player-role"></span><br>
+          <div class="player-info">
+            P7 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
@@ -268,7 +363,12 @@
         </div>
         <!-- P8 (顺时针方向 - 右下角) -->
         <div class="player" data-player="P8" style="bottom: 40px; right: 10%;">
-          P8 <span class="player-role"></span><br>
+          <div class="player-info">
+            P8 <span class="player-role"></span><br>
+            <span class="stack"></span>
+          </div>
+          <div class="player-bet"></div>
+          <div class="action-bubble"></div>
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>

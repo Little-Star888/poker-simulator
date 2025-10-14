@@ -80,7 +80,12 @@ function init() {
 
   // 手动操作按钮
   foldBtn.addEventListener('click', () => submitManualAction('FOLD'));
-  callBtn.addEventListener('click', () => submitManualAction('CALL'));
+  callBtn.addEventListener('click', () => {
+      const gameState = game.getGameState();
+      const player = gameState.players.find(p => p.id === game.getCurrentPlayerId());
+      const toCall = gameState.highestBet - player.bet;
+      submitManualAction(toCall === 0 ? 'CHECK' : 'CALL');
+  });
   raiseBtn.addEventListener('click', handleRaiseClick);
 
   updatePlayerDisplay(); // 初始化时根据默认玩家数量更新显示
@@ -117,6 +122,8 @@ function startNewGame() {
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
 
     log('✅ 新牌局开始！盲注: SB=' + Settings.sb + ', BB=' + Settings.bb);
+    log(`[SYSTEM] ${game.players[game.sbIndex].id} posts Small Blind ${Settings.sb}`);
+    log(`[SYSTEM] ${game.players[game.bbIndex].id} posts Big Blind ${Settings.bb}`);
     updateUI();
     console.log('UI已更新');
 
@@ -179,6 +186,7 @@ async function processNextAction() {
     // 执行动作
     game.executeAction(currentPlayerId, decision.action, decision.amount);
     log(`[${game.currentRound}] ${currentPlayerId} ${decision.action}${decision.amount ? ' ' + decision.amount : ''}`);
+    showActionBubble(currentPlayerId, decision.action, decision.amount);
 
     // 调试信息：显示当前游戏阶段
     console.log(`当前游戏阶段: ${game.currentRound}, 当前玩家: ${currentPlayerId}, 动作: ${decision.action}`);
@@ -288,6 +296,7 @@ function submitManualAction(action, amount) {
     // 执行动作
     game.executeAction(currentPlayerId, action, amount);
     log(`[${game.currentRound}] ${currentPlayerId} ${action}${amount ? ' ' + amount : ''}`);
+    showActionBubble(currentPlayerId, action, amount);
 
     // 更新行动记录
     updateActionSheet(currentPlayerId, action, amount);
@@ -331,28 +340,33 @@ function toggleManualActionArea(show) {
 
 // ========== ActionSheet 相关函数 ==========
 function renderActionSheet() {
-  const playerCount = Settings.playerCount;
   const tableBody = document.getElementById('action-sheet-body');
   tableBody.innerHTML = ''; // 清空现有内容
 
+  const playerCount = Settings.playerCount;
+  const players = game.players;
+  const sbIndex = game.sbIndex;
+
   // 重置行动记录数据
   actionRecords = {};
-  for (let i = 1; i <= playerCount; i++) {
-    const playerId = `P${i}`;
-    actionRecords[playerId] = {
+  players.forEach(player => {
+    actionRecords[player.id] = {
       preflop: [],
       flop: [],
       turn: [],
       river: []
     };
-  }
+  });
 
-  // 动态创建表格行
-  for (let i = 1; i <= playerCount; i++) {
-    const playerId = `P${i}`;
+  // 从SB开始，按顺序创建表格行
+  for (let i = 0; i < playerCount; i++) {
+    const playerIndex = (sbIndex + i) % playerCount;
+    const player = players[playerIndex];
+    const playerId = player.id;
+    const playerRole = player.role || '';
     const row = document.createElement('tr');
     
-    let rowHtml = `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${playerId}</td>`;
+    let rowHtml = `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${playerId} (${playerRole})</td>`;
     
     const stages = ['preflop', 'flop', 'turn', 'river'];
     stages.forEach(stage => {
@@ -514,7 +528,15 @@ function updateUI() {
     }
 
     // 更新筹码（可选）
-    // el.querySelector('.stack').textContent = player.stack;
+    const stackEl = el.querySelector('.stack');
+    if (stackEl) stackEl.textContent = `S: ${player.stack}`;
+
+    const betEl = el.querySelector('.player-bet');
+    if (betEl) {
+        betEl.textContent = player.bet > 0 ? `B: ${player.bet}` : '';
+    }
+
+    // 更新角色显示
 
     // 更新角色显示
     const roleEl = el.querySelector('.player-role');
@@ -540,6 +562,36 @@ function log(message) {
   const now = new Date().toLocaleTimeString();
   consoleLog.value += `[${now}] ${message}\n`;
   consoleLog.scrollTop = consoleLog.scrollHeight;
+}
+
+function showActionBubble(playerId, action, amount) {
+    const playerElement = document.querySelector(`.player[data-player="${playerId}"]`);
+    if (!playerElement) return;
+
+    const bubble = playerElement.querySelector('.action-bubble');
+    if (!bubble) return;
+
+    let text = action;
+    if (action === 'CALL' || action === 'RAISE' || action === 'BET') {
+        if (amount > 0) {
+            text += ` ${amount}`;
+        }
+    }
+
+    // 强制重置动画和内容
+    bubble.classList.remove('show', 'fade-out');
+    bubble.style.animation = 'none';
+    bubble.offsetHeight; /* 触发浏览器重绘 */
+    bubble.style.animation = null;
+
+    // 更新内容并显示
+    bubble.textContent = text;
+    bubble.classList.add('show');
+
+    // 动画结束后隐藏
+    setTimeout(() => {
+        bubble.classList.add('fade-out');
+    }, 1500); // 气泡显示1.5秒
 }
 
 // ========== 启动 ==========
