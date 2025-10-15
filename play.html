@@ -113,8 +113,29 @@
         animation-delay: 1s; /* 延迟1秒后开始消失 */
     }
 
+    .fold-indicator {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-25deg);
+      color: #e74c3c;
+      font-size: 22px;
+      font-weight: bold;
+      border: 3px solid #c0392b;
+      padding: 5px 10px;
+      border-radius: 8px;
+      opacity: 0.85;
+      z-index: 50;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
     .player.folded {
       opacity: 0.4;
+    }
+
+    .player.folded .fold-indicator {
+      display: block;
     }
 
     .player.active {
@@ -202,7 +223,8 @@
       width: 70%;
       height: 100%;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      gap: 20px;
       padding: 20px;
       background: #fafafa;
       overflow-y: auto;
@@ -272,6 +294,7 @@
       <div class="poker-table">
         <!-- 玩家 P1 (正下方) -->
         <div class="player" data-player="P1" style="bottom: 5px; left: 50%; transform: translateX(-50%);">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P1 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -285,6 +308,7 @@
         </div>
         <!-- P2 (顺时针方向 - 左下角) -->
         <div class="player" data-player="P2" style="bottom: 20%; left: 15px;">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P2 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -298,6 +322,7 @@
         </div>
         <!-- P3 (顺时针方向 - 左中) -->
         <div class="player" data-player="P3" style="top: 50%; left: 15px; transform: translateY(-50%);">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P3 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -311,6 +336,7 @@
         </div>
         <!-- P4 (顺时针方向 - 左上角) -->
         <div class="player" data-player="P4" style="top: 20%; left: 15px;">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P4 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -324,6 +350,7 @@
         </div>
         <!-- P5 (顺时针方向 - 顶部) -->
         <div class="player" data-player="P5" style="top: 5px; left: 50%; transform: translateX(-50%);">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P5 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -337,6 +364,7 @@
         </div>
         <!-- P6 (顺时针方向 - 右上角) -->
         <div class="player" data-player="P6" style="top: 20%; right: 15px;">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P6 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -350,6 +378,7 @@
         </div>
         <!-- P7 (顺时针方向 - 右中) -->
         <div class="player" data-player="P7" style="top: 50%; right: 15px; transform: translateY(-50%);">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P7 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -363,6 +392,7 @@
         </div>
         <!-- P8 (顺时针方向 - 右下角) -->
         <div class="player" data-player="P8" style="bottom: 20%; right: 15px;">
+          <div class="fold-indicator">FOLD</div>
           <div class="player-info">
             P8 <span class="player-role"></span><br>
             <span class="stack"></span>
@@ -400,99 +430,105 @@
 
     <!-- 右侧：控制面板 -->
     <div class="control-panel">
-      <div class="section">
-        <h3>⚙️ 运行配置</h3>
-        <div class="form-row">
-          <label>游戏模式:</label>
-          <select id="mode-select">
-            <option value="auto">自动</option>
-            <option value="manual">手动</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label>盲注设置:</label>
-          <input type="number" id="sb-input" value="50" min="1" style="width:80px;" /> / 
-          <input type="number" id="bb-input" value="100" min="1" style="width:80px;" />
-        </div>
-        <div class="form-row">
-          <label>
-            <input type="checkbox" id="show-hole-cards" checked />
-            明牌模式
-          </label>
-        </div>
-        <div class="form-row">
-          <label>自动延时 (ms):</label>
-          <input type="number" id="auto-delay" value="1000" min="100" style="width:100px;" />
-        </div>
-        <div class="form-row">
-          <label>GTO建议阶段:</label>
-          <div id="suggestion-phases">
-            <label style="margin-right: 10px;"><input type="checkbox" id="suggest-preflop" checked> Preflop</label>
-            <label style="margin-right: 10px;"><input type="checkbox" id="suggest-flop" checked> Flop</label>
-            <label style="margin-right: 10px;"><input type="checkbox" id="suggest-turn" checked> Turn</label>
-            <label style="margin-right: 10px;"><input type="checkbox" id="suggest-river" checked> River</label>
+      <!-- Left Column -->
+      <div class="control-panel-left" style="flex: 2;">
+        <div class="section">
+          <h3>⚙️ 运行配置</h3>
+          <div class="form-row">
+            <label>游戏模式:</label>
+            <select id="mode-select">
+              <option value="auto">自动</option>
+              <option value="manual">手动</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>盲注设置:</label>
+            <input type="number" id="sb-input" value="50" min="1" style="width:80px;" /> / 
+            <input type="number" id="bb-input" value="100" min="1" style="width:80px;" />
+          </div>
+          <div class="form-row">
+            <label>
+              <input type="checkbox" id="show-hole-cards" checked />
+              明牌模式
+            </label>
+          </div>
+          <div class="form-row">
+            <label>自动延时 (ms):</label>
+            <input type="number" id="auto-delay" value="1000" min="100" style="width:100px;" />
+          </div>
+          <div class="form-row">
+            <label>GTO建议阶段:</label>
+            <div id="suggestion-phases">
+              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-preflop" checked> Preflop</label>
+              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-flop" checked> Flop</label>
+              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-turn" checked> Turn</label>
+              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-river" checked> River</label>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>玩家数量:</label>
+            <input type="number" id="player-count-input" value="8" min="2" max="8" style="width:100px;" />
+          </div>
+          <div class="form-row">
+            <label>底池类型:</label>
+            <select id="pot-type-select">
+              <option value="unrestricted">无限制</option>
+              <option value="single_raised">单一加注底池</option>
+              <option value="3bet">3-Bet 底池</option>
+              <option value="4bet">4-Bet及以上</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>初始筹码范围:</label>
+            <input type="number" id="min-stack-input" value="1800" min="1" style="width:80px;" /> - 
+            <input type="number" id="max-stack-input" value="2200" min="1" style="width:80px;" />
           </div>
         </div>
-        <div class="form-row">
-          <label>玩家数量:</label>
-          <input type="number" id="player-count-input" value="8" min="2" max="8" style="width:100px;" />
+
+        <div class="section">
+          <h3>🎮 控制</h3>
+          <div class="form-row">
+            <button id="start-btn">开始牌局</button>
+            <button id="restart-btn">重新开始</button>
+          </div>
         </div>
-        <div class="form-row">
-          <label>底池类型:</label>
-          <select id="pot-type-select">
-            <option value="unrestricted">无限制</option>
-            <option value="single_raised">单一加注底池</option>
-            <option value="3bet">3-Bet 底池</option>
-            <option value="4bet">4-Bet及以上</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label>初始筹码范围:</label>
-          <input type="number" id="min-stack-input" value="1800" min="1" style="width:80px;" /> - 
-          <input type="number" id="max-stack-input" value="2200" min="1" style="width:80px;" />
+
+        <div class="section">
+          <h3>📊 玩家行动 (ActionSheet)</h3>
+          <div id="action-sheet-container" style="overflow-x: auto;">
+            <table id="action-sheet" style="border-collapse: collapse; width: 100%; font-size: 14px;">
+              <thead>
+                <tr style="background-color: #f2f2f2;">
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">玩家</th>
+                  <!-- PREFLOP阶段4列 -->
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">PREFLOP</th>
+                  <!-- FLOP阶段4列 -->
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">FLOP</th>
+                  <!-- TURN阶段4列 -->
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">TURN</th>
+                  <!-- RIVER阶段4列 -->
+                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">RIVER</th>
+                </tr>
+              </thead>
+              <tbody id="action-sheet-body">
+                <!-- 玩家行动记录将由JavaScript动态生成 -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div class="section">
-        <h3>🎮 控制</h3>
-        <div class="form-row">
-          <button id="start-btn">开始牌局</button>
-          <button id="restart-btn">重新开始</button>
+      <!-- Right Column -->
+      <div class="control-panel-right" style="flex: 3; display: flex; flex-direction: column;">
+        <div class="section">
+          <h3>💡 GTO 建议</h3>
+          <div id="suggestion-display" style="padding: 10px; background: #272822; color: #f8f8f2; border-radius: 4px; min-height: 200px; max-height: 40vh; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #333;">等待玩家行动...</div>
         </div>
-      </div>
 
-      <div class="section">
-        <h3>📊 玩家行动 (ActionSheet)</h3>
-        <div id="action-sheet-container" style="overflow-x: auto;">
-          <table id="action-sheet" style="border-collapse: collapse; width: 100%; font-size: 14px;">
-            <thead>
-              <tr style="background-color: #f2f2f2;">
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">玩家</th>
-                <!-- PREFLOP阶段4列 -->
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">PREFLOP</th>
-                <!-- FLOP阶段4列 -->
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">FLOP</th>
-                <!-- TURN阶段4列 -->
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">TURN</th>
-                <!-- RIVER阶段4列 -->
-                <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">RIVER</th>
-              </tr>
-            </thead>
-            <tbody id="action-sheet-body">
-              <!-- 玩家行动记录将由JavaScript动态生成 -->
-            </tbody>
-          </table>
+        <div class="section" style="display: flex; flex-direction: column; flex-grow: 1;">
+          <h3>📜 Console 日志</h3>
+          <textarea style="min-height: 200px; width: 100%; flex-grow: 1;" id="console-log" readonly></textarea>
         </div>
-      </div>
-
-      <div class="section">
-        <h3>💡 GTO 建议</h3>
-        <div id="suggestion-display" style="padding: 10px; background: #272822; color: #f8f8f2; border-radius: 4px; min-height: 200px; max-height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #333;">等待玩家行动...</div>
-      </div>
-
-      <div class="section">
-        <h3>📜 Console 日志</h3>
-        <textarea style="min-height: 200px; max-height: 30%; width: 80%" id="console-log" readonly></textarea>
       </div>
     </div>
   </div>

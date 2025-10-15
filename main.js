@@ -210,7 +210,7 @@ async function processNextAction() {
     if (shouldSuggest) {
       try {
         const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
-        renderSuggestion(suggestion, currentPlayerId);
+        renderSuggestion(suggestion, currentPlayerId, round);
       } catch (apiError) {
         const display = document.getElementById('suggestion-display');
         if (display.textContent.includes('等待玩家行动...')) {
@@ -354,8 +354,9 @@ async function showdown() {
  * 将从API获取的GTO建议渲染到UI上
  * @param {object} suggestion - GTO建议响应对象
  * @param {string} playerId - 当前玩家ID
+ * @param {string} phase - 当前游戏阶段 ('preflop', 'flop', 'turn', 'river')
  */
-function renderSuggestion(suggestion, playerId) {
+function renderSuggestion(suggestion, playerId, phase) {
     const display = document.getElementById('suggestion-display');
     
     // 首次渲染时，清空 "等待玩家行动..." 的提示
@@ -363,8 +364,26 @@ function renderSuggestion(suggestion, playerId) {
         display.innerHTML = '';
     }
 
+    // 查找或创建当前阶段的容器
+    let phaseContainer = document.getElementById(`phase-container-${phase}`);
+    if (!phaseContainer) {
+        phaseContainer = document.createElement('div');
+        phaseContainer.id = `phase-container-${phase}`;
+        phaseContainer.style.marginBottom = '20px';
+        
+        const phaseTitle = document.createElement('h3');
+        phaseTitle.textContent = phase.toUpperCase();
+        phaseTitle.style.color = '#fd971f'; // Orange color for phase title
+        phaseTitle.style.borderBottom = '1px solid #fd971f';
+        phaseTitle.style.paddingBottom = '5px';
+        phaseTitle.style.marginBottom = '10px';
+        
+        phaseContainer.appendChild(phaseTitle);
+        display.appendChild(phaseContainer);
+    }
+
     if (!suggestion) {
-        display.innerHTML += `<div style="color: #ff6b6b;">为 ${playerId} 获取建议失败或建议为空。</div>`;
+        phaseContainer.innerHTML += `<div style="color: #ff6b6b; margin-left: 10px;">为 ${playerId} 获取建议失败或建议为空。</div>`;
         display.scrollTop = display.scrollHeight;
         return;
     }
@@ -374,10 +393,11 @@ function renderSuggestion(suggestion, playerId) {
     suggestionWrapper.style.marginBottom = '15px';
     suggestionWrapper.style.borderBottom = '1px solid #444';
     suggestionWrapper.style.paddingBottom = '10px';
+    suggestionWrapper.style.marginLeft = '10px';
 
     // 添加玩家标题
     const title = document.createElement('h4');
-    title.textContent = `给 ${playerId} 的GTO建议 (${new Date().toLocaleTimeString()}) :`;
+    title.textContent = `给 ${playerId} 的建议 (${new Date().toLocaleTimeString()}) :`;
     title.style.margin = '0 0 5px 0';
     title.style.color = '#66d9ef'; // 亮蓝色标题
     suggestionWrapper.appendChild(title);
@@ -390,8 +410,8 @@ function renderSuggestion(suggestion, playerId) {
     pre.textContent = JSON.stringify(suggestion, null, 2);
     suggestionWrapper.appendChild(pre);
 
-    // 将新建议添加到显示区域
-    display.appendChild(suggestionWrapper);
+    // 将新建议添加到阶段容器中
+    phaseContainer.appendChild(suggestionWrapper);
 
     // 滚动到底部
     display.scrollTop = display.scrollHeight;
