@@ -24,8 +24,8 @@ export const Settings = {
   suggestOnRiver: false,
 
   // 新增：牌局预设
-  usePresetHands: false,
-  usePresetCommunity: false,
+  usePresetHands: true,
+  usePresetCommunity: true,
   presetCards: { 
     players: {}, 
     flop: new Array(3).fill(null), 

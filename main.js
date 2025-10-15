@@ -126,6 +126,8 @@ function init() {
 
   updatePlayerDisplay();
   log('德州扑克 AI 测试模拟器已加载');
+  injectStyles(); // Workaround for CSS file modification issues
+  reorganizeLayout(); // Rearrange sections for 3-column layout
 }
 
 // ========== 牌局预设功能 ==========
@@ -807,6 +809,68 @@ function showActionBubble(playerId, action, amount) {
     bubble.classList.add('show');
 
     setTimeout(() => bubble.classList.add('fade-out'), 1500);
+}
+
+
+
+function reorganizeLayout() {
+  // This function rearranges the DOM to create the desired 3-column layout.
+  // It moves the "Action Sheet" section from the left panel to the right panel.
+  
+  const actionSheetContainer = document.getElementById('action-sheet-container');
+  if (!actionSheetContainer) return;
+  
+  // Find the whole section for the action sheet
+  const actionSheetSection = actionSheetContainer.closest('.section');
+  const controlPanelRight = document.querySelector('.control-panel-right');
+
+  if (actionSheetSection && controlPanelRight) {
+    // Move the action sheet to be the first child of the right-hand panel
+    controlPanelRight.insertBefore(actionSheetSection, controlPanelRight.firstChild);
+//    log('⚙️ 应用三列布局结构。');
+  }
+}
+
+function injectStyles() {
+  const css = `
+    /* Revert control panel to be a row, and style the two new main columns */
+    .control-panel {
+      flex-direction: row !important;
+    }
+    .control-panel-left {
+      flex: 2 !important; /* Center column */
+    }
+    .control-panel-right {
+      flex: 3 !important; /* Right column */
+      display: flex;
+      flex-direction: column;
+    }
+    /* Ensure console log section can grow */
+    .control-panel-right .section:has(#console-log) {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #preset-player-hands-container {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+      gap: 15px !important;
+      align-items: start !important;
+    }
+    #preset-player-hands-container > h4 {
+      grid-column: 1 / -1 !important;
+      margin-bottom: 0 !important;
+    }
+    .player-hand-preset {
+      margin-bottom: 0 !important; /* Override old margin */
+    }
+  `;
+  const style = document.createElement('style');
+  style.type = 'text/css';
+  style.appendChild(document.createTextNode(css));
+  document.head.appendChild(style);
+//  log('⚙️ 应用布局修复样式。');
 }
 
 document.addEventListener('DOMContentLoaded', init);

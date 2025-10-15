@@ -239,7 +239,7 @@
       width: 70%;
       height: 100%;
       display: flex;
-      flex-direction: row;
+      flex-direction: column; /* Changed from row to column */
       gap: 20px;
       padding: 20px;
       background: #fafafa;
@@ -346,7 +346,7 @@
       margin: 0; 
     }
 
-    /* Preset Styles */
+    /* --- Preset Styles --- */
     #preset-controls {
       border: 1px solid #ddd;
       padding: 10px;
@@ -391,14 +391,25 @@
       opacity: 0.3;
       cursor: not-allowed;
     }
+    .player-hand-preset strong {
+      width: 50px;
+    }
+
+    /* Player Preset Layout - Grid Implementation */
+    #preset-player-hands-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
+      align-items: start;
+    }
+    #preset-player-hands-container > h4 {
+      grid-column: 1 / -1;
+      margin-bottom: 0;
+    }
     .player-hand-preset {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 5px;
-    }
-    .player-hand-preset strong {
-      width: 50px;
+      gap: 5px;
     }
   </style>
 </head>
