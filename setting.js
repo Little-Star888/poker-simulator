@@ -15,6 +15,7 @@ export const Settings = {
   minStack: 10000,         // 最小初始筹码
   maxStack: 20000,         // 最大初始筹码
   potType: 'single_raised', // 底池类型: unrestricted, single_raised, 3bet, 4bet
+  p1Role: 'random',           // P1开局角色: random, BTN, SB, BB, etc.
 
   // 新增：GTO建议阶段开关
   suggestOnPreflop: true,

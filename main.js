@@ -41,6 +41,7 @@ const playerCountInput = document.getElementById('player-count-input');
 const minStackInput = document.getElementById('min-stack-input');
 const maxStackInput = document.getElementById('max-stack-input');
 const potTypeSelect = document.getElementById('pot-type-select');
+const p1RoleSelect = document.getElementById('p1-role-select');
 const sbInput = document.getElementById('sb-input');
 const bbInput = document.getElementById('bb-input');
 const autoDelayInput = document.getElementById('auto-delay');
@@ -68,6 +69,7 @@ function init() {
   minStackInput.value = Settings.minStack;
   maxStackInput.value = Settings.maxStack;
   potTypeSelect.value = Settings.potType;
+  p1RoleSelect.value = Settings.p1Role;
   sbInput.value = Settings.sb;
   bbInput.value = Settings.bb;
   autoDelayInput.value = Settings.autoDelay;
@@ -98,6 +100,7 @@ function init() {
   minStackInput.addEventListener('change', () => Settings.update({ minStack: parseInt(minStackInput.value) || 2000 }));
   maxStackInput.addEventListener('change', () => Settings.update({ maxStack: parseInt(maxStackInput.value) || 2000 }));
   potTypeSelect.addEventListener('change', () => Settings.update({ potType: potTypeSelect.value }));
+  p1RoleSelect.addEventListener('change', () => Settings.update({ p1Role: p1RoleSelect.value }));
 
   sbInput.addEventListener('input', () => {
     const sbValue = parseInt(sbInput.value) || 0;

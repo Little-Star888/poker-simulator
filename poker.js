@@ -56,7 +56,26 @@ export class PokerGame {
     this.preflopRaiseCount = 0; // 新增：翻牌前加注次数计数器
 
     // 动态确定位置
-    this.dealerIndex = (this.handCount) % playerCount; // 庄家位置轮换
+    if (this.settings.p1Role === 'random') {
+        this.dealerIndex = Math.floor(Math.random() * playerCount);
+    } else {
+        const roles = this._getRoleOrder(playerCount);
+        const roleIndex = roles.indexOf(this.settings.p1Role);
+
+        if (roleIndex !== -1) {
+            // Calculate dealerIndex so that player at index 0 (P1) gets the target role.
+            // The player at (dealerIndex + i + 1) % playerCount gets roles[i].
+            // We want player 0 to get roles[roleIndex], so we need (dealerIndex + roleIndex + 1) % playerCount === 0.
+            // dealerIndex + roleIndex + 1 = playerCount (or a multiple)
+            // dealerIndex = playerCount - roleIndex - 1.
+            this.dealerIndex = playerCount - 1 - roleIndex;
+        } else {
+            // Fallback to random if the selected role is not valid for the current player count
+            console.warn(`Role ${this.settings.p1Role} is not valid for ${playerCount} players. Assigning roles randomly.`);
+            this.dealerIndex = Math.floor(Math.random() * playerCount);
+        }
+    }
+
     this.sbIndex = (this.dealerIndex + 1) % playerCount;
     this.bbIndex = (this.dealerIndex + 2) % playerCount;
     this.handCount++; // 为下一手牌做准备
