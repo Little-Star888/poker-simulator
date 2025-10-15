@@ -404,7 +404,7 @@ function renderSuggestion(suggestion, playerId, phase) {
 
     // 添加玩家标题
     const title = document.createElement('h4');
-    title.textContent = `给 ${playerId} 的建议 (${new Date().toLocaleTimeString()}) :`;
+    title.innerHTML = `给 ${playerId} 的建议 (${new Date().toLocaleTimeString()}) <span style="color: #fd971f;">[${phase.toUpperCase()}]</span>:`;
     title.style.margin = '0 0 5px 0';
     title.style.color = '#66d9ef'; // 亮蓝色标题
     suggestionWrapper.appendChild(title);
