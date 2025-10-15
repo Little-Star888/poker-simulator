@@ -838,7 +838,7 @@ function renderSuggestion(suggestion, playerId, phase) {
             const desc = suggestion.localResult.description;
 
             if (myCards && scenario && desc) {
-                const formattedText = `我的手牌是${myCards}, ${scenario}，${desc}`;
+                const formattedText = `手牌：${myCards}, ${scenario}，${desc}`;
 
                 const p = document.createElement('p');
                 p.style.margin = '0';
