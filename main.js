@@ -10,6 +10,8 @@ let isGameRunning = false;
 let isWaitingForManualInput = false;
 let isGamePaused = false;
 
+let gtoSuggestionFilter = new Set();
+
 let actionRecords = {
   P1: { preflop: [], flop: [], turn: [], river: [] },
   P2: { preflop: [], flop: [], turn: [], river: [] },
@@ -56,6 +58,7 @@ const presetControls = document.getElementById('preset-controls');
 const presetPlayerHandsContainer = document.getElementById('preset-player-hands-container');
 const presetCommunityCardsContainer = document.getElementById('preset-community-cards-container');
 const cardPicker = document.getElementById('card-picker');
+const gtoFilterPlayersContainer = document.getElementById('gto-filter-players');
 
 // ========== 初始化 ==========
 function init() {
@@ -87,6 +90,7 @@ function init() {
   playerCountInput.addEventListener('change', () => {
     Settings.update({ playerCount: parseInt(playerCountInput.value) || 8 });
     updatePlayerDisplay();
+    updateGtoFilterCheckboxes();
     if (Settings.usePresetHands) {
       buildPlayerSlots();
     }
@@ -125,6 +129,7 @@ function init() {
   raiseBtn.addEventListener('click', handleRaiseClick);
 
   updatePlayerDisplay();
+  updateGtoFilterCheckboxes();
   log('德州扑克 AI 测试模拟器已加载');
   injectStyles(); // Workaround for CSS file modification issues
   reorganizeLayout(); // Rearrange sections for 3-column layout
@@ -368,6 +373,8 @@ function handlePauseResumeClick() {
 }
 
 function startNewGame() {
+  document.getElementById('suggestion-display').innerHTML = '等待玩家行动...';
+
   if (isGameRunning && !isGamePaused) {
     log('游戏已在运行中');
     return;
@@ -422,6 +429,44 @@ function updatePlayerDisplay() {
       playerElement.style.display = i <= playerCount ? 'block' : 'none';
     }
   }
+}
+
+function updateGtoFilterCheckboxes() {
+    gtoFilterPlayersContainer.innerHTML = '';
+    gtoSuggestionFilter.clear();
+
+    if (Settings.playerCount > 0) {
+        gtoSuggestionFilter.add('P1'); // Default to only P1 selected
+    }
+
+    for (let i = 1; i <= Settings.playerCount; i++) {
+        const playerId = `P${i}`;
+        const isChecked = (playerId === 'P1');
+
+        const label = document.createElement('label');
+        label.style.marginRight = '10px';
+        label.style.width = 'auto'; // prevent label from taking full width
+        label.style.cursor = 'pointer';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = playerId;
+        checkbox.checked = isChecked;
+        checkbox.id = `gto-filter-${playerId}`;
+        checkbox.style.marginRight = '4px';
+
+        checkbox.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                gtoSuggestionFilter.add(playerId);
+            } else {
+                gtoSuggestionFilter.delete(playerId);
+            }
+        });
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(playerId));
+        gtoFilterPlayersContainer.appendChild(label);
+    }
 }
 
 function restartGame() {
@@ -564,6 +609,9 @@ async function showdown() {
 }
 
 function renderSuggestion(suggestion, playerId, phase) {
+    if (!gtoSuggestionFilter.has(playerId)) {
+        return;
+    }
     const display = document.getElementById('suggestion-display');
     
     if (display.textContent.includes('等待玩家行动...')) {
