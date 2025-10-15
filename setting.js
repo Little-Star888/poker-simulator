@@ -11,17 +11,17 @@ export const Settings = {
   sb: 50,                 // 小盲注 (Small Blind)
   bb: 100,                // 大盲注 (Big Blind)
   showHoleCards: true,    // 明牌模式：true = 所有底牌可见
-  autoDelay: 1000,        // 自动模式下每步延时（毫秒）
+  autoDelay: 2000,        // 自动模式下每步延时（毫秒）
   playerCount: 8,         // 玩家数量
-  minStack: 1800,         // 最小初始筹码
-  maxStack: 2200,         // 最大初始筹码
-  potType: 'unrestricted', // 底池类型: unrestricted, single_raised, 3bet, 4bet
+  minStack: 10000,         // 最小初始筹码
+  maxStack: 20000,         // 最大初始筹码
+  potType: 'single_raised', // 底池类型: unrestricted, single_raised, 3bet, 4bet
 
   // 新增：GTO建议阶段开关
   suggestOnPreflop: true,
   suggestOnFlop: true,
-  suggestOnTurn: true,
-  suggestOnRiver: true,
+  suggestOnTurn: false,
+  suggestOnRiver: false,
 
   // ===== 配置更新接口 =====
   /**
