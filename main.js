@@ -252,6 +252,42 @@ function handleSlotClick(event) {
   activeSelectionSlot.classList.add('active-selection');
 }
 
+function animateCardToSlot(pickerCard, slot, cardText) {
+    const startRect = pickerCard.getBoundingClientRect();
+    const endRect = slot.getBoundingClientRect();
+
+    const movingCard = document.createElement('div');
+    movingCard.style.position = 'fixed';
+    movingCard.style.zIndex = '1000';
+    movingCard.style.left = `${startRect.left}px`;
+    movingCard.style.top = `${startRect.top}px`;
+    movingCard.style.width = `${startRect.width}px`;
+    movingCard.style.height = `${startRect.height}px`;
+    movingCard.style.backgroundImage = `url(${getCardImagePath(cardText)})`;
+    movingCard.style.backgroundSize = 'contain';
+    movingCard.style.backgroundRepeat = 'no-repeat';
+    movingCard.style.backgroundPosition = 'center';
+    movingCard.style.borderRadius = '4px';
+    movingCard.style.transition = 'all 0.4s ease-in-out'; // Animate all properties
+
+    document.body.appendChild(movingCard);
+
+    // Delay to allow the browser to apply initial styles before transitioning
+    setTimeout(() => {
+        movingCard.style.left = `${endRect.left}px`;
+        movingCard.style.top = `${endRect.top}px`;
+        movingCard.style.width = `${endRect.width}px`;
+        movingCard.style.height = `${endRect.height}px`;
+    }, 20);
+
+    // After the animation finishes
+    setTimeout(() => {
+        document.body.removeChild(movingCard);
+        // Now call the original logic to actually assign the card to the slot
+        assignCard(slot, cardText);
+    }, 420); // Slightly longer than the transition duration
+}
+
 function handleCardPickerClick(event) {
   const pickerCard = event.currentTarget;
   const cardText = pickerCard.dataset.card;
@@ -266,17 +302,22 @@ function handleCardPickerClick(event) {
     return;
   }
 
-  assignCard(activeSelectionSlot, cardText);
+  // The original assignCard is now called from the animation function
+  animateCardToSlot(pickerCard, activeSelectionSlot, cardText);
 
   activeSelectionSlot.classList.remove('active-selection');
   activeSelectionSlot = null;
 }
 
 function assignCard(slot, cardText) {
+
   slot.style.backgroundImage = `url(${getCardImagePath(cardText)})`;
+
   slot.dataset.card = cardText;
 
-  const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', '"')}"]`);
+
+
+  const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', '"' )}"]`);
   if (pickerCard) {
     pickerCard.classList.add('dimmed');
   }
