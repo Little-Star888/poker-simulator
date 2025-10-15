@@ -581,12 +581,7 @@
             <label>盲注设置:</label>
           <input type="number" id="sb-input" value="50" min="1" style="width:80px;" /> / 
           <input type="number" id="bb-input" value="100" min="1" style="width:80px;" class="readonly-input" readonly />          </div>
-          <div class="form-row">
-            <label>
-              <input type="checkbox" id="show-hole-cards" checked />
-              明牌模式
-            </label>
-          </div>
+
           <div class="form-row">
             <label>玩家思考时间 (ms):</label>
             <input type="number" id="auto-delay" value="1000" min="100" style="width:100px;" />
@@ -602,11 +597,9 @@
           </div>
           <div class="form-row">
             <label>玩家数量:</label>
-            <input type="number" id="player-count-input" value="8" min="2" max="8" style="width:100px;" />
-          </div>
-          <div class="form-row">
-            <label>底池类型:</label>
-            <select id="pot-type-select">
+            <input type="number" id="player-count-input" value="8" min="2" max="8" style="width:80px;" />
+            <label style="width: auto; margin-left: 20px; margin-right: 10px;">底池类型:</label>
+            <select id="pot-type-select" style="flex-grow: 1;">
               <option value="unrestricted">无限制</option>
               <option value="single_raised">单一加注底池</option>
               <option value="3bet">3-Bet 底池</option>
@@ -623,15 +616,14 @@
         <div class="section" id="preset-section">
           <h3>🃏 牌局预设</h3>
           <div class="form-row">
-            <label>
+            <label>预设选项:</label>
+            <label style="width: auto; margin-left: 10px;">
               <input type="checkbox" id="use-preset-hands-checkbox" />
-              启用预设手牌
+              预设手牌
             </label>
-          </div>
-          <div class="form-row">
-            <label>
+            <label style="width: auto; margin-left: 20px;">
               <input type="checkbox" id="use-preset-community-checkbox" />
-              启用预设公共牌
+              预设公共牌
             </label>
           </div>
           <div id="preset-controls" style="display: none;">

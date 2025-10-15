@@ -41,7 +41,6 @@ const maxStackInput = document.getElementById('max-stack-input');
 const potTypeSelect = document.getElementById('pot-type-select');
 const sbInput = document.getElementById('sb-input');
 const bbInput = document.getElementById('bb-input');
-const showHoleCardsCheckbox = document.getElementById('show-hole-cards');
 const autoDelayInput = document.getElementById('auto-delay');
 const suggestPreflopCheckbox = document.getElementById('suggest-preflop');
 const suggestFlopCheckbox = document.getElementById('suggest-flop');
@@ -68,7 +67,6 @@ function init() {
   potTypeSelect.value = Settings.potType;
   sbInput.value = Settings.sb;
   bbInput.value = Settings.bb;
-  showHoleCardsCheckbox.checked = Settings.showHoleCards;
   autoDelayInput.value = Settings.autoDelay;
   suggestPreflopCheckbox.checked = Settings.suggestOnPreflop;
   suggestFlopCheckbox.checked = Settings.suggestOnFlop;
@@ -101,7 +99,6 @@ function init() {
     Settings.update({ sb: sbValue, bb: newBbValue });
   });
 
-  showHoleCardsCheckbox.addEventListener('change', () => Settings.update({ showHoleCards: showHoleCardsCheckbox.checked }));
   autoDelayInput.addEventListener('change', () => Settings.update({ autoDelay: parseInt(autoDelayInput.value) || 1000 }));
   suggestPreflopCheckbox.addEventListener('change', () => Settings.update({ suggestOnPreflop: suggestPreflopCheckbox.checked }));
   suggestFlopCheckbox.addEventListener('change', () => Settings.update({ suggestOnFlop: suggestFlopCheckbox.checked }));
@@ -752,14 +749,11 @@ function updateUI() {
     el.classList.toggle('active', playerId === gameState.currentPlayerId);
     el.classList.toggle('folded', player.isFolded);
 
-    if (playerId === 'P1' || Settings.showHoleCards) {
-      const cardEls = el.querySelectorAll('.hole-card');
-      if (cardEls.length >= 2) {
-        setCardImage(cardEls[0], player.holeCards[0]);
-        setCardImage(cardEls[1], player.holeCards[1]);
-      }
-    } else {
-      el.querySelectorAll('.hole-card').forEach(cardEl => setCardImage(cardEl, null));
+    // 默认明牌模式，始终显示所有玩家的底牌
+    const cardEls = el.querySelectorAll('.hole-card');
+    if (cardEls.length >= 2) {
+      setCardImage(cardEls[0], player.holeCards[0]);
+      setCardImage(cardEls[1], player.holeCards[1]);
     }
 
     const stackEl = el.querySelector('.stack');
