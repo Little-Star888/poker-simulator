@@ -848,10 +848,75 @@ function renderSuggestion(suggestion, playerId, phase) {
                 p.textContent = formattedText;
                 suggestionWrapper.appendChild(p);
             } else {
-                throw new Error("未能获取翻前建议");
+                throw new Error("Missing required fields for preflop formatting.");
             }
         } catch (e) {
-            console.error("未能获取翻前建议:", e, suggestion);
+            console.error("Error formatting preflop suggestion:", e, suggestion);
+            const pre = document.createElement('pre');
+            pre.style.margin = '0';
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.style.wordBreak = 'break-all';
+            pre.textContent = JSON.stringify(suggestion, null, 2);
+            suggestionWrapper.appendChild(pre);
+        }
+    } else if ((phase === 'flop' || phase === 'turn' || phase === 'river') && suggestion.localResult) {
+        try {
+            const myCards = suggestion.myCards ? suggestion.myCards.join(',') : 'N/A';
+            const board = suggestion.boardCards ? suggestion.boardCards.join(',') : 'N/A';
+            
+            const local = suggestion.localResult;
+            const position = `在${local.hasPosition ? '有利位置' : '不利位置'}`;
+            const scenario = local.scenarioDescription || '';
+            const boardType = local.boardType ? `牌面：${local.boardType}` : '';
+            const handType = local.handType ? `牌型：${local.handType}` : '';
+
+            let treysText = '';
+            if (suggestion.thirdPartyResult && suggestion.thirdPartyResult.equity) {
+                const treys = suggestion.thirdPartyResult.equity;
+                const parts = [];
+                if (treys.winRate !== null) parts.push(`treys计算的胜率为：${treys.winRate}%`);
+                if (treys.potOdds !== null) parts.push(`底池赔率为：${treys.potOdds}%`);
+                if (treys.action) parts.push(`建议${treys.action}`);
+                if (parts.length > 0) {
+                    treysText = parts.join('，') + '（仅作为对比参考）';
+                }
+            }
+
+            let localEquityText = '';
+            if (local.equity) {
+                const parts = [];
+                if (local.equity.winRate !== null) parts.push(`本地计算的胜率为：${local.equity.winRate}%`);
+                if (local.equity.potOdds !== null) parts.push(`底池赔率为：${local.equity.potOdds}%`);
+                localEquityText = parts.join('，');
+            }
+
+            const finalDesc = `最终建议：以本地计算的策略为准，${local.reasoning || ''}，建议${local.action}`;
+
+            const allParts = [
+                `手牌：${myCards}`,
+                `公共牌：${board}`,
+                position,
+                scenario,
+                boardType,
+                handType,
+                treysText,
+                localEquityText,
+                finalDesc
+            ];
+
+            const formattedText = allParts.filter(p => p).join('，');
+
+            const p = document.createElement('p');
+            p.style.margin = '0';
+            p.style.padding = '5px 0';
+            p.style.whiteSpace = 'pre-wrap';
+            p.style.wordBreak = 'break-all';
+            p.style.lineHeight = '1.6';
+            p.textContent = formattedText;
+            suggestionWrapper.appendChild(p);
+
+        } catch (e) {
+            console.error(`Error formatting ${phase} suggestion:`, e, suggestion);
             const pre = document.createElement('pre');
             pre.style.margin = '0';
             pre.style.whiteSpace = 'pre-wrap';
