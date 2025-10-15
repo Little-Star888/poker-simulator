@@ -838,7 +838,7 @@ function renderSuggestion(suggestion, playerId, phase) {
             const desc = suggestion.localResult.description;
 
             if (myCards && scenario && desc) {
-                const formattedText = `手牌：${myCards}, ${scenario}，${desc}`;
+                const formattedText = `我的手牌是${myCards}, ${scenario}，${desc}`;
 
                 const p = document.createElement('p');
                 p.style.margin = '0';
@@ -861,59 +861,89 @@ function renderSuggestion(suggestion, playerId, phase) {
         }
     } else if ((phase === 'flop' || phase === 'turn' || phase === 'river') && suggestion.localResult) {
         try {
-            const myCards = suggestion.myCards ? suggestion.myCards.join(',') : 'N/A';
-            const board = suggestion.boardCards ? suggestion.boardCards.join(',') : 'N/A';
-            
+            const container = document.createElement('div');
             const local = suggestion.localResult;
-            const position = `在${local.hasPosition ? '有利位置' : '不利位置'}`;
-            const scenario = local.scenarioDescription || '';
-            const boardType = local.boardType ? `牌面：${local.boardType}` : '';
-            const handType = local.handType ? `牌型：${local.handType}` : '';
 
-            let treysText = '';
+            const createRow = (label, value) => {
+                if (value === null || value === undefined || value === '') return;
+                const row = document.createElement('div');
+                row.style.marginBottom = '4px';
+                const labelEl = document.createElement('strong');
+                labelEl.textContent = `${label}: `;
+                labelEl.style.color = '#a6e22e';
+                row.appendChild(labelEl);
+                row.appendChild(document.createTextNode(value));
+                container.appendChild(row);
+            };
+            
+            const createSection = (title) => {
+                const titleEl = document.createElement('h5');
+                titleEl.textContent = title;
+                titleEl.style.color = '#f92672';
+                titleEl.style.marginTop = '12px';
+                titleEl.style.marginBottom = '8px';
+                titleEl.style.borderBottom = '1px solid #555';
+                titleEl.style.paddingBottom = '4px';
+                container.appendChild(titleEl);
+            };
+
+            createSection('牌局信息');
+            createRow('手牌', suggestion.myCards?.join(', '));
+            createRow('公共牌', suggestion.boardCards?.join(', '));
+            createRow('牌面', local.boardType);
+            createRow('牌型', local.handType);
+
+            createSection('局势分析');
+            createRow('位置', local.hasPosition ? '有利位置' : '不利位置');
+            createRow('行动场景', local.scenarioDescription);
+
+            createSection('数据参考');
+            if (local.equity) {
+                const parts = [];
+                if (local.equity.winRate !== null) parts.push(`胜率: ${local.equity.winRate}%`);
+                if (local.equity.potOdds !== null) parts.push(`底池赔率: ${local.equity.potOdds}%`);
+                createRow('本地计算', parts.join('， '));
+            }
             if (suggestion.thirdPartyResult && suggestion.thirdPartyResult.equity) {
                 const treys = suggestion.thirdPartyResult.equity;
                 const parts = [];
-                if (treys.winRate !== null) parts.push(`treys计算的胜率为：${treys.winRate}%`);
-                if (treys.potOdds !== null) parts.push(`底池赔率为：${treys.potOdds}%`);
-                if (treys.action) parts.push(`建议${treys.action}`);
-                if (parts.length > 0) {
-                    treysText = parts.join('，') + '（仅作为对比参考）';
-                }
+                if (treys.winRate !== null) parts.push(`胜率: ${treys.winRate}%`);
+                if (treys.potOdds !== null) parts.push(`底池赔率: ${treys.potOdds}%`);
+                if (treys.action) parts.push(`建议: ${treys.action}`);
+                createRow('Treys (对比)', parts.join('， '));
             }
 
-            let localEquityText = '';
-            if (local.equity) {
-                const parts = [];
-                if (local.equity.winRate !== null) parts.push(`本地计算的胜率为：${local.equity.winRate}%`);
-                if (local.equity.potOdds !== null) parts.push(`底池赔率为：${local.equity.potOdds}%`);
-                localEquityText = parts.join('，');
-            }
+            createSection('最终建议');
+            const actionRow = document.createElement('div');
+            actionRow.style.marginBottom = '4px';
+            const actionLabelEl = document.createElement('strong');
+            actionLabelEl.textContent = `行动: `;
+            actionLabelEl.style.color = '#a6e22e';
+            actionRow.appendChild(actionLabelEl);
+            const actionValueEl = document.createElement('strong');
+            actionValueEl.textContent = local.action;
+            actionValueEl.style.color = '#e6db74';
+            actionValueEl.style.fontSize = '1.2em';
+            actionRow.appendChild(actionValueEl);
+            container.appendChild(actionRow);
 
-            const finalDesc = `最终建议：以本地计算的策略为准，${local.reasoning || ''}，建议${local.action}`;
+            const reasonRow = document.createElement('div');
+            reasonRow.style.lineHeight = '1.6';
+            reasonRow.style.marginTop = '4px';
+            const reasonLabelEl = document.createElement('strong');
+            reasonLabelEl.textContent = '理由: ';
+            reasonLabelEl.style.color = '#a6e22e';
+            reasonRow.appendChild(reasonLabelEl);
+            reasonRow.appendChild(document.createTextNode(`(以本地计算为准) ${local.reasoning || ''}`));
+            container.appendChild(reasonRow);
 
-            const allParts = [
-                `手牌：${myCards}`,
-                `公共牌：${board}`,
-                position,
-                scenario,
-                boardType,
-                handType,
-                treysText,
-                localEquityText,
-                finalDesc
-            ];
-
-            const formattedText = allParts.filter(p => p).join('，');
-
-            const p = document.createElement('p');
-            p.style.margin = '0';
-            p.style.padding = '5px 0';
-            p.style.whiteSpace = 'pre-wrap';
-            p.style.wordBreak = 'break-all';
-            p.style.lineHeight = '1.6';
-            p.textContent = formattedText;
-            suggestionWrapper.appendChild(p);
+            suggestionWrapper.innerHTML = '';
+            const title = document.createElement('h4');
+            title.innerHTML = `给 ${playerId} 的建议 (${new Date().toLocaleTimeString()}) <span style="color: #fd971f;">[${phase.toUpperCase()}]</span>:`;
+            title.style.margin = '0 0 8px 0';
+            title.style.color = '#66d9ef';
+            suggestionWrapper.appendChild(title);
+            suggestionWrapper.appendChild(container);
 
         } catch (e) {
             console.error(`Error formatting ${phase} suggestion:`, e, suggestion);
