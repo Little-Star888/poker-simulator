@@ -520,12 +520,12 @@ function renderActionSheet() {
     const playerRole = player.role || '';
     const row = document.createElement('tr');
     
-    let rowHtml = `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${playerId} (${playerRole})</td>`;
+    let rowHtml = `<td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${playerId} (${playerRole})</td>`;
     
     const stages = ['preflop', 'flop', 'turn', 'river'];
     stages.forEach(stage => {
       for (let j = 0; j < 4; j++) {
-        rowHtml += `<td id="${playerId}-${stage}-${j}" style="border: 1px solid #ddd; padding: 8px; text-align: center;">-</td>`;
+        rowHtml += `<td id="${playerId}-${stage}-${j}" style="border: 1px solid #ddd; padding: 6px; text-align: center;">-</td>`;
       }
     });
 

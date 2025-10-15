@@ -272,6 +272,31 @@
       background: #45a049;
     }
 
+    .game-control-btn {
+      padding: 8px 16px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .start-btn {
+      background-color: #28a745; /* Green */
+    }
+    .start-btn:hover {
+      background-color: #218838;
+    }
+
+    .restart-btn {
+      background-color: #dc3545; /* Red */
+      margin-left: 10px;
+    }
+    .restart-btn:hover {
+      background-color: #c82333;
+    }
+
     /* Console 日志 */
     #console-log {
       flex: 1;
@@ -415,8 +440,12 @@
         </div>
       </div>
 
-      <!-- 操作栏 - 始终显示空白区域 -->
-      <div class="action-bar">
+      <!-- 操作栏 -->
+      <div class="action-bar" style="justify-content: space-around; align-items: center;">
+        <div id="game-controls">
+          <button id="start-btn" class="game-control-btn start-btn">开始牌局</button>
+          <button id="restart-btn" class="game-control-btn restart-btn">重新开始</button>
+        </div>
         <!-- 手动操作区 -->
         <div id="manual-action-area">
           <div id="manual-player-label">轮到 P1 行动</div>
@@ -486,29 +515,20 @@
         </div>
 
         <div class="section">
-          <h3>🎮 控制</h3>
-          <div class="form-row">
-            <button id="start-btn">开始牌局</button>
-            <button id="restart-btn">重新开始</button>
-          </div>
-        </div>
-
-        <div class="section">
           <h3>📊 玩家行动 (ActionSheet)</h3>
           <div id="action-sheet-container" style="overflow-x: auto;">
             <table id="action-sheet" style="border-collapse: collapse; width: 100%; font-size: 14px;">
               <thead>
                 <tr style="background-color: #f2f2f2;">
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">玩家</th>
-                  <!-- PREFLOP阶段4列 -->
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">PREFLOP</th>
-                  <!-- FLOP阶段4列 -->
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">FLOP</th>
-                  <!-- TURN阶段4列 -->
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">TURN</th>
-                  <!-- RIVER阶段4列 -->
-                  <th style="border: 1px solid #ddd; padding: 8px; text-align: center;" colspan="4">RIVER</th>
-                </tr>
+                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;">玩家</th>
+                                  <!-- PREFLOP阶段4列 -->
+                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">PREFLOP</th>
+                                  <!-- FLOP阶段4列 -->
+                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">FLOP</th>
+                                  <!-- TURN阶段4列 -->
+                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">TURN</th>
+                                  <!-- RIVER阶段4列 -->
+                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">RIVER</th>                </tr>
               </thead>
               <tbody id="action-sheet-body">
                 <!-- 玩家行动记录将由JavaScript动态生成 -->
