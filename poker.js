@@ -15,7 +15,11 @@ export class PokerGame {
   /**
    * 重置整个牌局（新游戏开始前调用）
    */
-  reset() {
+  reset(settings = null) {
+    this.usePresetHands = settings && settings.usePresetHands;
+    this.usePresetCommunity = settings && settings.usePresetCommunity;
+    this.presetCards = settings ? settings.presetCards : null;
+
     const playerCount = Settings.playerCount;
     // 玩家状态：根据设置创建
     this.players = Array.from({ length: playerCount }, (_, i) => {
@@ -121,32 +125,83 @@ export class PokerGame {
    */
   dealHoleCards() {
     this.deck = this.createDeck();
+    const cardsToRemove = new Set();
+
+    // 如果公共牌是预设的，则将它们添加到移除列表中
+    if (this.usePresetCommunity && this.presetCards) {
+        (this.presetCards.flop || []).forEach(c => c && cardsToRemove.add(c));
+        (this.presetCards.turn || []).forEach(c => c && cardsToRemove.add(c));
+        (this.presetCards.river || []).forEach(c => c && cardsToRemove.add(c));
+    }
+
+    // 如果手牌是预设的，则分配它们并将其添加到移除列表中
+    if (this.usePresetHands && this.presetCards) {
+        this.players.forEach(player => {
+            const cards = this.presetCards.players[player.id];
+            if (cards && cards.length === 2 && cards[0] && cards[1]) {
+                player.holeCards = [...cards];
+                cardsToRemove.add(cards[0]);
+                cardsToRemove.add(cards[1]);
+            } else {
+                throw new Error(`玩家 ${player.id} 的预设手牌无效。`);
+            }
+        });
+    }
+
+    // 从牌堆中移除所有预设的牌，然后洗牌
+    this.deck = this.deck.filter(card => !cardsToRemove.has(card));
     this.shuffleDeck();
-    this.players.forEach(player => {
-      player.holeCards = [this.deck.pop(), this.deck.pop()];
-    });
+
+    // 如果手牌不是预设的，则从剩余的牌堆中发牌
+    if (!this.usePresetHands) {
+        this.players.forEach(player => {
+            if (this.deck.length < 2) throw new Error("没有足够的牌来发手牌。");
+            player.holeCards = [this.deck.pop(), this.deck.pop()];
+        });
+    }
   }
 
   /**
    * 发Flop（3张公共牌）
    */
   dealFlop() {
-    if (this.deck.length < 4) throw new Error('Not enough cards to deal flop');
-    this.deck.pop(); // burn card
-    this.communityCards = [
-      this.deck.pop(),
-      this.deck.pop(),
-      this.deck.pop()
-    ];
+    if (this.usePresetCommunity) {
+        if (!this.presetCards || !this.presetCards.flop || this.presetCards.flop.length !== 3) {
+            throw new Error('无效的预设翻牌。');
+        }
+        this.communityCards = [...this.presetCards.flop];
+    } else {
+        if (this.deck.length < 4) throw new Error('没有足够的牌来发翻牌');
+        this.deck.pop(); // 烧掉一张牌
+        this.communityCards = [
+            this.deck.pop(),
+            this.deck.pop(),
+            this.deck.pop()
+        ];
+    }
   }
 
   /**
    * 发Turn或River（1张公共牌）
    */
   dealTurnOrRiver() {
-    if (this.deck.length < 2) throw new Error('Not enough cards to deal turn/river');
-    this.deck.pop(); // burn card
-    this.communityCards.push(this.deck.pop());
+    if (this.usePresetCommunity) {
+        if (this.communityCards.length === 3) { // 发转牌
+            if (!this.presetCards || !this.presetCards.turn || this.presetCards.turn.length !== 1) {
+                throw new Error('无效的预设转牌。');
+            }
+            this.communityCards.push(this.presetCards.turn[0]);
+        } else if (this.communityCards.length === 4) { // 发河牌
+            if (!this.presetCards || !this.presetCards.river || this.presetCards.river.length !== 1) {
+                throw new Error('无效的预设河牌。');
+            }
+            this.communityCards.push(this.presetCards.river[0]);
+        }
+    } else {
+        if (this.deck.length < 2) throw new Error('没有足够的牌来发转牌/河牌');
+        this.deck.pop(); // 烧掉一张牌
+        this.communityCards.push(this.deck.pop());
+    }
   }
 
   /**

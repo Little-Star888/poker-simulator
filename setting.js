@@ -23,6 +23,16 @@ export const Settings = {
   suggestOnTurn: false,
   suggestOnRiver: false,
 
+  // 新增：牌局预设
+  usePresetHands: false,
+  usePresetCommunity: false,
+  presetCards: { 
+    players: {}, 
+    flop: new Array(3).fill(null), 
+    turn: new Array(1).fill(null), 
+    river: new Array(1).fill(null) 
+  },
+
   // ===== 配置更新接口 =====
   /**
    * 更新一个或多个配置项
