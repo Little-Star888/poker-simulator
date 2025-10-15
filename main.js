@@ -717,6 +717,12 @@ function updateUI() {
       el.style.backgroundImage = '';
     }
   });
+
+  // 更新底池显示
+  const potAmountEl = document.getElementById('pot-amount');
+  if (potAmountEl) {
+    potAmountEl.textContent = gameState.pot;
+  }
 }
 
 function log(message) {

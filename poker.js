@@ -166,11 +166,14 @@ export class PokerGame {
 
     // 重置每轮状态
     this.players.forEach(p => {
+      // 在新一轮开始前（翻牌、转牌、河牌），将上一轮的投注收集进主底池
+      if (roundName !== 'preflop') {
+        this.pot += p.bet;
+        p.bet = 0;
+      }
+      // 为所有未弃牌的玩家重置行动状态
       if (!p.isFolded) {
         p.hasActed = false;
-      }
-      if (roundName !== 'preflop') {
-        p.bet = 0;
       }
     });
 
@@ -451,8 +454,9 @@ export class PokerGame {
    * 返回深拷贝，避免外部修改内部状态
    */
   getGameState() {
-    // 动态计算总底池
-    const totalPot = this.players.reduce((sum, p) => sum + p.totalInvested, 0);
+    // 动态计算总底池：已收集的底池 + 当前下注轮的未收集投注
+    const currentRoundBets = this.players.reduce((sum, p) => sum + p.bet, 0);
+    const totalPot = this.pot + currentRoundBets;
 
     return {
       players: this.players.map(p => ({ ...p })), // 浅拷贝对象（holeCards 是字符串数组，安全）

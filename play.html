@@ -180,6 +180,22 @@
       background-position: center;
     }
 
+    .pot-display {
+        position: absolute;
+        top: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.6);
+        color: #FFD700; /* 金色字体 */
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 6;
+        border: 1px solid #FFD700;
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+    }
+
     /* 操作栏 - 始终显示空白区域 */
     .action-bar {
       height: 100px;
@@ -442,6 +458,11 @@
           </div>
         </div>
 
+        <!-- 底池显示 -->
+        <div id="pot-display" class="pot-display">
+          底池: <span id="pot-amount">0</span>
+        </div>
+
         <!-- 公共牌区 -->
         <div class="community-cards">
           <div class="card community-card"></div>
@@ -493,7 +514,7 @@
             </label>
           </div>
           <div class="form-row">
-            <label>玩家思考等待时间 (ms):</label>
+            <label>玩家思考时间 (ms):</label>
             <input type="number" id="auto-delay" value="1000" min="100" style="width:100px;" />
           </div>
           <div class="form-row">
