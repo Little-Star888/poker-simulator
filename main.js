@@ -86,8 +86,15 @@ function init() {
   minStackInput.addEventListener('change', () => Settings.update({ minStack: parseInt(minStackInput.value) || 2000 }));
   maxStackInput.addEventListener('change', () => Settings.update({ maxStack: parseInt(maxStackInput.value) || 2000 }));
   potTypeSelect.addEventListener('change', () => Settings.update({ potType: potTypeSelect.value }));
-  sbInput.addEventListener('change', () => Settings.update({ sb: parseInt(sbInput.value) || 50 }));
-  bbInput.addEventListener('change', () => Settings.update({ bb: parseInt(bbInput.value) || 100 }));
+
+  // 小盲注是主要输入源，严格控制2倍关系
+  sbInput.addEventListener('input', () => {
+    const sbValue = parseInt(sbInput.value) || 0;
+    const newBbValue = sbValue * 2;
+    bbInput.value = newBbValue;
+    Settings.update({ sb: sbValue, bb: newBbValue });
+  });
+
   showHoleCardsCheckbox.addEventListener('change', () => Settings.update({ showHoleCards: showHoleCardsCheckbox.checked }));
   autoDelayInput.addEventListener('change', () => Settings.update({ autoDelay: parseInt(autoDelayInput.value) || 1000 }));
   suggestPreflopCheckbox.addEventListener('change', () => Settings.update({ suggestOnPreflop: suggestPreflopCheckbox.checked }));
