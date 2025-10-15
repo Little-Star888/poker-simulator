@@ -17,6 +17,12 @@ export const Settings = {
   maxStack: 2200,         // 最大初始筹码
   potType: 'unrestricted', // 底池类型: unrestricted, single_raised, 3bet, 4bet
 
+  // 新增：GTO建议阶段开关
+  suggestOnPreflop: true,
+  suggestOnFlop: true,
+  suggestOnTurn: true,
+  suggestOnRiver: true,
+
   // ===== 配置更新接口 =====
   /**
    * 更新一个或多个配置项

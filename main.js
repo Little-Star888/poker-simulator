@@ -48,6 +48,10 @@ const modeSelect = document.getElementById('mode-select');
 const bbInput = document.getElementById('bb-input');
 const showHoleCardsCheckbox = document.getElementById('show-hole-cards');
 const autoDelayInput = document.getElementById('auto-delay');
+const suggestPreflopCheckbox = document.getElementById('suggest-preflop');
+const suggestFlopCheckbox = document.getElementById('suggest-flop');
+const suggestTurnCheckbox = document.getElementById('suggest-turn');
+const suggestRiverCheckbox = document.getElementById('suggest-river');
 const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
 const consoleLog = document.getElementById('console-log');
@@ -64,6 +68,10 @@ function init() {
   bbInput.value = Settings.bb;
   showHoleCardsCheckbox.checked = Settings.showHoleCards;
   autoDelayInput.value = Settings.autoDelay;
+  suggestPreflopCheckbox.checked = Settings.suggestOnPreflop;
+  suggestFlopCheckbox.checked = Settings.suggestOnFlop;
+  suggestTurnCheckbox.checked = Settings.suggestOnTurn;
+  suggestRiverCheckbox.checked = Settings.suggestOnRiver;
 
   modeSelect.addEventListener('change', () => {
     Settings.update({ mode: modeSelect.value });
@@ -82,6 +90,10 @@ function init() {
   bbInput.addEventListener('change', () => Settings.update({ bb: parseInt(bbInput.value) || 100 }));
   showHoleCardsCheckbox.addEventListener('change', () => Settings.update({ showHoleCards: showHoleCardsCheckbox.checked }));
   autoDelayInput.addEventListener('change', () => Settings.update({ autoDelay: parseInt(autoDelayInput.value) || 1000 }));
+  suggestPreflopCheckbox.addEventListener('change', () => Settings.update({ suggestOnPreflop: suggestPreflopCheckbox.checked }));
+  suggestFlopCheckbox.addEventListener('change', () => Settings.update({ suggestOnFlop: suggestFlopCheckbox.checked }));
+  suggestTurnCheckbox.addEventListener('change', () => Settings.update({ suggestOnTurn: suggestTurnCheckbox.checked }));
+  suggestRiverCheckbox.addEventListener('change', () => Settings.update({ suggestOnRiver: suggestRiverCheckbox.checked }));
 
   // 绑定按钮
   startBtn.addEventListener('click', startNewGame);
@@ -187,18 +199,27 @@ async function processNextAction() {
   try {
     const gameState = game.getGameState();
 
-    // 新增：为当前玩家获取GTO建议并显示
-    try {
-      const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
-      renderSuggestion(suggestion, currentPlayerId);
-    } catch (apiError) {
-      const display = document.getElementById('suggestion-display');
-      if (display.textContent.includes('等待玩家行动...')) {
-        display.innerHTML = '';
+    // 根据开关状态，判断是否要获取GTO建议
+    const round = game.currentRound;
+    let shouldSuggest = false;
+    if (round === 'preflop' && Settings.suggestOnPreflop) shouldSuggest = true;
+    if (round === 'flop' && Settings.suggestOnFlop) shouldSuggest = true;
+    if (round === 'turn' && Settings.suggestOnTurn) shouldSuggest = true;
+    if (round === 'river' && Settings.suggestOnRiver) shouldSuggest = true;
+
+    if (shouldSuggest) {
+      try {
+        const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
+        renderSuggestion(suggestion, currentPlayerId);
+      } catch (apiError) {
+        const display = document.getElementById('suggestion-display');
+        if (display.textContent.includes('等待玩家行动...')) {
+          display.innerHTML = '';
+        }
+        display.innerHTML += `<div style="color: #ff6b6b;">获取 ${currentPlayerId} 的建议失败: ${apiError.message}</div>`;
+        display.scrollTop = display.scrollHeight;
+        log(`获取GTO建议时出错: ${apiError.message}`);
       }
-      display.innerHTML += `<div style="color: #ff6b6b;">获取 ${currentPlayerId} 的建议失败: ${apiError.message}</div>`;
-      display.scrollTop = display.scrollHeight;
-      log(`获取GTO建议时出错: ${apiError.message}`);
     }
 
     if (Settings.mode === 'manual') {
