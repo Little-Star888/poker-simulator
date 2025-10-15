@@ -69,7 +69,6 @@ function init() {
   minStackInput.value = Settings.minStack;
   maxStackInput.value = Settings.maxStack;
   potTypeSelect.value = Settings.potType;
-  p1RoleSelect.value = Settings.p1Role;
   sbInput.value = Settings.sb;
   bbInput.value = Settings.bb;
   autoDelayInput.value = Settings.autoDelay;
@@ -79,6 +78,8 @@ function init() {
   suggestRiverCheckbox.checked = Settings.suggestOnRiver;
   usePresetHandsCheckbox.checked = Settings.usePresetHands;
   usePresetCommunityCheckbox.checked = Settings.usePresetCommunity;
+
+  updateP1RoleSelectOptions();
 
   // Remove inline style to allow CSS classes to control visibility
   document.getElementById('preset-controls').style.display = '';
@@ -93,6 +94,7 @@ function init() {
     Settings.update({ playerCount: parseInt(playerCountInput.value) || 8 });
     updatePlayerDisplay();
     updateGtoFilterCheckboxes();
+    updateP1RoleSelectOptions();
     if (Settings.usePresetHands) {
       buildPlayerSlots();
     }
@@ -469,6 +471,47 @@ function updateGtoFilterCheckboxes() {
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(playerId));
         gtoFilterPlayersContainer.appendChild(label);
+    }
+}
+
+function getRoleOrder(playerCount) {
+    // This is a copy of the logic from poker.js
+    switch (playerCount) {
+        case 2: return ['SB', 'BTN'];
+        case 3: return ['SB', 'BB', 'BTN'];
+        case 4: return ['SB', 'BB', 'CO', 'BTN'];
+        case 5: return ['SB', 'BB', 'UTG', 'CO', 'BTN'];
+        case 6: return ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
+        case 7: return ['SB', 'BB', 'UTG', 'MP1', 'HJ', 'CO', 'BTN'];
+        case 8: return ['SB', 'BB', 'UTG', 'UTG+1', 'MP1', 'HJ', 'CO', 'BTN'];
+        // Default case for 9 or more, though UI is limited to 8
+        default:
+            const baseRoles = ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'MP1', 'MP2', 'HJ', 'CO'];
+            return baseRoles.slice(0, playerCount - 1).concat('BTN');
+    }
+}
+
+function updateP1RoleSelectOptions() {
+    const playerCount = Settings.playerCount;
+    const availableRoles = getRoleOrder(playerCount);
+    const currentP1Role = Settings.p1Role;
+
+    p1RoleSelect.innerHTML = '<option value="random">随机</option>'; // Start with random
+
+    availableRoles.forEach(role => {
+        const option = document.createElement('option');
+        option.value = role;
+        option.textContent = role;
+        p1RoleSelect.appendChild(option);
+    });
+
+    // After repopulating, try to set the previously selected value.
+    // If it's no longer valid, switch to 'random'.
+    if (availableRoles.includes(currentP1Role)) {
+        p1RoleSelect.value = currentP1Role;
+    } else {
+        p1RoleSelect.value = 'random';
+        Settings.update({ p1Role: 'random' });
     }
 }
 
