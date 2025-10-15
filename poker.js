@@ -1,5 +1,5 @@
 // poker.js
-import { Settings } from './setting.js';
+// Settings are now passed into the reset() method, so direct import is removed.
 
 /**
  * 德州扑克核心引擎
@@ -9,22 +9,26 @@ import { Settings } from './setting.js';
 export class PokerGame {
   constructor() {
     this.handCount = 0; // 新增：手牌计数器
-    this.reset();
+    // The game is now reset via a call from main.js, not on construction.
   }
 
   /**
    * 重置整个牌局（新游戏开始前调用）
    */
-  reset(settings = null) {
-    this.usePresetHands = settings && settings.usePresetHands;
-    this.usePresetCommunity = settings && settings.usePresetCommunity;
-    this.presetCards = settings ? settings.presetCards : null;
+  reset(settings) {
+    if (!settings) {
+      throw new Error("Settings object must be provided to the game engine.");
+    }
+    this.settings = settings;
+    this.usePresetHands = this.settings && this.settings.usePresetHands;
+    this.usePresetCommunity = this.settings && this.settings.usePresetCommunity;
+    this.presetCards = this.settings ? this.settings.presetCards : null;
 
-    const playerCount = Settings.playerCount;
+    const playerCount = this.settings.playerCount;
     // 玩家状态：根据设置创建
     this.players = Array.from({ length: playerCount }, (_, i) => {
-      const min = Math.min(Settings.minStack, Settings.maxStack);
-      const max = Math.max(Settings.minStack, Settings.maxStack);
+      const min = Math.min(this.settings.minStack, this.settings.maxStack);
+      const max = Math.max(this.settings.minStack, this.settings.maxStack);
       const randomStack = Math.floor(Math.random() * (max - min + 1)) + min;
 
       return {
@@ -45,8 +49,8 @@ export class PokerGame {
     this.currentRound = null;     // 'preflop', 'flop', 'turn', 'river'
     this.currentPlayerIndex = -1; // 当前应行动的玩家索引
     this.highestBet = 0;          // 当前下注轮最高下注额
-    this.minRaise = Settings.bb;  // 最小加注额（初始为大盲）
-    this.lastRaiseAmount = Settings.bb; // 新增：本轮最后的加注额
+    this.minRaise = this.settings.bb;  // 最小加注额（初始为大盲）
+    this.lastRaiseAmount = this.settings.bb; // 新增：本轮最后的加注额
     this.deck = [];
     this.lastAggressorIndex = -1; // 新增：最后一位攻击性玩家的索引
     this.preflopRaiseCount = 0; // 新增：翻牌前加注次数计数器
@@ -215,8 +219,8 @@ export class PokerGame {
 
     this.setCurrentRound(roundName);
     this.highestBet = 0;
-    this.minRaise = Settings.bb;
-    this.lastRaiseAmount = Settings.bb; // 重置最后的加注额
+    this.minRaise = this.settings.bb;
+    this.lastRaiseAmount = this.settings.bb; // 重置最后的加注额
     this.lastAggressorIndex = -1; // 重置最后攻击者
 
     // 重置每轮状态
@@ -262,8 +266,8 @@ export class PokerGame {
     const sbPlayer = this.players[this.sbIndex];
     const bbPlayer = this.players[this.bbIndex];
     
-    const sb = Math.min(Settings.sb, sbPlayer.stack);
-    const bb = Math.min(Settings.bb, bbPlayer.stack);
+    const sb = Math.min(this.settings.sb, sbPlayer.stack);
+    const bb = Math.min(this.settings.bb, bbPlayer.stack);
 
     sbPlayer.bet = sb;
     sbPlayer.stack -= sb;

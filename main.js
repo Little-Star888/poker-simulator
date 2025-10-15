@@ -60,6 +60,23 @@ const cardPicker = document.getElementById('card-picker');
 
 // ========== 初始化 ==========
 function init() {
+  // On initial load, populate UI controls with values from the Settings object.
+  modeSelect.value = Settings.mode;
+  playerCountInput.value = Settings.playerCount;
+  minStackInput.value = Settings.minStack;
+  maxStackInput.value = Settings.maxStack;
+  potTypeSelect.value = Settings.potType;
+  sbInput.value = Settings.sb;
+  bbInput.value = Settings.bb;
+  showHoleCardsCheckbox.checked = Settings.showHoleCards;
+  autoDelayInput.value = Settings.autoDelay;
+  suggestPreflopCheckbox.checked = Settings.suggestOnPreflop;
+  suggestFlopCheckbox.checked = Settings.suggestOnFlop;
+  suggestTurnCheckbox.checked = Settings.suggestOnTurn;
+  suggestRiverCheckbox.checked = Settings.suggestOnRiver;
+  usePresetHandsCheckbox.checked = Settings.usePresetHands;
+  usePresetCommunityCheckbox.checked = Settings.usePresetCommunity;
+
   // 绑定配置变更
   modeSelect.addEventListener('change', () => {
     Settings.update({ mode: modeSelect.value });
@@ -359,12 +376,8 @@ function startNewGame() {
     }
   }
   
-  const settingsForGame = {
-      usePresetHands: Settings.usePresetHands,
-      usePresetCommunity: Settings.usePresetCommunity,
-      presetCards: Settings.presetCards
-  };
-  game.reset(settingsForGame);
+  // Pass the entire live Settings object to the game engine.
+  game.reset(Settings);
 
   isGamePaused = false;
 
