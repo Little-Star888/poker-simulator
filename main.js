@@ -8,6 +8,7 @@ import { getSuggestion } from './api_service.js';
 let game = new PokerGame();
 let isGameRunning = false;
 let isWaitingForManualInput = false;
+let isGamePaused = false;
 
 // 存储玩家行动记录 - 改为数组结构以支持同一阶段多次操作
 let actionRecords = {
@@ -53,7 +54,7 @@ const suggestFlopCheckbox = document.getElementById('suggest-flop');
 const suggestTurnCheckbox = document.getElementById('suggest-turn');
 const suggestRiverCheckbox = document.getElementById('suggest-river');
 const startBtn = document.getElementById('start-btn');
-const restartBtn = document.getElementById('restart-btn');
+const pauseBtn = document.getElementById('pause-btn');
 const consoleLog = document.getElementById('console-log');
 
 // ========== 初始化 ==========
@@ -103,8 +104,8 @@ function init() {
   suggestRiverCheckbox.addEventListener('change', () => Settings.update({ suggestOnRiver: suggestRiverCheckbox.checked }));
 
   // 绑定按钮
-  startBtn.addEventListener('click', startNewGame);
-  restartBtn.addEventListener('click', restartGame);
+  startBtn.addEventListener('click', handleStartOrRestartClick);
+  pauseBtn.addEventListener('click', handlePauseResumeClick);
 
   // 手动操作按钮
   foldBtn.addEventListener('click', () => submitManualAction('FOLD'));
@@ -121,12 +122,50 @@ function init() {
 }
 
 // ========== 游戏控制 ==========
+
+function handleStartOrRestartClick() {
+    if (this.textContent === '开始牌局') {
+        startNewGame();
+    } else { // 按钮文字是 "重新开始"
+        restartGame();
+    }
+}
+
+function handlePauseResumeClick() {
+    if (!isGameRunning) return; // 游戏未开始时，此按钮应被禁用
+
+    if (isGamePaused) { // 当前是暂停状态，点击后继续
+        isGamePaused = false;
+        log('▶️ 牌局继续');
+        
+        // 更新按钮状态
+        pauseBtn.textContent = '暂停';
+        startBtn.textContent = '开始牌局';
+        startBtn.disabled = true;
+
+        // 在自动模式下，重新启动游戏流程
+        if (Settings.mode === 'auto') {
+            processNextAction(); 
+        }
+    } else { // 当前是运行状态，点击后暂停
+        isGamePaused = true;
+        log('⏸️ 牌局暂停');
+
+        // 更新按钮状态
+        pauseBtn.textContent = '继续';
+        startBtn.textContent = '重新开始';
+        startBtn.disabled = false;
+    }
+}
+
 function startNewGame() {
   console.log('startNewGame 被调用');
-  if (isGameRunning) {
+  // 当游戏正在运行且未暂停时，"开始游戏"按钮无效
+  if (isGameRunning && !isGamePaused) {
     log('游戏已在运行中');
     return;
   }
+  isGamePaused = false; // 重置暂停状态
 
   try {
     // 重置游戏状态
@@ -154,6 +193,12 @@ function startNewGame() {
     log(`[SYSTEM] ${game.players[game.bbIndex].id} posts Big Blind ${Settings.bb}`);
     updateUI();
     console.log('UI已更新');
+
+    // 更新按钮状态
+    startBtn.textContent = '开始牌局';
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    pauseBtn.textContent = '暂停';
 
     // 自动模式下立即开始
     if (Settings.mode === 'auto') {
@@ -186,7 +231,7 @@ function restartGame() {
 // ========== 主流程引擎 ==========
 async function processNextAction() {
   const TAG = 'processNextAction '
-  if (!isGameRunning) return;
+  if (!isGameRunning || isGamePaused) return;
 
   const currentPlayerId = game.getCurrentPlayerId();
   log(`调试: 处理下一个动作，当前玩家: ${currentPlayerId}`);
@@ -427,9 +472,15 @@ function renderSuggestion(suggestion, playerId, phase) {
 
 function endGame() {
   isGameRunning = false;
+  isGamePaused = false;
   isWaitingForManualInput = false;
   toggleManualActionArea(false);
   log('🎉 牌局结束！（本版本不计算胜负）');
+
+  startBtn.textContent = '开始牌局';
+  startBtn.disabled = false;
+  pauseBtn.textContent = '暂停';
+  pauseBtn.disabled = true;
 }
 
 // ========== 手动模式交互 ==========

@@ -313,6 +313,14 @@
       background-color: #c82333;
     }
 
+    .game-control-btn:disabled,
+    .game-control-btn:disabled:hover {
+      background-color: #cccccc; /* 灰色背景 */
+      color: #888888; /* 深灰色文字 */
+      cursor: not-allowed; /* 禁止光标 */
+      box-shadow: none; /* 移除阴影 */
+    }
+
     /* Console 日志 */
     #console-log {
       flex: 1;
@@ -477,7 +485,7 @@
       <div class="action-bar" style="justify-content: space-around; align-items: center;">
         <div id="game-controls">
           <button id="start-btn" class="game-control-btn start-btn">开始牌局</button>
-          <button id="restart-btn" class="game-control-btn restart-btn">重新开始</button>
+          <button id="pause-btn" class="game-control-btn restart-btn" disabled>暂停</button>
         </div>
         <!-- 手动操作区 -->
         <div id="manual-action-area">
