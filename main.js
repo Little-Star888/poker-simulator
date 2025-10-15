@@ -75,6 +75,9 @@ function init() {
   usePresetHandsCheckbox.checked = Settings.usePresetHands;
   usePresetCommunityCheckbox.checked = Settings.usePresetCommunity;
 
+  // Remove inline style to allow CSS classes to control visibility
+  document.getElementById('preset-controls').style.display = '';
+
   // 绑定配置变更
   modeSelect.addEventListener('change', () => {
     Settings.update({ mode: modeSelect.value });
@@ -125,6 +128,7 @@ function init() {
   log('德州扑克 AI 测试模拟器已加载');
   injectStyles(); // Workaround for CSS file modification issues
   reorganizeLayout(); // Rearrange sections for 3-column layout
+  updatePresetVisibility(); // Ensure preset UI visibility is correct on load
 }
 
 // ========== 牌局预设功能 ==========
@@ -145,9 +149,9 @@ function updatePresetVisibility() {
         resetPresetData();
     }
 
-    presetControls.style.display = anyPresetEnabled ? 'block' : 'none';
-    presetPlayerHandsContainer.style.display = Settings.usePresetHands ? 'block' : 'none';
-    presetCommunityCardsContainer.style.display = Settings.usePresetCommunity ? 'block' : 'none';
+    presetControls.classList.toggle('hidden-by-js', !anyPresetEnabled);
+    presetPlayerHandsContainer.classList.toggle('hidden-by-js', !Settings.usePresetHands);
+    presetCommunityCardsContainer.classList.toggle('hidden-by-js', !Settings.usePresetCommunity);
 }
 
 function initPresetUI() {
@@ -827,37 +831,39 @@ function reorganizeLayout() {
 
 function injectStyles() {
   const css = `
-    /* Revert control panel to be a row, and style the two new main columns */
+    /* --- Layout Workaround Styles --- */
+
+    /* Main 3-column layout */
     .control-panel {
       flex-direction: row !important;
     }
     .control-panel-left {
-      flex: 2 !important; /* Center column */
+      flex: 2 !important;
     }
     .control-panel-right {
-      flex: 3 !important; /* Right column */
+      flex: 3 !important;
       display: flex;
       flex-direction: column;
     }
-    /* Ensure console log section can grow */
-    .control-panel-right .section:has(#console-log) {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    
+
+    /* Player Preset Layout */
     #preset-player-hands-container {
-      display: grid !important;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
-      gap: 15px !important;
-      align-items: start !important;
+      display: grid !important; /* Force grid layout */
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
+      align-items: start;
     }
     #preset-player-hands-container > h4 {
-      grid-column: 1 / -1 !important;
-      margin-bottom: 0 !important;
+      grid-column: 1 / -1;
+      margin-bottom: 0;
     }
     .player-hand-preset {
-      margin-bottom: 0 !important; /* Override old margin */
+      margin-bottom: 0;
+    }
+
+    /* JS Helper Class to forcefully hide elements */
+    .hidden-by-js {
+      display: none !important;
     }
   `;
   const style = document.createElement('style');
