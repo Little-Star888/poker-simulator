@@ -252,9 +252,9 @@ function handleSlotClick(event) {
   activeSelectionSlot.classList.add('active-selection');
 }
 
-function animateCardToSlot(pickerCard, slot, cardText) {
+function animateCardToSlot(pickerCard, destinationElement, cardText, originalSlot) {
     const startRect = pickerCard.getBoundingClientRect();
-    const endRect = slot.getBoundingClientRect();
+    const endRect = destinationElement.getBoundingClientRect();
 
     const movingCard = document.createElement('div');
     movingCard.style.position = 'fixed';
@@ -283,8 +283,8 @@ function animateCardToSlot(pickerCard, slot, cardText) {
     // After the animation finishes
     setTimeout(() => {
         document.body.removeChild(movingCard);
-        // Now call the original logic to actually assign the card to the slot
-        assignCard(slot, cardText);
+        // Call assignCard with the original preset slot
+        assignCard(originalSlot, cardText);
     }, 420); // Slightly longer than the transition duration
 }
 
@@ -302,8 +302,22 @@ function handleCardPickerClick(event) {
     return;
   }
 
-  // The original assignCard is now called from the animation function
-  animateCardToSlot(pickerCard, activeSelectionSlot, cardText);
+  const { type, playerId, cardIndex } = activeSelectionSlot.dataset;
+  let destinationElement = activeSelectionSlot; // Default to the slot itself for community cards
+
+  if (type === 'player') {
+    const playerOnTable = document.querySelector(`.player[data-player="${playerId}"]`);
+    if (playerOnTable) {
+        const cardOnTable = playerOnTable.querySelectorAll('.hole-card')[parseInt(cardIndex)];
+        if (cardOnTable) {
+            destinationElement = cardOnTable; // The animation's destination is the card on the table
+        }
+    }
+  }
+
+  // Pass the original slot `activeSelectionSlot` to the animation function
+  // so it knows which preset slot to update after the animation.
+  animateCardToSlot(pickerCard, destinationElement, cardText, activeSelectionSlot);
 
   activeSelectionSlot.classList.remove('active-selection');
   activeSelectionSlot = null;
@@ -327,31 +341,104 @@ function assignCard(slot, cardText) {
   const { type, playerId, cardIndex, stage } = slot.dataset;
   if (type === 'player') {
     Settings.presetCards.players[playerId][parseInt(cardIndex)] = cardText;
+    const playerOnTable = document.querySelector(`.player[data-player="${playerId}"]`);
+    if (playerOnTable) {
+        const cardOnTable = playerOnTable.querySelectorAll('.hole-card')[parseInt(cardIndex)];
+        setCardImage(cardOnTable, cardText);
+    }
   } else {
     Settings.presetCards[stage][parseInt(cardIndex)] = cardText;
   }
 }
 
 function unassignCard(slot) {
+
   const cardText = slot.dataset.card;
+
   if (!cardText) return;
 
-  slot.style.backgroundImage = '';
-  delete slot.dataset.card;
 
-  const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', '"')}"]`);
-  if (pickerCard) {
-    pickerCard.classList.remove('dimmed');
-  }
-
-  usedCards.delete(cardText);
 
   const { type, playerId, cardIndex, stage } = slot.dataset;
+
+
+
+  // 1. Find all UI elements related to this card
+
+  const elementsToAnimate = [slot];
+
+  let cardOnTable = null;
+
   if (type === 'player') {
-    Settings.presetCards.players[playerId][parseInt(cardIndex)] = null;
-  } else {
-    Settings.presetCards[stage][parseInt(cardIndex)] = null;
+
+    const playerOnTable = document.querySelector(`.player[data-player="${playerId}"]`);
+
+    if (playerOnTable) {
+
+        cardOnTable = playerOnTable.querySelectorAll('.hole-card')[parseInt(cardIndex)];
+
+        if (cardOnTable) elementsToAnimate.push(cardOnTable);
+
+    }
+
   }
+
+
+
+  // 2. Trigger animation on all elements
+
+  elementsToAnimate.forEach(el => el.classList.add('card-unassigned'));
+
+
+
+  // 3. After animation, update data and clean up UI
+
+  setTimeout(() => {
+
+    // Update data model
+
+    if (type === 'player') {
+
+      Settings.presetCards.players[playerId][parseInt(cardIndex)] = null;
+
+    } else {
+
+      Settings.presetCards[stage][parseInt(cardIndex)] = null;
+
+    }
+
+    usedCards.delete(cardText);
+
+
+
+    // Update UI state
+
+    const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', '"' )}"]`);
+
+    if (pickerCard) {
+
+      pickerCard.classList.remove('dimmed');
+
+    }
+
+    
+
+    // Reset the animated elements' appearance and remove animation class
+
+    elementsToAnimate.forEach(el => {
+
+        el.style.backgroundImage = '';
+
+        el.classList.remove('card-unassigned');
+
+    });
+
+    delete slot.dataset.card;
+
+
+
+  }, 300); // Must match animation duration
+
 }
 
 function validatePresetCards() {
@@ -1029,6 +1116,15 @@ function injectStyles() {
     /* JS Helper Class to forcefully hide elements */
     .hidden-by-js {
       display: none !important;
+    }
+
+    /* --- Preset Card Removal Animation --- */
+    .card-unassigned {
+      animation: card-unassign-anim 0.3s ease-in forwards;
+    }
+    @keyframes card-unassign-anim {
+      from { transform: scale(1); opacity: 1; }
+      to { transform: scale(0.5); opacity: 0; }
     }
   `;
   const style = document.createElement('style');
