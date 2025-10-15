@@ -531,13 +531,17 @@ function startNewGame() {
     game.startNewRound('preflop');
     isGameRunning = true;
 
+    // Disable preset controls during the game
+    document.getElementById('preset-section').style.opacity = '0.5';
+    document.getElementById('preset-section').style.pointerEvents = 'none';
+
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
 
     log('✅ 新牌局开始！盲注: SB=' + Settings.sb + ', BB=' + Settings.bb);
     log(`[SYSTEM] ${game.players[game.sbIndex].id} posts Small Blind ${Settings.sb}`);
     log(`[SYSTEM] ${game.players[game.bbIndex].id} posts Big Blind ${Settings.bb}`);
-    updateUI();
+    updateUI({ isInitialDeal: true });
 
     startBtn.textContent = '开始牌局';
     startBtn.disabled = true;
@@ -879,6 +883,10 @@ function endGame() {
   startBtn.disabled = false;
   pauseBtn.textContent = '暂停';
   pauseBtn.disabled = true;
+
+  // Re-enable preset controls
+  document.getElementById('preset-section').style.opacity = '1';
+  document.getElementById('preset-section').style.pointerEvents = 'auto';
 }
 
 function showManualActionPanel(playerId) {
@@ -994,7 +1002,8 @@ function setCardImage(cardElement, cardText) {
   cardElement.style.backgroundImage = cardText ? `url(${getCardImagePath(cardText)})` : '';
 }
 
-function updateUI() {
+function updateUI(options = {}) {
+  const isInitialDeal = options.isInitialDeal || false;
   const gameState = game.getGameState();
 
   document.querySelectorAll('.player').forEach(el => {
@@ -1008,8 +1017,27 @@ function updateUI() {
     // 默认明牌模式，始终显示所有玩家的底牌
     const cardEls = el.querySelectorAll('.hole-card');
     if (cardEls.length >= 2) {
-      setCardImage(cardEls[0], player.holeCards[0]);
-      setCardImage(cardEls[1], player.holeCards[1]);
+        const shouldAnimate = isInitialDeal && !Settings.usePresetHands;
+
+        if (shouldAnimate) {
+            [cardEls[0], cardEls[1]].forEach((cardEl, index) => {
+                const cardText = player.holeCards[index];
+                if (cardText) {
+                    // Set image first, then trigger animation
+                    setCardImage(cardEl, cardText);
+                    cardEl.classList.add('card-dealt-anim');
+                    setTimeout(() => cardEl.classList.remove('card-dealt-anim'), 500);
+                } else {
+                    setCardImage(cardEl, null);
+                }
+            });
+        } else if (!isInitialDeal) {
+            // On subsequent UI updates (not the initial deal), just set the image.
+            // This is important for showdown or if state changes mid-game.
+            setCardImage(cardEls[0], player.holeCards[0]);
+            setCardImage(cardEls[1], player.holeCards[1]);
+        }
+        // If (isInitialDeal && usePresetHands), do nothing, as cards are already set by live-update.
     }
 
     const stackEl = el.querySelector('.stack');
@@ -1125,6 +1153,15 @@ function injectStyles() {
     @keyframes card-unassign-anim {
       from { transform: scale(1); opacity: 1; }
       to { transform: scale(0.5); opacity: 0; }
+    }
+
+    /* --- Card Dealing Animation --- */
+    .hole-card.card-dealt-anim {
+      animation: card-fade-in 0.5s ease-out;
+    }
+    @keyframes card-fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   `;
   const style = document.createElement('style');
