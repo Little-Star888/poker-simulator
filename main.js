@@ -653,12 +653,42 @@ function renderSuggestion(suggestion, playerId, phase) {
     title.style.color = '#66d9ef';
     suggestionWrapper.appendChild(title);
 
-    const pre = document.createElement('pre');
-    pre.style.margin = '0';
-    pre.style.whiteSpace = 'pre-wrap';
-    pre.style.wordBreak = 'break-all';
-    pre.textContent = JSON.stringify(suggestion, null, 2);
-    suggestionWrapper.appendChild(pre);
+    if (phase === 'preflop' && suggestion.localResult && suggestion.myCards) {
+        try {
+            const myCards = suggestion.myCards.join(',');
+            const scenario = suggestion.localResult.scenarioDescription;
+            const desc = suggestion.localResult.description;
+
+            if (myCards && scenario && desc) {
+                const formattedText = `手牌：${myCards}, ${scenario}，${desc}`;
+
+                const p = document.createElement('p');
+                p.style.margin = '0';
+                p.style.padding = '5px 0';
+                p.style.whiteSpace = 'pre-wrap';
+                p.style.wordBreak = 'break-all';
+                p.textContent = formattedText;
+                suggestionWrapper.appendChild(p);
+            } else {
+                throw new Error("未能获取翻前建议");
+            }
+        } catch (e) {
+            console.error("未能获取翻前建议:", e, suggestion);
+            const pre = document.createElement('pre');
+            pre.style.margin = '0';
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.style.wordBreak = 'break-all';
+            pre.textContent = JSON.stringify(suggestion, null, 2);
+            suggestionWrapper.appendChild(pre);
+        }
+    } else {
+        const pre = document.createElement('pre');
+        pre.style.margin = '0';
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.style.wordBreak = 'break-all';
+        pre.textContent = JSON.stringify(suggestion, null, 2);
+        suggestionWrapper.appendChild(pre);
+    }
 
     phaseContainer.appendChild(suggestionWrapper);
     display.scrollTop = display.scrollHeight;
