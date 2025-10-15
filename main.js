@@ -188,13 +188,16 @@ async function processNextAction() {
     const gameState = game.getGameState();
 
     // 新增：为当前玩家获取GTO建议并显示
-    const suggestionDisplay = document.getElementById('suggestion-display');
-    suggestionDisplay.innerHTML = `<span>正在为 <b>${currentPlayerId}</b> 获取建议...</span>`;
     try {
       const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
-      renderSuggestion(suggestion);
+      renderSuggestion(suggestion, currentPlayerId);
     } catch (apiError) {
-      suggestionDisplay.textContent = `获取建议失败: ${apiError.message}`;
+      const display = document.getElementById('suggestion-display');
+      if (display.textContent.includes('等待玩家行动...')) {
+        display.innerHTML = '';
+      }
+      display.innerHTML += `<div style="color: #ff6b6b;">获取 ${currentPlayerId} 的建议失败: ${apiError.message}</div>`;
+      display.scrollTop = display.scrollHeight;
       log(`获取GTO建议时出错: ${apiError.message}`);
     }
 
@@ -329,63 +332,48 @@ async function showdown() {
 /**
  * 将从API获取的GTO建议渲染到UI上
  * @param {object} suggestion - GTO建议响应对象
+ * @param {string} playerId - 当前玩家ID
  */
-function renderSuggestion(suggestion) {
+function renderSuggestion(suggestion, playerId) {
     const display = document.getElementById('suggestion-display');
+    
+    // 首次渲染时，清空 "等待玩家行动..." 的提示
+    if (display.textContent.includes('等待玩家行动...')) {
+        display.innerHTML = '';
+    }
+
     if (!suggestion) {
-        display.innerHTML = '<span>无法获取建议或建议为空。</span>';
+        display.innerHTML += `<div style="color: #ff6b6b;">为 ${playerId} 获取建议失败或建议为空。</div>`;
+        display.scrollTop = display.scrollHeight;
         return;
     }
 
-    let html = '';
+    // 创建一个新的容器来存放这次的建议
+    const suggestionWrapper = document.createElement('div');
+    suggestionWrapper.style.marginBottom = '15px';
+    suggestionWrapper.style.borderBottom = '1px solid #444';
+    suggestionWrapper.style.paddingBottom = '10px';
 
-    // 格式一：处理包含多个动作和频率的 actionLines (通常是翻后)
-    if (suggestion.actionLines && suggestion.actionLines.length > 0) {
-        html += '<ul style="list-style-type: none; padding: 0; margin: 0;">';
-        for (const actionLine of suggestion.actionLines) {
-            const percentage = (actionLine.frequency * 100).toFixed(1);
-            const actionName = actionLine.action.name;
-            const amount = actionLine.action.amount > 0 ? ` ${actionLine.action.amount}` : '';
+    // 添加玩家标题
+    const title = document.createElement('h4');
+    title.textContent = `给 ${playerId} 的GTO建议 (${new Date().toLocaleTimeString()}) :`;
+    title.style.margin = '0 0 5px 0';
+    title.style.color = '#66d9ef'; // 亮蓝色标题
+    suggestionWrapper.appendChild(title);
 
-            html += `<li style="margin-bottom: 5px; display: flex; align-items: center;">
-                        <strong style="min-width: 120px;">${actionName}${amount}</strong>
-                        <div style="flex-grow: 1; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
-                            <div style="width: ${percentage}%; background: #4CAF50; color: white; text-align: right; padding: 2px 5px; font-size: 12px;">${percentage}%</div>
-                        </div>
-                     </li>`;
-        }
-        html += '</ul>';
-    }
-    // 格式二：处理仅包含单个建议动作的 localResult (通常是翻前)
-    else if (suggestion.localResult && suggestion.localResult.action) {
-        const actionName = suggestion.localResult.action;
-        const description = suggestion.localResult.description || '';
-        
-        html += '<ul style="list-style-type: none; padding: 0; margin: 0;">';
-        html += `<li style="margin-bottom: 5px; display: flex; align-items: center;">
-                    <strong style="min-width: 120px;">${actionName}</strong>
-                    <div style="flex-grow: 1; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
-                        <div style="width: 100%; background: #4CAF50; color: white; text-align: right; padding: 2px 5px; font-size: 12px;">100%</div>
-                    </div>
-                 </li>`;
-        html += '</ul>';
-        if (description) {
-            html += `<div style="margin-top: 10px; font-size: 12px; color: #555;">${description}</div>`;
-        }
-    } 
-    // 格式无法解析时的后备情况
-    else {
-        display.innerHTML = '<span>无法解析建议的格式。</span>';
-        return;
-    }
+    // 格式化并显示JSON
+    const pre = document.createElement('pre');
+    pre.style.margin = '0';
+    pre.style.whiteSpace = 'pre-wrap'; // 自动换行
+    pre.style.wordBreak = 'break-all'; // 强制断词
+    pre.textContent = JSON.stringify(suggestion, null, 2);
+    suggestionWrapper.appendChild(pre);
 
-    // 如果有胜率信息，也一并显示
-    if (suggestion.winRate) {
-        const winRate = (suggestion.winRate * 100).toFixed(2);
-        html += `<div style="margin-top: 10px; font-weight: bold;">预计胜率: ${winRate}%</div>`;
-    }
+    // 将新建议添加到显示区域
+    display.appendChild(suggestionWrapper);
 
-    display.innerHTML = html;
+    // 滚动到底部
+    display.scrollTop = display.scrollHeight;
 }
 
 
