@@ -838,35 +838,7 @@ function renderSuggestion(suggestion, playerId, phase) {
     title.style.color = '#66d9ef';
     suggestionWrapper.appendChild(title);
 
-    if (phase === 'preflop' && suggestion.localResult && suggestion.myCards) {
-        try {
-            const myCards = suggestion.myCards.join(',');
-            const scenario = suggestion.localResult.scenarioDescription;
-            const desc = suggestion.localResult.description;
-
-            if (myCards && scenario && desc) {
-                const formattedText = `手牌：${myCards}, ${scenario}，${desc}`;
-
-                const p = document.createElement('p');
-                p.style.margin = '0';
-                p.style.padding = '5px 0';
-                p.style.whiteSpace = 'pre-wrap';
-                p.style.wordBreak = 'break-all';
-                p.textContent = formattedText;
-                suggestionWrapper.appendChild(p);
-            } else {
-                throw new Error("Missing required fields for preflop formatting.");
-            }
-        } catch (e) {
-            console.error("Error formatting preflop suggestion:", e, suggestion);
-            const pre = document.createElement('pre');
-            pre.style.margin = '0';
-            pre.style.whiteSpace = 'pre-wrap';
-            pre.style.wordBreak = 'break-all';
-            pre.textContent = JSON.stringify(suggestion, null, 2);
-            suggestionWrapper.appendChild(pre);
-        }
-    } else if ((phase === 'flop' || phase === 'turn' || phase === 'river') && suggestion.localResult) {
+    if ((phase === 'preflop' || phase === 'flop' || phase === 'turn' || phase === 'river') && suggestion.localResult) {
         try {
             const container = document.createElement('div');
             const local = suggestion.localResult;
@@ -896,29 +868,35 @@ function renderSuggestion(suggestion, playerId, phase) {
 
             createSection('牌局信息');
             createRow('手牌', suggestion.myCards?.join(', '));
-            createRow('公共牌', suggestion.boardCards?.join(', '));
-            createRow('牌面', local.boardType);
-            createRow('牌型', local.handType);
+            if (phase !== 'preflop') {
+                createRow('公共牌', suggestion.boardCards?.join(', '));
+                createRow('牌面', local.boardType);
+                createRow('牌型', local.handType);
+            }
 
             createSection('局势分析');
-            createRow('位置', local.hasPosition ? '有利位置' : '不利位置');
+            if (phase !== 'preflop') {
+                createRow('位置', local.hasPosition ? '有利位置' : '不利位置');
+            }
             createRow('行动场景', local.scenarioDescription);
 
-            createSection('数据参考');
-            if (local.equity) {
-                const parts = [];
-                if (local.equity.winRate !== null) parts.push(`胜率: ${local.equity.winRate}%`);
-                if (local.equity.potOdds !== null) parts.push(`底池赔率: ${local.equity.potOdds}%`);
-                if (local.action !== null) parts.push(`建议: ${local.action}`);
-                createRow('本地计算', parts.join('， '));
-            }
-            if (suggestion.thirdPartyResult && suggestion.thirdPartyResult.equity) {
-                const treys = suggestion.thirdPartyResult.equity;
-                const parts = [];
-                if (treys.winRate !== null) parts.push(`胜率: ${treys.winRate}%`);
-                if (treys.potOdds !== null) parts.push(`底池赔率: ${treys.potOdds}%`);
-                if (treys.action) parts.push(`建议: ${treys.action}`);
-                createRow('Treys (仅作对比参考)', parts.join('， '));
+            if (phase !== 'preflop') {
+                createSection('数据参考');
+                if (local.equity) {
+                    const parts = [];
+                    if (local.equity.winRate !== null) parts.push(`胜率: ${local.equity.winRate}%`);
+                    if (local.equity.potOdds !== null) parts.push(`底池赔率: ${local.equity.potOdds}%`);
+                    if (local.action !== null) parts.push(`建议: ${local.action}`);
+                    createRow('本地计算', parts.join('， '));
+                }
+                if (suggestion.thirdPartyResult && suggestion.thirdPartyResult.equity) {
+                    const treys = suggestion.thirdPartyResult.equity;
+                    const parts = [];
+                    if (treys.winRate !== null) parts.push(`胜率: ${treys.winRate}%`);
+                    if (treys.potOdds !== null) parts.push(`底池赔率: ${treys.potOdds}%`);
+                    if (treys.action) parts.push(`建议: ${treys.action}`);
+                    createRow('Treys (仅作对比参考)', parts.join('， '));
+                }
             }
 
             createSection('最终建议');
@@ -942,7 +920,8 @@ function renderSuggestion(suggestion, playerId, phase) {
             reasonLabelEl.textContent = '理由: ';
             reasonLabelEl.style.color = '#a6e22e';
             reasonRow.appendChild(reasonLabelEl);
-            reasonRow.appendChild(document.createTextNode(`(以本地计算为准) ${local.reasoning || ''}`));
+            const reasoningText = phase === 'preflop' ? (local.reasoning || local.description || '') : `(以本地计算为准) ${local.reasoning || ''}`;
+            reasonRow.appendChild(document.createTextNode(reasoningText));
             container.appendChild(reasonRow);
 
             suggestionWrapper.innerHTML = '';
