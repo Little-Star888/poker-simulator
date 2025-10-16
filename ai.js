@@ -23,7 +23,7 @@ const ACTION_WEIGHTS = {
  * @param {string} playerId - 当前行动玩家 ID，如 'P3'
  * @returns {Promise<{ action: string, amount?: number }>}
  */
-export async function getDecision(gameState, playerId) {
+export async function getDecision(gameState, playerId, gtoSuggestionFilter) {
   // 模拟网络延迟
   await new Promise(resolve => setTimeout(resolve, 200));
 
@@ -96,8 +96,17 @@ export async function getDecision(gameState, playerId) {
     selectedAction = forceAction;
   } else {
     const weightedActions = [];
+    
+    // 为本次决策复制一份权重，以便修改
+    const currentActionWeights = { ...ACTION_WEIGHTS };
+
+    // 如果当前玩家被选中显示GTO建议，则大幅降低弃牌的概率
+    if (gtoSuggestionFilter && gtoSuggestionFilter.has(playerId)) {
+        currentActionWeights.FOLD = 1; // 将弃牌权重从3降至1
+    }
+
     for (const action of finalActions) {
-      const weight = ACTION_WEIGHTS[action] || 1;
+      const weight = currentActionWeights[action] || 1; // 使用可能被修改过的权重
       for (let i = 0; i < weight; i++) {
         weightedActions.push(action);
       }

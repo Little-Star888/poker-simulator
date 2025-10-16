@@ -761,7 +761,7 @@ async function processNextAction() {
     }
 
     // 自动模式逻辑
-    const decision = await getDecision(gameState, currentPlayerId);
+    const decision = await getDecision(gameState, currentPlayerId, gtoSuggestionFilter);
     game.executeAction(currentPlayerId, decision.action, decision.amount);
     log(`[${game.currentRound}] ${currentPlayerId} ${decision.action}${decision.amount ? ' ' + decision.amount : ''}`);
     showActionBubble(currentPlayerId, decision.action, decision.amount);
