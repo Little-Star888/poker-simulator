@@ -172,7 +172,44 @@ function init() {
   renderActionSheetTemplate(); // Render initial action sheet
   log('德州扑克 AI 测试模拟器已加载');
   injectStyles(); // Workaround for CSS file modification issues
-  reorganizeLayout(); // Rearrange sections for 3-column layout
+  
+  // 控制配置抽屉的逻辑
+  const configDrawer = document.getElementById('config-drawer');
+  const configToggleBtn = document.getElementById('config-toggle-btn');
+  const drawerCloseBtn = document.querySelector('.drawer-close-btn');
+  const drawerOverlay = document.querySelector('.drawer-overlay');
+
+  function openDrawer() {
+    if (configDrawer) {
+      configDrawer.classList.add('is-open');
+    }
+  }
+
+  function closeDrawer() {
+    if (configDrawer) {
+      configDrawer.classList.remove('is-open');
+    }
+  }
+
+  if (configToggleBtn) {
+    configToggleBtn.addEventListener('click', openDrawer);
+  }
+  if (drawerCloseBtn) {
+    drawerCloseBtn.addEventListener('click', closeDrawer);
+  }
+  if (drawerOverlay) {
+    drawerOverlay.addEventListener('click', closeDrawer);
+  }
+
+  // 添加ResizeObserver以实现响应式布局
+  const table = document.querySelector('.poker-table');
+  if (table) {
+    const resizeObserver = new ResizeObserver(() => {
+      updatePlayerLayout();
+    });
+    resizeObserver.observe(table);
+  }
+
   updatePresetVisibility(); // Ensure preset UI visibility is correct on load
 }
 
@@ -656,14 +693,66 @@ function startNewGame() {
   }
 }
 
+function updatePlayerLayout() {
+    const table = document.querySelector('.poker-table');
+    if (!table) return;
+
+    const tableRect = table.getBoundingClientRect();
+    const centerX = tableRect.width / 2;
+    const centerY = tableRect.height / 2;
+
+    // 半径减去一定像素作为内边距
+    const radiusX = (tableRect.width / 2) - 70; 
+    const radiusY = (tableRect.height / 2) - 60;
+
+    const players = Array.from(document.querySelectorAll('.player')).filter(p => p.style.display !== 'none');
+    const playerCount = players.length;
+    if (playerCount === 0) return;
+
+    // 定义8个玩家的标准座位角度 (顺时针, 0度在右侧)
+    // 这个顺序将P1放在底部，然后P2在右下，P3在右边...
+    const seatAngles = [
+        270, // P1 (Bottom)
+        315, // P2
+        0,   // P3
+        45,  // P4
+        90,  // P5 (Top)
+        135, // P6
+        180, // P7
+        225  // P8
+    ];
+
+    players.forEach(player => {
+        const playerId = player.dataset.player;
+        const playerNum = parseInt(playerId.substring(1)); // e.g., 1 for P1
+
+        // 获取该玩家的预设角度
+        const angleDeg = seatAngles[playerNum - 1];
+        const angleRad = angleDeg * (Math.PI / 180);
+
+        const x = centerX + radiusX * Math.cos(angleRad);
+        const y = centerY + radiusY * Math.sin(angleRad);
+
+        player.style.left = `${x}px`;
+        player.style.top = `${y}px`;
+        player.style.transform = 'translate(-50%, -50%)';
+        // 清除旧的或冲突的样式
+        player.style.bottom = '';
+        player.style.right = '';
+    });
+}
+
 function updatePlayerDisplay() {
   const playerCount = Settings.playerCount;
   for (let i = 1; i <= 8; i++) {
     const playerElement = document.querySelector(`.player[data-player="P${i}"]`);
     if (playerElement) {
-      playerElement.style.display = i <= playerCount ? 'block' : 'none';
+      // 使用 'flex' 因为 .player 的 display 样式是 flex
+      playerElement.style.display = i <= playerCount ? 'flex' : 'none';
     }
   }
+  // 在更新玩家可见性后，重新计算布局
+  updatePlayerLayout();
 }
 
 function updateGtoFilterCheckboxes() {
@@ -1489,37 +1578,7 @@ function reorganizeLayout() {
 
 function injectStyles() {
   const css = `
-    /* --- Layout Workaround Styles --- */
-
-    /* Main 3-column layout */
-    .control-panel {
-      flex-direction: row !important;
-    }
-    .control-panel-left {
-      flex: 2 !important;
-    }
-    .control-panel-right {
-      flex: 3 !important;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Player Preset Layout */
-    #preset-player-hands-container {
-      display: grid !important; /* Force grid layout */
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 15px;
-      align-items: start;
-    }
-    #preset-player-hands-container > h4 {
-      grid-column: 1 / -1;
-      margin-bottom: 0;
-    }
-    .player-hand-preset {
-      margin-bottom: 0;
-    }
-
-    /* JS Helper Class to forcefully hide elements */
+    /* --- JS Helper Class to forcefully hide elements --- */
     .hidden-by-js {
       display: none !important;
     }
@@ -1546,7 +1605,6 @@ function injectStyles() {
   style.type = 'text/css';
   style.appendChild(document.createTextNode(css));
   document.head.appendChild(style);
-//  log('⚙️ 应用布局修复样式。');
 }
 
 document.addEventListener('DOMContentLoaded', init);

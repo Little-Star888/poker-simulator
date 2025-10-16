@@ -4,290 +4,152 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>德州扑克 AI 测试模拟器</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
   <style>
+    /* --- Base & Reset --- */
+    :root {
+      --drawer-width: 420px;
+      --header-height: 50px;
+      --border-color: #ddd;
+      --bg-light: #f5f5f5;
+      --bg-white: #ffffff;
+      --text-dark: #333;
+      --text-light: #888;
+      --accent-color: #28a745;
+    }
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-
-    .app-container {
-      display: flex;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    /* ========== 左侧：牌桌区域 + 操作栏 (30%) ========== */
-    .table-area {
-      width: 30%;
+    html, body {
       height: 100%;
-      position: relative;
-      background-color: #e8f5e9;
-      border-right: 1px solid #ccc;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      background-color: var(--bg-light);
     }
-
-    /* 牌桌区域 */
-    .poker-table {
-      flex: 1;
-      position: relative;
-      background-color: #2E8B57;
-      margin: 90px 10px 10px; /* 增加上边距以显示顶部弹窗 */
-      border-radius: 8px;
-    }
-
-    /* 玩家位置 */
-    .player {
-      position: absolute;
-      text-align: center;
-      width: 110px; /* 调整尺寸以适应圆形 */
-      height: 110px; /* 调整尺寸以适应圆形 */
-      background: white;
-      border: 1px solid #999;
-      border-radius: 50%; /* 改为圆形 */
-      padding: 8px;
-      font-size: 12px;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .player-info {
-      line-height: 1.2;
-    }
-
-    .player-role {
-        font-size: 10px;
-        color: #e67e22;
-    }
-
-    .stack {
-        font-size: 11px;
-        color: #3498db;
-    }
-
-    .player-bet {
-        position: absolute;
-        bottom: -20px; /* 显示在玩家圆圈下方 */
-        background-color: rgba(0, 0, 0, 0.6);
-        color: white;
-        padding: 2px 5px;
-        border-radius: 3px;
-        font-size: 10px;
-    }
-
-    .action-bubble {
-        position: absolute;
-        top: -30px; /* 显示在玩家圆圈上方 */
-        background-color: #f39c12;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: bold;
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.3s, transform 0.3s;
-        z-index: 100;
-        white-space: nowrap;
-    }
-
-    .action-bubble.show {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    @keyframes fade-out {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(-10px); }
-    }
-
-    .action-bubble.fade-out {
-        animation: fade-out 0.5s forwards;
-        animation-delay: 1s; /* 延迟1秒后开始消失 */
-    }
-
-    .fold-indicator {
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-25deg);
-      color: #e74c3c;
-      font-size: 22px;
-      font-weight: bold;
-      border: 3px solid #c0392b;
-      padding: 5px 10px;
-      border-radius: 8px;
-      opacity: 0.85;
-      z-index: 50;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-    }
-
-    .player.folded {
-      opacity: 0.4;
-    }
-
-    .player.folded .fold-indicator {
-      display: block;
-    }
-
-    .player.active {
-      border: 2px solid gold;
-      box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
-    }
-
-    .hole-cards {
-      margin-top: 4px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      min-height: 50px;
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-    }
-
-    .hole-card {
-      width: 40px;
-      height: 50px;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-
-    /* 公共牌区 */
-    .community-cards {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      gap: 6px;
-      z-index: 5;
-    }
-
-    .card {
-      width: 40px;
-      height: 50px;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-
-    .pot-display {
-        position: absolute;
-        top: 20%;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: rgba(0, 0, 0, 0.6);
-        color: #FFD700; /* 金色字体 */
-        padding: 4px 12px;
-        border-radius: 15px;
-        font-size: 16px;
-        font-weight: bold;
-        z-index: 6;
-        border: 1px solid #FFD700;
-        box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
-    }
-
-    /* 操作栏 - 始终显示空白区域 */
-    .action-bar {
-      height: 100px;
-      background-color: #e8f5e9;
-      border-top: 1px solid #ccc;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* 手动操作区 */
-    #manual-action-area {
-      position: absolute;
-      background: white;
-      padding: 12px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      display: none;
-      width: 90%;
-      text-align: center;
-      z-index: 20;
-    }
-
-    #manual-action-area button {
-      margin: 0 6px;
-      padding: 6px 12px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    #raise-amount {
-      width: 70px;
-      padding: 4px;
-      margin: 0 8px;
-      font-size: 14px;
-    }
-
-    /* ========== 右侧：控制面板 (70%) ========== */
-    .control-panel {
-      width: 70%;
-      height: 100%;
-      display: flex;
-      flex-direction: column; /* Changed from row to column */
-      gap: 20px;
-      padding: 20px;
-      background: #fafafa;
-      overflow-y: auto;
-    }
-
-    .section {
-      margin-bottom: 20px;
-    }
-
     .section h3 {
       margin-bottom: 12px;
       font-size: 16px;
-      color: #333;
+      color: var(--text-dark);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
     }
-
     .form-row {
       display: flex;
       align-items: center;
       margin: 8px 0;
+      flex-wrap: wrap;
     }
-
     .form-row label {
       width: 120px;
       font-size: 14px;
+      flex-shrink: 0;
     }
-
-    .form-row input,
-    .form-row select,
-    .form-row button {
+    .form-row input, .form-row select {
       padding: 6px 10px;
       font-size: 14px;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
 
-    .form-row button {
-      background: #4CAF50;
-      color: white;
+    /* --- Main Layout --- */
+    .app-container {
+      display: flex;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* --- Config Drawer --- */
+    .config-drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: var(--drawer-width);
+      max-width: 90vw;
+      background: var(--bg-white);
+      z-index: 2000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-in-out;
+      overflow-y: auto;
+      border-right: 1px solid var(--border-color);
+    }
+    .config-drawer.is-open {
+      transform: translateX(0);
+      box-shadow: 3px 0 15px rgba(0,0,0,0.1);
+    }
+    .config-drawer-content {
+      padding: 20px;
+    }
+    .drawer-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none;
       border: none;
+      font-size: 28px;
+      font-weight: bold;
+      color: #888;
       cursor: pointer;
-      margin-left: 10px;
+      padding: 0;
+      line-height: 1;
+    }
+    .drawer-close-btn:hover {
+      color: #333;
     }
 
-    .form-row button:hover {
-      background: #45a049;
+    /* --- Drawer Overlay --- */
+    .drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 1999; /* Below drawer, above content */
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    }
+    .config-drawer.is-open ~ .drawer-overlay {
+      opacity: 1;
+      visibility: visible;
     }
 
+    /* --- Main Content Area --- */
+    .main-content {
+      display: flex;
+      flex-direction: column; /* Mobile First: Vertical Stack */
+      width: 100%;
+      height: 100%;
+      transition: margin-left 0.3s ease-in-out;
+    }
+
+    /* --- Table Area --- */
+    .table-area {
+      width: 100%;
+      height: 70vh; /* Increased height */
+      min-height: 550px; /* Increased min-height */
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: #e8f5e9;
+    }
+    .poker-table {
+      flex-grow: 1;
+      position: relative;
+      background-color: #2E8B57;
+      margin: 10px;
+      border-radius: 80px; /* More oval shape */
+    }
+    .action-bar {
+      height: 80px;
+      border-top: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+    }
     .game-control-btn {
       padding: 8px 16px;
       font-size: 16px;
@@ -296,430 +158,160 @@
       color: white;
       cursor: pointer;
       transition: background-color 0.2s;
-    }
-
-    .start-btn {
-      background-color: #28a745; /* Green */
-    }
-    .start-btn:hover {
-      background-color: #218838;
-    }
-
-    .restart-btn {
-      background-color: #dc3545; /* Red */
-      margin-left: 10px;
-    }
-    .restart-btn:hover {
-      background-color: #c82333;
-    }
-
-    .game-control-btn:disabled,
-    .game-control-btn:disabled:hover {
-      background-color: #cccccc; /* 灰色背景 */
-      color: #888888; /* 深灰色文字 */
-      cursor: not-allowed; /* 禁止光标 */
-      box-shadow: none; /* 移除阴影 */
-    }
-
-    /* Console 日志 */
-    #console-log {
-      flex: 1;
-      background: #1e1e1e;
-      color: #0f0;
-      padding: 12px;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      border: 1px solid #333;
-      border-radius: 4px;
-      resize: none;
-    }
-
-    /* Style for the readonly BB input */
-    .readonly-input {
-      background-color: #eee; /* Light grey to indicate readonly */
-      -moz-appearance: textfield; /* Hide spinner in Firefox */
-    }
-    /* Hide spinner in Webkit browsers (Chrome, Safari) */
-    .readonly-input::-webkit-inner-spin-button,
-    .readonly-input::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    /* --- Preset Styles --- */
-    #preset-controls {
-      border: 1px solid #ddd;
-      padding: 10px;
-      border-radius: 4px;
-      background: #fdfdfd;
-    }
-    .preset-card-slot {
-      width: 40px;
-      height: 50px;
-      border: 1px dashed #aaa;
-      border-radius: 4px;
-      cursor: pointer;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      display: inline-block;
-      vertical-align: middle;
-    }
-    .preset-card-slot.active-selection {
-      border-color: #f39c12;
-      box-shadow: 0 0 5px rgba(243, 156, 18, 0.7);
-    }
-    #card-picker {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      border: 1px solid #eee;
-      padding: 5px;
-      max-height: 250px;
-      overflow-y: auto;
-    }
-    .picker-card {
-      width: 40px;
-      height: 50px;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      cursor: pointer;
-      border-radius: 3px;
-    }
-    .picker-card.dimmed {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-    .player-hand-preset strong {
-      width: 50px;
-    }
-
-    /* Player Preset Layout - Grid Implementation */
-    #preset-player-hands-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 15px;
-      align-items: start;
-    }
-    #preset-player-hands-container > h4 {
-      grid-column: 1 / -1;
-      margin-bottom: 0;
-    }
-    .player-hand-preset {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 8px;
+    }
+    #start-btn { background-color: var(--accent-color); }
+    #pause-btn { background-color: #ffc107; }
+    #config-toggle-btn { background-color: #6c757d; }
+    .game-control-btn:disabled {
+      background-color: #cccccc;
+      color: #888888;
+      cursor: not-allowed;
     }
 
-    /* --- New Manual Action Popup Styles --- */
-    .player-action-popup {
-      position: absolute;
-      top: -85px; /* Position it above the player circle */
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.95);
-      border: 1px solid #aaa;
+    /* --- Info Panel Area (GTO, Console, etc.) --- */
+    .info-panel-area {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+    .info-panel-area .section {
+      background: var(--bg-white);
+      padding: 15px;
       border-radius: 8px;
-      padding: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 110; /* Higher than player z-index */
-      display: none; /* Hidden by default */
-      width: 280px;
-      text-align: center;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
     }
-    .player-action-popup .action-buttons button {
-      margin: 4px;
-      padding: 5px 10px;
-      font-size: 12px;
-      cursor: pointer;
+    #suggestion-display {
+      padding: 10px; background: #272822; color: #f8f8f2; border-radius: 4px;
+      min-height: 200px; max-height: 40vh; overflow-y: auto; font-family: 'Courier New', monospace;
+      font-size: 13px; border: 1px solid #333;
     }
-    .player-action-popup .amount-slider {
-      padding: 5px;
+    #console-log {
+      flex: 1; background: #1e1e1e; color: #0f0; padding: 12px;
+      font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #333;
+      border-radius: 4px; resize: none; min-height: 150px;
     }
-    .player-action-popup .amount-slider label {
-      font-size: 12px;
-      display: block;
-      margin-bottom: 5px;
-    }
-    .player-action-popup .amount-slider input[type="range"] {
-      width: 90%;
-    }
-    .player-action-popup .amount-slider button {
-      margin-top: 8px;
-      padding: 5px 12px;
+    #action-sheet-container { overflow-x: auto; }
+    #action-sheet { border-collapse: collapse; width: 100%; font-size: 12px; }
+    #action-sheet th, #action-sheet td { border: 1px solid #ddd; padding: 4px; text-align: center; }
+    #action-sheet thead { background-color: #f2f2f2; }
+
+
+    /* --- Desktop Layout --- */
+    @media (min-width: 1200px) {
+      .config-drawer {
+        position: relative;
+        transform: translateX(0);
+        box-shadow: none;
+        min-width: var(--drawer-width);
+        flex-shrink: 0;
+      }
+      #config-toggle-btn, .drawer-overlay, .drawer-close-btn {
+        display: none; /* Hide mobile controls on desktop */
+      }
+      .main-content {
+        flex-direction: row;
+        overflow: hidden;
+      }
+      .table-area {
+        width: 50%; /* Adjusted width */
+        height: 100%;
+        border-right: 1px solid var(--border-color);
+      }
+      .info-panel-area {
+        width: 50%; /* Adjusted width */
+        height: 100%;
+        overflow-y: auto;
+        padding: 20px;
+      }
     }
 
+    /* --- Player & Card Styles --- */
+    .player {
+      position: absolute; text-align: center; width: 100px; height: 100px; /* Slightly smaller */
+      background: white; border: 1px solid #999; border-radius: 50%;
+      padding: 8px; font-size: 12px; z-index: 10; display: flex;
+      flex-direction: column; justify-content: center; align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .player-info { line-height: 1.2; }
+    .player-role { font-size: 10px; color: #e67e22; }
+    .stack { font-size: 11px; color: #3498db; }
+    .player-bet {
+      position: absolute; bottom: -20px; background-color: rgba(0, 0, 0, 0.6);
+      color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px;
+    }
+    .action-bubble {
+      position: absolute; top: -30px; background-color: #f39c12; color: white;
+      padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;
+      opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s;
+      z-index: 100; white-space: nowrap;
+    }
+    .action-bubble.show { opacity: 1; transform: translateY(0); }
+    @keyframes fade-out {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(-10px); }
+    }
+    .action-bubble.fade-out { animation: fade-out 0.5s forwards; animation-delay: 1s; }
+    .fold-indicator {
+      display: none; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-25deg); color: #e74c3c;
+      font-size: 22px; font-weight: bold; border: 3px solid #c0392b;
+      padding: 5px 10px; border-radius: 8px; opacity: 0.85; z-index: 50;
+    }
+    .player.folded { opacity: 0.4; }
+    .player.folded .fold-indicator { display: block; }
+    .player.active { border: 2px solid gold; box-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
+    .hole-cards { margin-top: 4px; min-height: 45px; display: flex; gap: 4px; justify-content: center; }
+    .hole-card { width: 36px; height: 45px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+    .community-cards { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 6px; z-index: 5; }
+    .card { width: 40px; height: 50px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+    .pot-display {
+      position: absolute; top: 25%; left: 50%; transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.6); color: #FFD700; padding: 4px 12px;
+      border-radius: 15px; font-size: 16px; font-weight: bold; z-index: 6;
+      border: 1px solid #FFD700; box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+    }
+    .player-action-popup {
+      position: absolute; top: -85px; left: 50%; transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95); border: 1px solid #aaa; border-radius: 8px;
+      padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 110;
+      display: none; width: 280px; text-align: center;
+    }
+    .player-action-popup .action-buttons button { margin: 4px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+    .player-action-popup .amount-slider { padding: 5px; }
+    .player-action-popup .amount-slider label { font-size: 12px; display: block; margin-bottom: 5px; }
+    .player-action-popup .amount-slider input[type="range"] { width: 90%; }
+    .player-action-popup .amount-slider button { margin-top: 8px; padding: 5px 12px; }
+    .readonly-input { background-color: #eee; }
+    #preset-controls { border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #fdfdfd; }
+    .preset-card-slot {
+      width: 40px; height: 50px; border: 1px dashed #aaa; border-radius: 4px; cursor: pointer;
+      background-size: contain; background-repeat: no-repeat; background-position: center;
+      display: inline-block; vertical-align: middle;
+    }
+    .preset-card-slot.active-selection { border-color: #f39c12; box-shadow: 0 0 5px rgba(243, 156, 18, 0.7); }
+    #card-picker { display: flex; flex-wrap: wrap; gap: 5px; border: 1px solid #eee; padding: 5px; max-height: 250px; overflow-y: auto; }
+    .picker-card { width: 40px; height: 50px; background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; border-radius: 3px; }
+    .picker-card.dimmed { opacity: 0.3; cursor: not-allowed; }
+    #preset-player-hands-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; align-items: start; }
+    #preset-player-hands-container > h4 { grid-column: 1 / -1; margin-bottom: 0; }
+    .player-hand-preset { display: flex; align-items: center; gap: 5px; }
   </style>
 </head>
 <body>
   <div class="app-container">
-    <!-- 左侧：牌桌 + 操作栏 -->
-    <div class="table-area">
-      <!-- 牌桌区域 -->
-      <div class="poker-table">
-        <!-- 玩家 P1 (正下方) -->
-        <div class="player" data-player="P1" style="bottom: 5px; left: 50%; transform: translateX(-50%);">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P1 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-        <!-- P2 (顺时针方向 - 左下角) -->
-        <div class="player" data-player="P2" style="bottom: 20%; left: 15px;">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P2 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-        <!-- P3 (顺时针方向 - 左中) -->
-        <div class="player" data-player="P3" style="top: 50%; left: 15px; transform: translateY(-50%);">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P3 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-        <!-- P4 (顺时针方向 - 左上角) -->
-        <div class="player" data-player="P4" style="top: 20%; left: 15px;">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P4 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-        <!-- P5 (顺时针方向 - 顶部) -->
-        <div class="player" data-player="P5" style="top: 5px; left: 50%; transform: translateX(-50%);">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P5 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-        <!-- P6 (顺时针方向 - 右上角) -->
-        <div class="player" data-player="P6" style="top: 20%; right: 15px;">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P6 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-        <!-- P7 (顺时针方向 - 右中) -->
-        <div class="player" data-player="P7" style="top: 50%; right: 15px; transform: translateY(-50%);">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P7 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-        <!-- P8 (顺时针方向 - 右下角) -->
-        <div class="player" data-player="P8" style="bottom: 20%; right: 15px;">
-          <div class="fold-indicator">FOLD</div>
-          <div class="player-info">
-            P8 <span class="player-role"></span><br>
-            <span class="stack"></span>
-          </div>
-          <div class="player-bet"></div>
-          <div class="action-bubble"></div>
-          <div class="hole-cards">
-            <div class="hole-card" data-card="1"></div>
-            <div class="hole-card" data-card="2"></div>
-          </div>
-          <div class="player-action-popup">
-            <div class="action-buttons">
-              <button data-action="FOLD">Fold</button>
-              <button data-action="CHECK">Check</button>
-              <button data-action="CALL">Call</button>
-              <button data-action="BET">Bet</button>
-              <button data-action="RAISE">Raise</button>
-              <button data-action="ALLIN">All In</button>
-            </div>
-            <div class="amount-slider" style="display: none;">
-              <label>金额: <span class="bet-amount-label">0</span></label>
-              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
-              <button class="confirm-bet-btn">确认</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 底池显示 -->
-        <div id="pot-display" class="pot-display">
-          底池: <span id="pot-amount">0</span>
-        </div>
-
-        <!-- 公共牌区 -->
-        <div class="community-cards">
-          <div class="card community-card"></div>
-          <div class="card community-card"></div>
-          <div class="card community-card"></div>
-          <div class="card community-card"></div>
-          <div class="card community-card"></div>
-        </div>
-      </div>
-
-      <!-- 操作栏 -->
-      <div class="action-bar" style="justify-content: space-around; align-items: center;">
-        <div id="game-controls">
-          <button id="start-btn" class="game-control-btn start-btn">▶️ 开始牌局</button>
-          <button id="pause-btn" class="game-control-btn restart-btn" disabled>⏸️ 暂停</button>
-        </div>
-        <!-- 手动操作区 (已被移除) -->
-      </div>
-    </div>
-
-    <!-- 右侧：控制面板 -->
-    <div class="control-panel">
-      <!-- Left Column -->
-      <div class="control-panel-left" style="flex: 2;">
+    <!-- Slide-out Drawer for Configurations -->
+    <aside id="config-drawer" class="config-drawer">
+      <button class="drawer-close-btn">&times;</button>
+      <div class="config-drawer-content">
         <div class="section" id="runtime-config-section">
           <h3>⚙️ 运行配置</h3>
           <div class="form-row">
@@ -731,9 +323,9 @@
           </div>
           <div class="form-row">
             <label>盲注设置:</label>
-          <input type="number" id="sb-input" value="50" min="1" style="width:80px;" /> /
-          <input type="number" id="bb-input" value="100" min="1" style="width:80px;" class="readonly-input" readonly />          </div>
-
+            <input type="number" id="sb-input" value="50" min="1" style="width:80px;" /> /
+            <input type="number" id="bb-input" value="100" min="1" style="width:80px;" class="readonly-input" readonly />
+          </div>
           <div class="form-row">
             <label>玩家思考时间 (ms):</label>
             <input type="number" id="auto-delay" value="1000" min="100" style="width:100px;" />
@@ -741,17 +333,15 @@
           <div class="form-row">
             <label>GTO建议阶段:</label>
             <div id="suggestion-phases">
-              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-preflop" checked> Preflop</label>
-              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-flop" checked> Flop</label>
-              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-turn" checked> Turn</label>
-              <label style="margin-right: 10px;"><input type="checkbox" id="suggest-river" checked> River</label>
+              <label style="margin-right: 10px; width: auto;"><input type="checkbox" id="suggest-preflop" checked> Preflop</label>
+              <label style="margin-right: 10px; width: auto;"><input type="checkbox" id="suggest-flop" checked> Flop</label>
+              <label style="margin-right: 10px; width: auto;"><input type="checkbox" id="suggest-turn" checked> Turn</label>
+              <label style="margin-right: 10px; width: auto;"><input type="checkbox" id="suggest-river" checked> River</label>
             </div>
           </div>
           <div class="form-row">
             <label>GTO建议筛选:</label>
-            <div id="gto-filter-players" style="display: flex; flex-wrap: wrap; align-items: center;">
-              <!-- Player filter checkboxes will be generated by JS -->
-            </div>
+            <div id="gto-filter-players" style="display: flex; flex-wrap: wrap; align-items: center;"></div>
           </div>
           <div class="form-row">
             <label>玩家数量:</label>
@@ -766,9 +356,7 @@
           </div>
           <div class="form-row">
             <label>P1开局位置:</label>
-            <select id="p1-role-select">
-              <!-- Options are now generated by main.js -->
-            </select>
+            <select id="p1-role-select"></select>
           </div>
           <div class="form-row">
             <label>初始筹码范围:</label>
@@ -785,13 +373,12 @@
                 <input type="checkbox" id="use-preset-community-checkbox" />
                 预设公共牌
             </label>
-              <label style="width: auto; margin-left: 10px;">
-                  <input type="checkbox" id="use-preset-hands-checkbox" />
-                  预设手牌
-              </label>
+            <label style="width: auto; margin-left: 10px;">
+                <input type="checkbox" id="use-preset-hands-checkbox" />
+                预设手牌
+            </label>
           </div>
-          <div id="preset-controls" style="display: none;">
-              <!-- Community Card Presets -->
+          <div id="preset-controls" class="hidden-by-js">
               <div id="preset-community-cards-container" style="margin-top: 15px;">
                   <h4>公共牌:</h4>
                   <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -805,61 +392,102 @@
                       <div class="preset-card-slot" data-type="community" data-stage="river" data-card-index="0"></div>
                   </div>
               </div>
-              <!-- Player Hand Presets -->
-              <div id="preset-player-hands-container" style="margin-top: 15px; margin-bottom: 15px;">
-                <h4>玩家手牌:</h4>
-                <!-- Player slots will be generated by JS -->
-            </div>
-            <!-- Card Picker -->
-            <div id="card-picker-container" style="margin-top: 15px;">
-              <h4>选择扑克牌:</h4>
-              <div id="card-picker">
-                <!-- Cards will be generated by JS -->
+              <div id="preset-player-hands-container" style="margin-top: 15px; margin-bottom: 15px;"></div>
+              <div id="card-picker-container" style="margin-top: 15px;">
+                <h4>选择扑克牌:</h4>
+                <div id="card-picker"></div>
               </div>
-            </div>
           </div>
         </div>
+      </div>
+    </aside>
+    <div class="drawer-overlay"></div>
 
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="table-area">
+        <div class="poker-table">
+          <!-- Players P1-P8 -->
+          <div class="player" data-player="P1">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P1 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div class="player" data-player="P2">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P2 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div class="player" data-player="P3">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P3 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div class="player" data-player="P4">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P4 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div class="player" data-player="P5">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P5 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div class="player" data-player="P6">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P6 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div class="player" data-player="P7">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P7 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div class="player" data-player="P8">
+            <div class="fold-indicator">FOLD</div><div class="player-info">P8 <span class="player-role"></span><br><span class="stack"></span></div>
+            <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
+            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+          </div>
+          <div id="pot-display" class="pot-display">底池: <span id="pot-amount">0</span></div>
+          <div class="community-cards"><div class="card community-card"></div><div class="card community-card"></div><div class="card community-card"></div><div class="card community-card"></div><div class="card community-card"></div></div>
+        </div>
+        <div class="action-bar">
+          <div id="game-controls">
+            <button id="start-btn" class="game-control-btn">▶️ 开始牌局</button>
+            <button id="pause-btn" class="game-control-btn" disabled>⏸️ 暂停</button>
+          </div>
+          <button id="config-toggle-btn" class="game-control-btn">
+            <i class="material-icons">settings</i>
+            <span>配置</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="info-panel-area">
         <div class="section">
           <h3>📊 玩家行动 (ActionSheet)</h3>
-          <div id="action-sheet-container" style="overflow-x: auto;">
-            <table id="action-sheet" style="border-collapse: collapse; width: 100%; font-size: 14px;">
+          <div id="action-sheet-container">
+            <table id="action-sheet">
               <thead>
-                <tr style="background-color: #f2f2f2;">
-                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;">玩家</th>
-                                  <!-- PREFLOP阶段4列 -->
-                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">PREFLOP</th>
-                                  <!-- FLOP阶段4列 -->
-                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">FLOP</th>
-                                  <!-- TURN阶段4列 -->
-                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">TURN</th>
-                                  <!-- RIVER阶段4列 -->
-                                  <th style="border: 1px solid #ddd; padding: 4px; text-align: center;" colspan="4">RIVER</th>                </tr>
+                <tr>
+                  <th>玩家</th><th colspan="4">PREFLOP</th><th colspan="4">FLOP</th><th colspan="4">TURN</th><th colspan="4">RIVER</th>
+                </tr>
               </thead>
-              <tbody id="action-sheet-body">
-                <!-- 玩家行动记录将由JavaScript动态生成 -->
-              </tbody>
+              <tbody id="action-sheet-body"></tbody>
             </table>
           </div>
         </div>
-      </div>
-
-      <!-- Right Column -->
-      <div class="control-panel-right" style="flex: 3; display: flex; flex-direction: column;">
         <div class="section">
           <h3>💡 GTO 建议</h3>
-          <div id="suggestion-display" style="padding: 10px; background: #272822; color: #f8f8f2; border-radius: 4px; min-height: 200px; max-height: 40vh; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; border: 1px solid #333;">等待玩家行动...</div>
+          <div id="suggestion-display">等待玩家行动...</div>
         </div>
-
         <div class="section" style="display: flex; flex-direction: column; flex-grow: 1;">
           <h3>📜 Console 日志</h3>
-          <textarea style="min-height: 200px; width: 100%; flex-grow: 1;" id="console-log" readonly></textarea>
+          <textarea id="console-log" readonly></textarea>
         </div>
       </div>
-    </div>
+    </main>
   </div>
-
-  <!-- 引入主模块（使用 type="module"） -->
   <script type="module" src="main.js"></script>
 </body>
 </html>
