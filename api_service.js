@@ -110,6 +110,24 @@ function formatCardForAPI(cardString) {
 
 
 /**
+ * 根据翻前加注次数，动态计算后端API所需的potType
+ * @param {number} preflopRaiseCount - 翻前加注次数
+ * @returns {number} - 对应后端的potType枚举值
+ */
+function calculatePotType(preflopRaiseCount) {
+    switch (preflopRaiseCount) {
+        case 0:
+            return 4; // UNOPENED_POT (前端叫 unrestricted)
+        case 1:
+            return 0; // single_raised
+        case 2:
+            return 2; // 3bet
+        default:
+            return 3; // 4bet and higher
+    }
+}
+
+/**
 
  * 获取GTO建议
 
@@ -125,6 +143,8 @@ function formatCardForAPI(cardString) {
 
 export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
 
+    console.log(`[DEBUG] getSuggestion called for ${currentPlayerId}. Received preflopRaiseCount: ${gameState.preflopRaiseCount}`);
+
     const player = gameState.players.find(p => p.id === currentPlayerId);
 
     if (!player) throw new Error('Player not found for suggestion');
@@ -137,6 +157,8 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
 
     const flopSitInt = flopSitString ? FLOP_ACTION_SITUATION_MAP[flopSitString] : 0;
 
+    // 动态计算potType，而不是从Settings中写死
+    const calculatedPotType = calculatePotType(gameState.preflopRaiseCount);
 
 
     const requestDto = {
@@ -157,7 +179,7 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
 
         preFlopRaisers: gameState.preflopRaiseCount, // 补充参数
 
-        potType: POT_TYPE_MAP[Settings.potType],
+        potType: calculatedPotType, // 使用动态计算的值
 
         hasPosition: calculateHasPosition(gameState, currentPlayerId),
 
@@ -197,6 +219,7 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
 
 
 
+    console.log(`[DEBUG] For ${currentPlayerId} (preflopRaiseCount: ${gameState.preflopRaiseCount}) -> Sending potType: ${calculatedPotType}`);
     console.log(`Requesting suggestion for ${currentPlayerId}: /poker/suggestion?${params.toString()}`);
 
 
