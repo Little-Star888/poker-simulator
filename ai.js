@@ -11,9 +11,9 @@ import { Settings } from './setting.js';
 const ACTION_WEIGHTS = {
   CHECK: 5, // 过牌/让牌，最高概率
   CALL: 4,  // 跟注
-  FOLD: 3,  // 弃牌
-  BET: 2,   // 主动下注
-  RAISE: 1, // 加注
+  BET: 3,   // 主动下注
+  RAISE: 2, // 加注
+  FOLD: 1,  // 弃牌
   ALLIN: 0, // 全下，概率为0以禁用
 };
 
