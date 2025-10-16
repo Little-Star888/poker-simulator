@@ -114,7 +114,7 @@ function init() {
   suggestTurnCheckbox.addEventListener('change', () => Settings.update({ suggestOnTurn: suggestTurnCheckbox.checked }));
   suggestRiverCheckbox.addEventListener('change', () => Settings.update({ suggestOnRiver: suggestRiverCheckbox.checked }));
 
-  startBtn.addEventListener('click', handleStartOrRestartClick);
+  startBtn.addEventListener('click', handleStartStopClick);
   pauseBtn.addEventListener('click', handlePauseResumeClick);
 
   // 绑定牌局预设功能
@@ -494,11 +494,11 @@ function validatePresetCards() {
 
 // ========== 游戏控制 ==========
 
-function handleStartOrRestartClick() {
-    if (this.textContent === '开始牌局') {
+function handleStartStopClick() {
+    if (startBtn.textContent === '开始牌局') {
         startNewGame();
     } else {
-        restartGame();
+        stopGame();
     }
 }
 
@@ -509,8 +509,7 @@ function handlePauseResumeClick() {
         isGamePaused = false;
         log('▶️ 牌局继续');
         pauseBtn.textContent = '暂停';
-        startBtn.textContent = '开始牌局';
-        startBtn.disabled = true;
+        // startBtn remains "停止牌局" and enabled
         if (Settings.mode === 'auto') {
             processNextAction(); 
         }
@@ -518,8 +517,7 @@ function handlePauseResumeClick() {
         isGamePaused = true;
         log('⏸️ 牌局暂停');
         pauseBtn.textContent = '继续';
-        startBtn.textContent = '重新开始';
-        startBtn.disabled = false;
+        // startBtn remains "停止牌局" and enabled
     }
 }
 
@@ -565,8 +563,8 @@ function startNewGame() {
     log(`[SYSTEM] ${game.players[game.bbIndex].id} posts Big Blind ${Settings.bb}`);
     updateUI({ isInitialDeal: true });
 
-    startBtn.textContent = '开始牌局';
-    startBtn.disabled = true;
+    startBtn.textContent = '停止牌局';
+    startBtn.disabled = false;
     pauseBtn.disabled = false;
     pauseBtn.textContent = '暂停';
 
@@ -672,11 +670,33 @@ function updateP1RoleSelectOptions() {
     }
 }
 
-function restartGame() {
+function stopGame() {
+  log('🛑 牌局已手动停止，重置到初始状态。');
   isGameRunning = false;
+  isGamePaused = false;
   isWaitingForManualInput = false;
   hideAllActionPopups();
-  startNewGame();
+
+  // Reset game logic to a fresh state
+  game.reset(Settings); 
+  
+  // Reset UI by re-reading the fresh game state
+  updateUI(); 
+  updatePlayerDisplay();
+  renderActionSheet(); // Clears and rebuilds the action table
+  document.getElementById('suggestion-display').innerHTML = '等待玩家行动...';
+
+  // Update button states
+  startBtn.textContent = '开始牌局';
+  startBtn.disabled = false;
+  pauseBtn.textContent = '暂停';
+  pauseBtn.disabled = true;
+
+  // Re-enable config sections
+  document.getElementById('preset-section').style.opacity = '1';
+  document.getElementById('preset-section').style.pointerEvents = 'auto';
+  document.getElementById('runtime-config-section').style.opacity = '1';
+  document.getElementById('runtime-config-section').style.pointerEvents = 'auto';
 }
 
 async function processNextAction() {
