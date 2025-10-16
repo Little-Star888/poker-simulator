@@ -572,6 +572,13 @@ function startNewGame() {
     document.getElementById('runtime-config-section').style.opacity = '0.5';
     document.getElementById('runtime-config-section').style.pointerEvents = 'none';
 
+    // 但保持GTO建议筛选区域可用，以便在游戏中动态过滤
+    const gtoFilterRow = document.getElementById('gto-filter-players').parentElement;
+    if (gtoFilterRow) {
+        gtoFilterRow.style.opacity = '1';
+        gtoFilterRow.style.pointerEvents = 'auto';
+    }
+
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
 
@@ -633,17 +640,31 @@ function updateGtoFilterCheckboxes() {
         checkbox.style.marginRight = '4px';
 
         checkbox.addEventListener('change', (event) => {
+            const changedPlayerId = event.target.value;
             if (event.target.checked) {
-                gtoSuggestionFilter.add(playerId);
+                gtoSuggestionFilter.add(changedPlayerId);
             } else {
-                gtoSuggestionFilter.delete(playerId);
+                gtoSuggestionFilter.delete(changedPlayerId);
             }
+            // 动态更新建议的可见性
+            updateSuggestionVisibility();
         });
 
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(playerId));
         gtoFilterPlayersContainer.appendChild(label);
     }
+}
+
+function updateSuggestionVisibility() {
+    document.querySelectorAll('.gto-suggestion-for-player').forEach(suggestionEl => {
+        const elPlayerId = suggestionEl.dataset.playerId;
+        if (gtoSuggestionFilter.has(elPlayerId)) {
+            suggestionEl.style.display = 'block';
+        } else {
+            suggestionEl.style.display = 'none';
+        }
+    });
 }
 
 function getRoleOrder(playerCount) {
@@ -714,6 +735,13 @@ function stopGame() {
   document.getElementById('preset-section').style.pointerEvents = 'auto';
   document.getElementById('runtime-config-section').style.opacity = '1';
   document.getElementById('runtime-config-section').style.pointerEvents = 'auto';
+
+  // 并重置GTO筛选区域的覆盖样式
+  const gtoFilterRow = document.getElementById('gto-filter-players').parentElement;
+  if (gtoFilterRow) {
+      gtoFilterRow.style.opacity = '';
+      gtoFilterRow.style.pointerEvents = '';
+  }
 }
 
 async function processNextAction() {
@@ -835,9 +863,6 @@ async function showdown() {
 }
 
 function renderSuggestion(suggestion, playerId, phase) {
-    if (!gtoSuggestionFilter.has(playerId)) {
-        return;
-    }
     const display = document.getElementById('suggestion-display');
     
     if (display.textContent.includes('等待玩家行动...')) {
@@ -868,10 +893,19 @@ function renderSuggestion(suggestion, playerId, phase) {
     }
 
     const suggestionWrapper = document.createElement('div');
+    // 添加用于动态筛选的class和data属性
+    suggestionWrapper.classList.add('gto-suggestion-for-player');
+    suggestionWrapper.dataset.playerId = playerId;
+
     suggestionWrapper.style.marginBottom = '15px';
     suggestionWrapper.style.borderBottom = '1px solid #444';
     suggestionWrapper.style.paddingBottom = '10px';
     suggestionWrapper.style.marginLeft = '10px';
+
+    // 根据筛选器设置初始可见性
+    if (!gtoSuggestionFilter.has(playerId)) {
+        suggestionWrapper.style.display = 'none';
+    }
 
     const title = document.createElement('h4');
     title.innerHTML = `给 ${playerId} 的建议 (${new Date().toLocaleTimeString()}) <span style="color: #fd971f;">[${phase.toUpperCase()}]</span>:`
@@ -1014,6 +1048,13 @@ function endGame() {
   // 重新启用运行配置
   document.getElementById('runtime-config-section').style.opacity = '1';
   document.getElementById('runtime-config-section').style.pointerEvents = 'auto';
+
+  // 并重置GTO筛选区域的覆盖样式
+  const gtoFilterRow = document.getElementById('gto-filter-players').parentElement;
+  if (gtoFilterRow) {
+      gtoFilterRow.style.opacity = '';
+      gtoFilterRow.style.pointerEvents = '';
+  }
 }
 
 // ========== 新手动模式功能 ==========
