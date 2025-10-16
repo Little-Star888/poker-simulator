@@ -178,6 +178,40 @@ function init() {
 
 // ========== 牌局预设功能 ==========
 
+
+function getSlotSequence() {
+    const sequence = [];
+    
+    if (Settings.usePresetCommunity) {
+        // Flop, Turn, River slots in document order
+        document.querySelectorAll('#preset-community-cards-container .preset-card-slot').forEach(slot => sequence.push(slot));
+    }
+
+    if (Settings.usePresetHands) {
+        // Player hand slots in document order (P1, P2, ...)
+        document.querySelectorAll('#preset-player-hands-container .preset-card-slot').forEach(slot => sequence.push(slot));
+    }
+
+    return sequence;
+}
+
+function activateNextEmptySlot() {
+    // Deactivate current slot if any
+    if (activeSelectionSlot) {
+        activeSelectionSlot.classList.remove('active-selection');
+        activeSelectionSlot = null;
+    }
+
+    const sequence = getSlotSequence();
+    for (const slot of sequence) {
+        if (!slot.dataset.card) { // Find the first slot without a card
+            activeSelectionSlot = slot;
+            activeSelectionSlot.classList.add('active-selection');
+            return; // Stop after activating the first empty one
+        }
+    }
+}
+
 function updatePresetVisibility() {
     Settings.update({
         usePresetHands: usePresetHandsCheckbox.checked,
@@ -204,6 +238,8 @@ function updatePresetVisibility() {
     presetControls.classList.toggle('hidden-by-js', !anyPresetEnabled);
     presetPlayerHandsContainer.classList.toggle('hidden-by-js', !Settings.usePresetHands);
     presetCommunityCardsContainer.classList.toggle('hidden-by-js', !Settings.usePresetCommunity);
+
+    activateNextEmptySlot();
 }
 
 function initPresetUI() {
@@ -268,6 +304,9 @@ function resetPresetData() {
     document.querySelectorAll('.picker-card').forEach(card => {
         card.classList.remove('dimmed');
     });
+    if (activeSelectionSlot) {
+        activeSelectionSlot.classList.remove('active-selection');
+    }
     activeSelectionSlot = null;
 }
 
@@ -326,6 +365,8 @@ function animateCardToSlot(pickerCard, destinationElement, cardText, originalSlo
         document.body.removeChild(movingCard);
         // Call assignCard with the original preset slot
         assignCard(originalSlot, cardText);
+        // 自动激活下一个空槽位
+        activateNextEmptySlot();
     }, 420); // Slightly longer than the transition duration
 }
 
@@ -339,7 +380,7 @@ function handleCardPickerClick(event) {
   }
   
   if (!activeSelectionSlot) {
-    log('请先点击一个空的卡槽以指定要放置的位置。');
+    log('没有可用的空卡槽来放置扑克牌，或所有卡槽已满。');
     return;
   }
 
@@ -360,8 +401,7 @@ function handleCardPickerClick(event) {
   // so it knows which preset slot to update after the animation.
   animateCardToSlot(pickerCard, destinationElement, cardText, activeSelectionSlot);
 
-  activeSelectionSlot.classList.remove('active-selection');
-  activeSelectionSlot = null;
+  // The active slot is now managed by activateNextEmptySlot() within the animation callback.
 }
 
 function assignCard(slot, cardText) {
@@ -476,7 +516,8 @@ function unassignCard(slot) {
 
     delete slot.dataset.card;
 
-
+    // 自动激活下一个（现在是当前这个）空槽位
+    activateNextEmptySlot();
 
   }, 300); // Must match animation duration
 
