@@ -110,6 +110,7 @@ function init() {
     if (Settings.usePresetHands) {
       buildPlayerSlots();
     }
+    renderActionSheetTemplate(); // Re-render action sheet on change
   });
   minStackInput.addEventListener('change', () => Settings.update({ minStack: parseInt(minStackInput.value) || 2000 }));
   maxStackInput.addEventListener('change', () => Settings.update({ maxStack: parseInt(maxStackInput.value) || 2000 }));
@@ -168,6 +169,7 @@ function init() {
 
   updatePlayerDisplay();
   updateGtoFilterCheckboxes();
+  renderActionSheetTemplate(); // Render initial action sheet
   log('德州扑克 AI 测试模拟器已加载');
   injectStyles(); // Workaround for CSS file modification issues
   reorganizeLayout(); // Rearrange sections for 3-column layout
@@ -1194,6 +1196,32 @@ function submitManualAction(playerId, action, amount) {
 
 
 
+
+function renderActionSheetTemplate() {
+  const tableBody = document.getElementById('action-sheet-body');
+  tableBody.innerHTML = ''; // Clear existing rows
+
+  const playerCount = Settings.playerCount;
+
+  for (let i = 0; i < playerCount; i++) {
+    const playerId = `P${i + 1}`;
+    const row = document.createElement('tr');
+    
+    // We don't know the role yet, so we'll leave it blank for now
+    let rowHtml = `<td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${playerId}</td>`;
+    
+    const stages = ['preflop', 'flop', 'turn', 'river'];
+    stages.forEach(stage => {
+      for (let j = 0; j < 4; j++) {
+        // Use a generic style, specific IDs will be set when game starts
+        rowHtml += `<td style="border: 1px solid #ddd; padding: 6px; text-align: center;">-</td>`;
+      }
+    });
+
+    row.innerHTML = rowHtml;
+    tableBody.appendChild(row);
+  }
+}
 
 function renderActionSheet() {
   const tableBody = document.getElementById('action-sheet-body');
