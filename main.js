@@ -568,15 +568,19 @@ function startNewGame() {
     document.getElementById('preset-section').style.opacity = '0.5';
     document.getElementById('preset-section').style.pointerEvents = 'none';
 
-    // 禁用运行配置
-    document.getElementById('runtime-config-section').style.opacity = '0.5';
-    document.getElementById('runtime-config-section').style.pointerEvents = 'none';
-
-    // 但保持GTO建议筛选区域可用，以便在游戏中动态过滤
-    const gtoFilterRow = document.getElementById('gto-filter-players').parentElement;
-    if (gtoFilterRow) {
-        gtoFilterRow.style.opacity = '1';
-        gtoFilterRow.style.pointerEvents = 'auto';
+    // 禁用运行配置 (除了GTO筛选)
+    const runtimeConfigSection = document.getElementById('runtime-config-section');
+    if (runtimeConfigSection) {
+        // 遍历所有直接子元素（form-row）
+        Array.from(runtimeConfigSection.querySelectorAll('.form-row')).forEach(row => {
+            // 如果当前行是GTO筛选行，则跳过
+            if (row.contains(document.getElementById('gto-filter-players'))) {
+                return;
+            }
+            // 否则，禁用它
+            row.style.opacity = '0.5';
+            row.style.pointerEvents = 'none';
+        });
     }
 
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
@@ -733,14 +737,14 @@ function stopGame() {
   // Re-enable config sections
   document.getElementById('preset-section').style.opacity = '1';
   document.getElementById('preset-section').style.pointerEvents = 'auto';
-  document.getElementById('runtime-config-section').style.opacity = '1';
-  document.getElementById('runtime-config-section').style.pointerEvents = 'auto';
-
-  // 并重置GTO筛选区域的覆盖样式
-  const gtoFilterRow = document.getElementById('gto-filter-players').parentElement;
-  if (gtoFilterRow) {
-      gtoFilterRow.style.opacity = '';
-      gtoFilterRow.style.pointerEvents = '';
+  
+  // 重新启用运行配置
+  const runtimeConfigSection = document.getElementById('runtime-config-section');
+  if (runtimeConfigSection) {
+      Array.from(runtimeConfigSection.querySelectorAll('.form-row')).forEach(row => {
+          row.style.opacity = '';
+          row.style.pointerEvents = '';
+      });
   }
 }
 
@@ -1046,14 +1050,12 @@ function endGame() {
   document.getElementById('preset-section').style.pointerEvents = 'auto';
 
   // 重新启用运行配置
-  document.getElementById('runtime-config-section').style.opacity = '1';
-  document.getElementById('runtime-config-section').style.pointerEvents = 'auto';
-
-  // 并重置GTO筛选区域的覆盖样式
-  const gtoFilterRow = document.getElementById('gto-filter-players').parentElement;
-  if (gtoFilterRow) {
-      gtoFilterRow.style.opacity = '';
-      gtoFilterRow.style.pointerEvents = '';
+  const runtimeConfigSection = document.getElementById('runtime-config-section');
+  if (runtimeConfigSection) {
+      Array.from(runtimeConfigSection.querySelectorAll('.form-row')).forEach(row => {
+          row.style.opacity = '';
+          row.style.pointerEvents = '';
+      });
   }
 }
 
