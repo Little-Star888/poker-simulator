@@ -553,6 +553,10 @@ function startNewGame() {
     document.getElementById('preset-section').style.opacity = '0.5';
     document.getElementById('preset-section').style.pointerEvents = 'none';
 
+    // 禁用运行配置
+    document.getElementById('runtime-config-section').style.opacity = '0.5';
+    document.getElementById('runtime-config-section').style.pointerEvents = 'none';
+
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
 
@@ -969,6 +973,10 @@ function endGame() {
   // Re-enable preset controls
   document.getElementById('preset-section').style.opacity = '1';
   document.getElementById('preset-section').style.pointerEvents = 'auto';
+
+  // 重新启用运行配置
+  document.getElementById('runtime-config-section').style.opacity = '1';
+  document.getElementById('runtime-config-section').style.pointerEvents = 'auto';
 }
 
 // ========== 新手动模式功能 ==========
