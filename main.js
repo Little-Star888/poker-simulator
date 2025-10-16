@@ -593,7 +593,7 @@ function startNewGame() {
 
     startBtn.textContent = '🛑 停止牌局';
     startBtn.disabled = false;
-    pauseBtn.disabled = false;
+    pauseBtn.disabled = Settings.mode === 'manual'; // 手动模式下禁用暂停
     pauseBtn.textContent = '⏸️ 暂停';
 
     if (Settings.mode === 'auto') {
