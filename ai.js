@@ -71,20 +71,35 @@ export async function getDecision(gameState, playerId, gtoSuggestionFilter) {
   if (currentRound === 'preflop' && Settings.potType !== 'unrestricted') {
     const raiseCount = preflopRaiseCount;
 
-    let requiredRaises = 0;
-    if (Settings.potType === 'single_raised') requiredRaises = 1;
-    if (Settings.potType === '3bet') requiredRaises = 2;
-    if (Settings.potType === '4bet') requiredRaises = 3;
+    // 确定性场景创建：强制执行加注以达到所需的底池类型
+    if ((Settings.potType === '3bet' || Settings.potType === '4bet')) {
+        const requiredRaises = (Settings.potType === '3bet') ? 2 : 3;
 
-    if (requiredRaises > 0 && raiseCount < requiredRaises) {
-      if (possibleActions.includes('RAISE')) {
-        forceAction = 'RAISE';
-      }
+        if (raiseCount < requiredRaises && possibleActions.includes('RAISE')) {
+            // 计算一个固定的、最小的加注额
+            const raiseAmount = highestBet + lastRaiseAmount;
+            
+            // 确保这个加注是有效的并且不会导致All-in
+            if (stack + currentBet > raiseAmount) {
+                return { action: 'RAISE', amount: raiseAmount };
+            } else if (possibleActions.includes('CALL')) {
+                // 如果无法完成最小加注，则跟注
+                return { action: 'CALL' };
+            }
+            // 如果连跟注都无法完成，则会自然地在后续逻辑中选择弃牌
+        }
+    } else if (Settings.potType === 'single_raised') {
+        // 对于single_raised，保持原有的强制加注一次的逻辑
+        if (raiseCount < 1 && possibleActions.includes('RAISE')) {
+            forceAction = 'RAISE';
+        }
     }
 
+    // 达到目标后，限制进一步的加注
     let maxRaises = -1;
     if (Settings.potType === 'single_raised') maxRaises = 1;
     if (Settings.potType === '3bet') maxRaises = 2;
+    // 4bet pot不设上限
 
     if (maxRaises !== -1 && raiseCount >= maxRaises) {
       finalActions = finalActions.filter(action => action !== 'RAISE');
