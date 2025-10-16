@@ -100,9 +100,9 @@ export async function getDecision(gameState, playerId, gtoSuggestionFilter) {
     // 为本次决策复制一份权重，以便修改
     const currentActionWeights = { ...ACTION_WEIGHTS };
 
-    // 如果当前玩家被选中显示GTO建议，则大幅降低弃牌的概率
+    // 如果当前玩家被选中显示GTO建议，则永不弃牌（除非是唯一选项）
     if (gtoSuggestionFilter && gtoSuggestionFilter.has(playerId)) {
-        currentActionWeights.FOLD = 1; // 将弃牌权重从3降至1
+        currentActionWeights.FOLD = 0; // 将弃牌权重设置为0
     }
 
     for (const action of finalActions) {
