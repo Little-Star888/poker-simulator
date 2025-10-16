@@ -194,6 +194,13 @@ function updatePresetVisibility() {
         resetPresetData();
     }
 
+    if (Settings.usePresetHands) {
+        buildPlayerSlots();
+    } else {
+        // 如果不使用预设手牌，请确保容器为空
+        presetPlayerHandsContainer.innerHTML = '';
+    }
+
     presetControls.classList.toggle('hidden-by-js', !anyPresetEnabled);
     presetPlayerHandsContainer.classList.toggle('hidden-by-js', !Settings.usePresetHands);
     presetCommunityCardsContainer.classList.toggle('hidden-by-js', !Settings.usePresetCommunity);
@@ -219,7 +226,6 @@ function initPresetUI() {
       slot.addEventListener('click', handleSlotClick);
   });
 
-  buildPlayerSlots();
   isPresetUIInitialized = true;
 }
 
