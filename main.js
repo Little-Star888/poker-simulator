@@ -78,9 +78,24 @@ function init() {
   // Remove inline style to allow CSS classes to control visibility
   document.getElementById('preset-controls').style.display = '';
 
+  // Helper function to manage pot type select state
+  function updatePotTypeSelectState() {
+    const isManualMode = modeSelect.value === 'manual';
+    potTypeSelect.disabled = isManualMode;
+    if (isManualMode) {
+        potTypeSelect.style.backgroundColor = '#eee'; // Visual cue for disabled
+    } else {
+        potTypeSelect.style.backgroundColor = '';
+    }
+  }
+  updatePotTypeSelectState(); // Set initial state on load
+
   // 绑定配置变更
   modeSelect.addEventListener('change', () => {
     Settings.update({ mode: modeSelect.value });
+    
+    updatePotTypeSelectState(); // Update pot type select based on new mode
+
     // 如果切换到自动模式，确保手动输入标志为false并隐藏弹出窗口
     if (modeSelect.value === 'auto') {
         isWaitingForManualInput = false;
@@ -495,7 +510,7 @@ function validatePresetCards() {
 // ========== 游戏控制 ==========
 
 function handleStartStopClick() {
-    if (startBtn.textContent === '开始牌局') {
+    if (startBtn.textContent.includes('开始牌局')) {
         startNewGame();
     } else {
         stopGame();
@@ -508,7 +523,7 @@ function handlePauseResumeClick() {
     if (isGamePaused) {
         isGamePaused = false;
         log('▶️ 牌局继续');
-        pauseBtn.textContent = '暂停';
+        pauseBtn.textContent = '⏸️ 暂停';
         // startBtn remains "停止牌局" and enabled
         if (Settings.mode === 'auto') {
             processNextAction(); 
@@ -516,7 +531,7 @@ function handlePauseResumeClick() {
     } else {
         isGamePaused = true;
         log('⏸️ 牌局暂停');
-        pauseBtn.textContent = '继续';
+        pauseBtn.textContent = '▶️ 继续';
         // startBtn remains "停止牌局" and enabled
     }
 }
@@ -563,10 +578,10 @@ function startNewGame() {
     log(`[SYSTEM] ${game.players[game.bbIndex].id} posts Big Blind ${Settings.bb}`);
     updateUI({ isInitialDeal: true });
 
-    startBtn.textContent = '停止牌局';
+    startBtn.textContent = '🛑 停止牌局';
     startBtn.disabled = false;
     pauseBtn.disabled = false;
-    pauseBtn.textContent = '暂停';
+    pauseBtn.textContent = '⏸️ 暂停';
 
     if (Settings.mode === 'auto') {
       setTimeout(processNextAction, Settings.autoDelay);
@@ -687,9 +702,9 @@ function stopGame() {
   document.getElementById('suggestion-display').innerHTML = '等待玩家行动...';
 
   // Update button states
-  startBtn.textContent = '开始牌局';
+  startBtn.textContent = '▶️ 开始牌局';
   startBtn.disabled = false;
-  pauseBtn.textContent = '暂停';
+  pauseBtn.textContent = '⏸️ 暂停';
   pauseBtn.disabled = true;
 
   // Re-enable config sections
@@ -985,9 +1000,9 @@ function endGame() {
   hideAllActionPopups();
   log('🎉 牌局结束！（本版本不计算胜负）');
 
-  startBtn.textContent = '开始牌局';
+  startBtn.textContent = '▶️ 开始牌局';
   startBtn.disabled = false;
-  pauseBtn.textContent = '暂停';
+  pauseBtn.textContent = '⏸️ 暂停';
   pauseBtn.disabled = true;
 
   // Re-enable preset controls
