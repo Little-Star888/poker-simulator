@@ -902,6 +902,8 @@ function renderSuggestion(suggestion, playerId, phase) {
                 const parts = [];
                 if (local.equity.winRate !== null) parts.push(`胜率: ${local.equity.winRate}%`);
                 if (local.equity.potOdds !== null) parts.push(`底池赔率: ${local.equity.potOdds}%`);
+                console.log("等会哦啊哈的：" + local.action);
+                if (local.action !== null) parts.push(`建议: ${local.action}`);
                 createRow('本地计算', parts.join('， '));
             }
             if (suggestion.thirdPartyResult && suggestion.thirdPartyResult.equity) {
@@ -910,7 +912,7 @@ function renderSuggestion(suggestion, playerId, phase) {
                 if (treys.winRate !== null) parts.push(`胜率: ${treys.winRate}%`);
                 if (treys.potOdds !== null) parts.push(`底池赔率: ${treys.potOdds}%`);
                 if (treys.action) parts.push(`建议: ${treys.action}`);
-                createRow('Treys (对比)', parts.join('， '));
+                createRow('Treys (仅作对比参考)', parts.join('， '));
             }
 
             createSection('最终建议');
