@@ -340,10 +340,10 @@
       -moz-appearance: textfield; /* Hide spinner in Firefox */
     }
     /* Hide spinner in Webkit browsers (Chrome, Safari) */
-    .readonly-input::-webkit-inner-spin-button, 
-    .readonly-input::-webkit-outer-spin-button { 
-      -webkit-appearance: none; 
-      margin: 0; 
+    .readonly-input::-webkit-inner-spin-button,
+    .readonly-input::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
 
     /* --- Preset Styles --- */
@@ -411,6 +411,45 @@
       align-items: center;
       gap: 5px;
     }
+
+    /* --- New Manual Action Popup Styles --- */
+    .player-action-popup {
+      position: absolute;
+      top: -85px; /* Position it above the player circle */
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      padding: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 110; /* Higher than player z-index */
+      display: none; /* Hidden by default */
+      width: 280px;
+      text-align: center;
+    }
+    .player-action-popup .action-buttons button {
+      margin: 4px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .player-action-popup .amount-slider {
+      padding: 5px;
+    }
+    .player-action-popup .amount-slider label {
+      font-size: 12px;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .player-action-popup .amount-slider input[type="range"] {
+      width: 90%;
+    }
+    .player-action-popup .amount-slider button {
+      margin-top: 8px;
+      padding: 5px 12px;
+    }
+
   </style>
 </head>
 <body>
@@ -432,6 +471,21 @@
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
           </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
+          </div>
         </div>
         <!-- P2 (顺时针方向 - 左下角) -->
         <div class="player" data-player="P2" style="bottom: 20%; left: 15px;">
@@ -445,6 +499,21 @@
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
+          </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
           </div>
         </div>
         <!-- P3 (顺时针方向 - 左中) -->
@@ -460,6 +529,21 @@
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
           </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
+          </div>
         </div>
         <!-- P4 (顺时针方向 - 左上角) -->
         <div class="player" data-player="P4" style="top: 20%; left: 15px;">
@@ -473,6 +557,21 @@
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
+          </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
           </div>
         </div>
         <!-- P5 (顺时针方向 - 顶部) -->
@@ -488,6 +587,21 @@
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
           </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
+          </div>
         </div>
         <!-- P6 (顺时针方向 - 右上角) -->
         <div class="player" data-player="P6" style="top: 20%; right: 15px;">
@@ -501,6 +615,21 @@
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
+          </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
           </div>
         </div>
         <!-- P7 (顺时针方向 - 右中) -->
@@ -516,6 +645,21 @@
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
           </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
+          </div>
         </div>
         <!-- P8 (顺时针方向 - 右下角) -->
         <div class="player" data-player="P8" style="bottom: 20%; right: 15px;">
@@ -529,6 +673,21 @@
           <div class="hole-cards">
             <div class="hole-card" data-card="1"></div>
             <div class="hole-card" data-card="2"></div>
+          </div>
+          <div class="player-action-popup">
+            <div class="action-buttons">
+              <button data-action="FOLD">Fold</button>
+              <button data-action="CHECK">Check</button>
+              <button data-action="CALL">Call</button>
+              <button data-action="BET">Bet</button>
+              <button data-action="RAISE">Raise</button>
+              <button data-action="ALLIN">All In</button>
+            </div>
+            <div class="amount-slider" style="display: none;">
+              <label>金额: <span class="bet-amount-label">0</span></label>
+              <input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5">
+              <button class="confirm-bet-btn">确认</button>
+            </div>
           </div>
         </div>
 
@@ -553,14 +712,7 @@
           <button id="start-btn" class="game-control-btn start-btn">开始牌局</button>
           <button id="pause-btn" class="game-control-btn restart-btn" disabled>暂停</button>
         </div>
-        <!-- 手动操作区 -->
-        <div id="manual-action-area">
-          <div id="manual-player-label">轮到 P1 行动</div>
-          <button id="fold-btn">FOLD</button>
-          <button id="call-btn">CALL</button>
-          <button id="raise-btn">RAISE</button>
-          <input type="number" id="raise-amount" placeholder="金额" min="0" style="display:none; width:80px; margin:0 8px;" />
-        </div>
+        <!-- 手动操作区 (已被移除) -->
       </div>
     </div>
 
@@ -579,7 +731,7 @@
           </div>
           <div class="form-row">
             <label>盲注设置:</label>
-          <input type="number" id="sb-input" value="50" min="1" style="width:80px;" /> / 
+          <input type="number" id="sb-input" value="50" min="1" style="width:80px;" /> /
           <input type="number" id="bb-input" value="100" min="1" style="width:80px;" class="readonly-input" readonly />          </div>
 
           <div class="form-row">
@@ -620,7 +772,7 @@
           </div>
           <div class="form-row">
             <label>初始筹码范围:</label>
-            <input type="number" id="min-stack-input" value="1800" min="1" style="width:80px;" /> - 
+            <input type="number" id="min-stack-input" value="1800" min="1" style="width:80px;" /> -
             <input type="number" id="max-stack-input" value="2200" min="1" style="width:80px;" />
           </div>
         </div>
@@ -629,34 +781,34 @@
           <h3>🃏 牌局预设</h3>
           <div class="form-row">
             <label>预设选项:</label>
-            <label style="width: auto; margin-left: 10px;">
-              <input type="checkbox" id="use-preset-hands-checkbox" />
-              预设手牌
-            </label>
             <label style="width: auto; margin-left: 20px;">
-              <input type="checkbox" id="use-preset-community-checkbox" />
-              预设公共牌
+                <input type="checkbox" id="use-preset-community-checkbox" />
+                预设公共牌
             </label>
+              <label style="width: auto; margin-left: 10px;">
+                  <input type="checkbox" id="use-preset-hands-checkbox" />
+                  预设手牌
+              </label>
           </div>
           <div id="preset-controls" style="display: none;">
-            <!-- Player Hand Presets -->
-            <div id="preset-player-hands-container" style="margin-bottom: 15px;">
-              <h4>玩家手牌:</h4>
-              <!-- Player slots will be generated by JS -->
-            </div>
-            <!-- Community Card Presets -->
-            <div id="preset-community-cards-container" style="margin-top: 15px;">
-              <h4>公共牌:</h4>
-              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <strong>Flop:</strong>
-                <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="0"></div>
-                <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="1"></div>
-                <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="2"></div>
-                <strong style="margin-left: 20px;">Turn:</strong>
-                <div class="preset-card-slot" data-type="community" data-stage="turn" data-card-index="0"></div>
-                <strong style="margin-left: 20px;">River:</strong>
-                <div class="preset-card-slot" data-type="community" data-stage="river" data-card-index="0"></div>
+              <!-- Community Card Presets -->
+              <div id="preset-community-cards-container" style="margin-top: 15px;">
+                  <h4>公共牌:</h4>
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                      <strong>Flop:</strong>
+                      <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="0"></div>
+                      <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="1"></div>
+                      <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="2"></div>
+                      <strong style="margin-left: 20px;">Turn:</strong>
+                      <div class="preset-card-slot" data-type="community" data-stage="turn" data-card-index="0"></div>
+                      <strong style="margin-left: 20px;">River:</strong>
+                      <div class="preset-card-slot" data-type="community" data-stage="river" data-card-index="0"></div>
+                  </div>
               </div>
+              <!-- Player Hand Presets -->
+              <div id="preset-player-hands-container" style="margin-top: 15px; margin-bottom: 15px;">
+                <h4>玩家手牌:</h4>
+                <!-- Player slots will be generated by JS -->
             </div>
             <!-- Card Picker -->
             <div id="card-picker-container" style="margin-top: 15px;">

@@ -28,13 +28,7 @@ let activeSelectionSlot = null;
 let usedCards = new Set();
 let isPresetUIInitialized = false;
 
-// ========== DOM 元素引用 ==========
-const manualActionArea = document.getElementById('manual-action-area');
-const manualPlayerLabel = document.getElementById('manual-player-label');
-const raiseInput = document.getElementById('raise-amount');
-const foldBtn = document.getElementById('fold-btn');
-const callBtn = document.getElementById('call-btn');
-const raiseBtn = document.getElementById('raise-btn');
+
 
 const modeSelect = document.getElementById('mode-select');
 const playerCountInput = document.getElementById('player-count-input');
@@ -87,8 +81,11 @@ function init() {
   // 绑定配置变更
   modeSelect.addEventListener('change', () => {
     Settings.update({ mode: modeSelect.value });
-    isWaitingForManualInput = modeSelect.value === 'manual';
-    toggleManualActionArea(modeSelect.value === 'manual');
+    // 如果切换到自动模式，确保手动输入标志为false并隐藏弹出窗口
+    if (modeSelect.value === 'auto') {
+        isWaitingForManualInput = false;
+        hideAllActionPopups();
+    }
   });
   playerCountInput.addEventListener('change', () => {
     Settings.update({ playerCount: parseInt(playerCountInput.value) || 8 });
@@ -124,14 +121,35 @@ function init() {
   usePresetHandsCheckbox.addEventListener('change', updatePresetVisibility);
   usePresetCommunityCheckbox.addEventListener('change', updatePresetVisibility);
 
-  foldBtn.addEventListener('click', () => submitManualAction('FOLD'));
-  callBtn.addEventListener('click', () => {
-      const gameState = game.getGameState();
-      const player = gameState.players.find(p => p.id === game.getCurrentPlayerId());
-      const toCall = gameState.highestBet - player.bet;
-      submitManualAction(toCall === 0 ? 'CHECK' : 'CALL');
+  // 为所有玩家的行动弹出窗口绑定事件监听器
+  document.querySelectorAll('.player-action-popup').forEach(popup => {
+    const playerElement = popup.closest('.player');
+    const playerId = playerElement.dataset.player;
+
+    popup.querySelector('[data-action="FOLD"]').addEventListener('click', () => submitManualAction(playerId, 'FOLD'));
+    popup.querySelector('[data-action="CHECK"]').addEventListener('click', () => submitManualAction(playerId, 'CHECK'));
+    popup.querySelector('[data-action="CALL"]').addEventListener('click', () => submitManualAction(playerId, 'CALL'));
+    popup.querySelector('[data-action="ALLIN"]').addEventListener('click', () => submitManualAction(playerId, 'ALLIN'));
+
+    popup.querySelector('[data-action="BET"]').addEventListener('click', () => showAmountSlider(playerId, 'BET'));
+    popup.querySelector('[data-action="RAISE"]').addEventListener('click', () => showAmountSlider(playerId, 'RAISE'));
+
+    popup.querySelector('.confirm-bet-btn').addEventListener('click', () => {
+        const slider = popup.querySelector('.bet-slider-input');
+        const amount = parseInt(slider.dataset.amount);
+        const action = slider.dataset.action;
+        submitManualAction(playerId, action, amount);
+    });
+
+    const slider = popup.querySelector('.bet-slider-input');
+    slider.addEventListener('input', () => updateSliderAmount(playerId, slider));
+    // 当用户释放滑块时，如果值为100%，则自动提交ALL IN
+    slider.addEventListener('change', () => {
+        if (slider.value === '100') {
+            submitManualAction(playerId, 'ALLIN');
+        }
+    });
   });
-  raiseBtn.addEventListener('click', handleRaiseClick);
 
   updatePlayerDisplay();
   updateGtoFilterCheckboxes();
@@ -550,6 +568,9 @@ function startNewGame() {
 
     if (Settings.mode === 'auto') {
       setTimeout(processNextAction, Settings.autoDelay);
+    } else {
+      // 在手动模式下，立即为第一个玩家显示操作
+      processNextAction();
     }
   } catch (e) {
     log('❌ 启动失败: ' + e.message);
@@ -650,7 +671,7 @@ function updateP1RoleSelectOptions() {
 function restartGame() {
   isGameRunning = false;
   isWaitingForManualInput = false;
-  toggleManualActionArea(false);
+  hideAllActionPopups();
   startNewGame();
 }
 
@@ -694,11 +715,11 @@ async function processNextAction() {
     }
 
     if (Settings.mode === 'manual') {
-      showManualActionPanel(currentPlayerId);
-      isWaitingForManualInput = true;
-      return;
+      showPlayerActionPopup(currentPlayerId);
+      return; // 等待用户输入
     }
 
+    // 自动模式逻辑
     const decision = await getDecision(gameState, currentPlayerId);
     game.executeAction(currentPlayerId, decision.action, decision.amount);
     log(`[${game.currentRound}] ${currentPlayerId} ${decision.action}${decision.amount ? ' ' + decision.amount : ''}`);
@@ -717,21 +738,7 @@ async function processNextAction() {
   }
 }
 
-function handleRaiseClick() {
-  if (raiseInput.style.display === 'none' || raiseInput.style.display === '') {
-    raiseInput.style.display = 'inline';
-    raiseInput.value = '';
-    raiseInput.focus();
-    raiseBtn.textContent = '确认 RAISE';
-  } else {
-    const amount = parseInt(raiseInput.value);
-    if (isNaN(amount) || amount <= 0) {
-      log('请输入有效的加注金额');
-      return;
-    }
-    submitManualAction('RAISE', amount);
-  }
-}
+
 
 function advanceToNextStage() {
   const currentRound = game.currentRound;
@@ -972,7 +979,7 @@ function endGame() {
   isGameRunning = false;
   isGamePaused = false;
   isWaitingForManualInput = false;
-  toggleManualActionArea(false);
+  hideAllActionPopups();
   log('🎉 牌局结束！（本版本不计算胜负）');
 
   startBtn.textContent = '开始牌局';
@@ -985,51 +992,186 @@ function endGame() {
   document.getElementById('preset-section').style.pointerEvents = 'auto';
 }
 
-function showManualActionPanel(playerId) {
-  const gameState = game.getGameState();
-  const player = gameState.players.find(p => p.id === playerId);
-  const toCall = gameState.highestBet - player.bet;
+// ========== 新手动模式功能 ==========
 
-  manualPlayerLabel.textContent = `轮到 ${playerId} 行动`;
-  callBtn.textContent = toCall === 0 ? 'CHECK' : `CALL (${toCall})`;
-  raiseInput.value = gameState.highestBet + Settings.bb;
-  raiseInput.style.display = 'none';
-
-  toggleManualActionArea(true);
-}
-
-function submitManualAction(action, amount) {
-  if (!isWaitingForManualInput) return;
-
-  const currentPlayerId = game.getCurrentPlayerId();
-  try {
-    game.executeAction(currentPlayerId, action, amount);
-    log(`[${game.currentRound}] ${currentPlayerId} ${action}${amount ? ' ' + amount : ''}`);
-    showActionBubble(currentPlayerId, action, amount);
-    updateActionSheet(currentPlayerId, action, amount);
-
-    toggleManualActionArea(false);
+/**
+ * 隐藏所有玩家行动弹出窗口。
+ */
+function hideAllActionPopups() {
+    document.querySelectorAll('.player-action-popup').forEach(p => p.style.display = 'none');
     isWaitingForManualInput = false;
-    raiseBtn.textContent = 'RAISE';
-    raiseInput.style.display = 'none';
+}
 
-    if (game.isBettingRoundComplete()) {
-      advanceToNextStage();
-    } else {
-      game.moveToNextPlayer();
-      updateUI();
-      if (Settings.mode === 'manual') {
-        processNextAction();
-      }
+/**
+ * 为指定玩家显示行动弹出窗口。
+ * @param {string} playerId 
+ */
+function showPlayerActionPopup(playerId) {
+    // 首先隐藏所有其他可能打开的弹出窗口
+    hideAllActionPopups();
+
+    const playerElement = document.querySelector(`.player[data-player="${playerId}"]`);
+    if (!playerElement) return;
+
+    const popup = playerElement.querySelector('.player-action-popup');
+    const actionButtons = popup.querySelector('.action-buttons');
+    const amountSliderContainer = popup.querySelector('.amount-slider');
+
+    const gameState = game.getGameState();
+    const player = gameState.players.find(p => p.id === playerId);
+    const toCall = gameState.highestBet - player.bet;
+
+    // 根据规则决定显示哪些按钮
+    const canCheck = toCall === 0;
+    actionButtons.querySelector('[data-action="CHECK"]').style.display = canCheck ? 'inline-block' : 'none';
+    actionButtons.querySelector('[data-action="CALL"]').style.display = !canCheck ? 'inline-block' : 'none';
+    if (!canCheck) {
+        actionButtons.querySelector('[data-action="CALL"]').textContent = `Call (${toCall})`;
     }
-  } catch (e) {
-    log(`❌ 无效操作: ${e.message}`);
-  }
+
+    const canBet = gameState.highestBet === 0;
+    actionButtons.querySelector('[data-action="BET"]').style.display = canBet ? 'inline-block' : 'none';
+    actionButtons.querySelector('[data-action="RAISE"]').style.display = !canBet ? 'inline-block' : 'none';
+
+    // 重置并隐藏滑块
+    amountSliderContainer.style.display = 'none';
+    actionButtons.style.display = 'block';
+
+    popup.style.display = 'block';
+    isWaitingForManualInput = true;
 }
 
-function toggleManualActionArea(show) {
-  manualActionArea.style.display = show ? 'block' : 'none';
+/**
+ * 显示下注/加注的金额滑块
+ * @param {string} playerId 
+ * @param {'BET' | 'RAISE'} action 
+ */
+function showAmountSlider(playerId, action) {
+    const playerElement = document.querySelector(`.player[data-player="${playerId}"]`);
+    const popup = playerElement.querySelector('.player-action-popup');
+    const actionButtons = popup.querySelector('.action-buttons');
+    const amountSliderContainer = popup.querySelector('.amount-slider');
+    const slider = popup.querySelector('.bet-slider-input');
+
+    actionButtons.style.display = 'none';
+    amountSliderContainer.style.display = 'block';
+    slider.dataset.action = action;
+    // 重置滑块到最小值并更新标签
+    slider.value = slider.min;
+    updateSliderAmount(playerId, slider);
 }
+
+/**
+ * 当滑块移动时，更新显示的金额
+ * @param {string} playerId 
+ * @param {HTMLInputElement} slider 
+ */
+function updateSliderAmount(playerId, slider) {
+    const gameState = game.getGameState();
+    const player = gameState.players.find(p => p.id === playerId);
+    if (!player) return;
+
+    const popup = slider.closest('.player-action-popup');
+    const amountLabel = popup.querySelector('.bet-amount-label');
+    const confirmBtn = popup.querySelector('.confirm-bet-btn');
+    const percentage = parseInt(slider.value);
+    const action = slider.dataset.action;
+
+    let amountToPutIn;
+    // 100% 总是意味着 all-in
+    if (percentage === 100) {
+        amountToPutIn = player.stack;
+    } else {
+        amountToPutIn = Math.floor(player.stack * (percentage / 100));
+    }
+
+    let finalAmount; // 这是传递给 game.executeAction 的最终金额
+    let labelText;
+
+    if (action === 'BET') {
+        const minBet = Math.min(Settings.bb, player.stack);
+        // 确保下注额不小于最小下注，除非是all-in
+        let betAmount = Math.max(amountToPutIn, minBet);
+        if (betAmount >= player.stack) { // 如果计算出的金额大于或等于玩家筹码，则为all-in
+            betAmount = player.stack;
+        }
+        finalAmount = betAmount;
+        labelText = `${finalAmount} (${percentage}%)`;
+    } else { // RAISE
+        const minRaiseTo = gameState.highestBet + gameState.lastRaiseAmount;
+        const maxRaiseTo = player.stack + player.bet;
+
+        // 我们这里的 `amountToPutIn` 是指玩家额外要投入的钱
+        let totalAfterRaise = player.bet + amountToPutIn;
+
+        // 确保总金额不小于最小加注额，除非是all-in
+        let finalRaiseTo = Math.max(totalAfterRaise, minRaiseTo);
+        if (finalRaiseTo >= maxRaiseTo) { // 如果计算出的总额大于或等于玩家能付出的最大值，则为all-in
+            finalRaiseTo = maxRaiseTo;
+        }
+        finalAmount = finalRaiseTo;
+        labelText = `${finalAmount} (${percentage}%)`;
+    }
+
+    slider.dataset.amount = finalAmount;
+    if (percentage === 100) {
+        amountLabel.textContent = `ALL IN (${player.stack + player.bet})`;
+        confirmBtn.textContent = '确认 ALL IN';
+    } else {
+        amountLabel.textContent = labelText;
+        confirmBtn.textContent = '确认';
+    }
+}
+
+/**
+ * 提交手动操作
+ * @param {string} playerId 
+ * @param {string} action 
+ * @param {number} [amount] 
+ */
+function submitManualAction(playerId, action, amount) {
+    if (!isWaitingForManualInput) return;
+
+    const currentPlayerId = game.getCurrentPlayerId();
+    if (playerId !== currentPlayerId) {
+        log(`错误: 不是 ${playerId} 的回合.`);
+        return;
+    }
+
+    // 如果是100%的BET/RAISE，自动转为ALLIN
+    if ((action === 'BET' || action === 'RAISE') && amount) {
+        const player = game.getGameState().players.find(p => p.id === playerId);
+        if (player && (player.stack + player.bet) === amount) {
+            action = 'ALLIN';
+            amount = undefined;
+        }
+    }
+
+    try {
+        game.executeAction(currentPlayerId, action, amount);
+        log(`[${game.currentRound}] ${currentPlayerId} ${action}${amount ? ' ' + amount : ''}`);
+        showActionBubble(currentPlayerId, action, amount);
+        updateActionSheet(currentPlayerId, action, amount);
+
+        hideAllActionPopups();
+
+        if (game.isBettingRoundComplete()) {
+            advanceToNextStage();
+        } else {
+            game.moveToNextPlayer();
+            updateUI();
+            // 在手动模式下，立即为下一位玩家处理行动
+            processNextAction();
+        }
+    } catch (e) {
+        log(`❌ 无效操作: ${e.message}`);
+        // 如果操作无效，重新显示弹出窗口以供更正
+        showPlayerActionPopup(playerId);
+    }
+}
+
+
+
 
 function renderActionSheet() {
   const tableBody = document.getElementById('action-sheet-body');

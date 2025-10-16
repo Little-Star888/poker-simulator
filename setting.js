@@ -10,7 +10,7 @@ export const Settings = {
   mode: 'auto',           // 游戏模式: 'auto' | 'manual'
   sb: 50,                 // 小盲注 (Small Blind)
   bb: 100,                // 大盲注 (Big Blind)
-  autoDelay: 2000,        // 自动模式下每步延时（毫秒）
+  autoDelay: 1500,        // 自动模式下每步延时（毫秒）
   playerCount: 8,         // 玩家数量
   minStack: 10000,         // 最小初始筹码
   maxStack: 20000,         // 最大初始筹码
