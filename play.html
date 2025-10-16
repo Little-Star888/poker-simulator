@@ -448,12 +448,13 @@
       width: 40px; height: 50px; border: 1px dashed #aaa; border-radius: 4px; cursor: pointer;
       background-size: contain; background-repeat: no-repeat; background-position: center;
       display: inline-block; vertical-align: middle;
+      flex-shrink: 0; /* Prevent shrinking in flex containers */
     }
     .preset-card-slot.active-selection { border-color: #f39c12; box-shadow: 0 0 5px rgba(243, 156, 18, 0.7); }
     #card-picker { display: flex; flex-wrap: wrap; gap: 5px; border: 1px solid #eee; padding: 5px; max-height: 250px; overflow-y: auto; }
     .picker-card { width: 40px; height: 50px; background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; border-radius: 3px; }
     .picker-card.dimmed { opacity: 0.3; cursor: not-allowed; }
-    #preset-player-hands-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; align-items: start; }
+    #preset-player-hands-container { display: grid; grid-template-columns: repeat(auto-fill, 160px); gap: 10px; justify-content: center; }
     #preset-player-hands-container > h4 { grid-column: 1 / -1; margin-bottom: 0; }
     .player-hand-preset { display: flex; align-items: center; gap: 5px; }
   </style>
@@ -538,9 +539,9 @@
                       <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="0"></div>
                       <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="1"></div>
                       <div class="preset-card-slot" data-type="community" data-stage="flop" data-card-index="2"></div>
-                      <strong style="margin-left: 10px;">Turn:</strong>
+                      <strong style="margin-left: -1px;">Turn:</strong>
                       <div class="preset-card-slot" data-type="community" data-stage="turn" data-card-index="0"></div>
-                      <strong style="margin-left: 10px;">River:</strong>
+                      <strong style="margin-left: -1px;">River:</strong>
                       <div class="preset-card-slot" data-type="community" data-stage="river" data-card-index="0"></div>
                   </div>
               </div>
