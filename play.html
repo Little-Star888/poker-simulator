@@ -285,16 +285,163 @@
       border: 1px solid #FFD700; box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
     }
     .player-action-popup {
-      position: absolute; top: -85px; left: 50%; transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.95); border: 1px solid #aaa; border-radius: 8px;
-      padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 110;
-      display: none; width: 280px; text-align: center;
+      position: absolute;
+      /* The JS will set top/left, this transform will center it */
+      transform: translate(-50%, -50%); 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      z-index: 110;
+      display: none;
+      width: 300px; /* A bit wider */
+      text-align: center;
+      overflow: hidden; /* To respect border-radius */
     }
-    .player-action-popup .action-buttons button { margin: 4px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
-    .player-action-popup .amount-slider { padding: 5px; }
-    .player-action-popup .amount-slider label { font-size: 12px; display: block; margin-bottom: 5px; }
-    .player-action-popup .amount-slider input[type="range"] { width: 90%; }
-    .player-action-popup .amount-slider button { margin-top: 8px; padding: 5px 12px; }
+
+    .player-action-popup .popup-header {
+        background-color: #f7f7f7;
+        padding: 8px 12px;
+        font-weight: bold;
+        font-size: 16px;
+        color: #333;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .player-action-popup .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        padding: 15px;
+    }
+
+    .player-action-popup .action-buttons button {
+        border: none;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-basis: calc(33.333% - 6px); /* Three buttons per row */
+        flex-grow: 1;
+    }
+
+    .player-action-popup .action-buttons button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Color coding buttons */
+    .player-action-popup button[data-action="FOLD"] {
+        background-color: #e74c3c;
+        color: white;
+    }
+    .player-action-popup button[data-action="CHECK"],
+    .player-action-popup button[data-action="CALL"] {
+        background-color: #3498db;
+        color: white;
+    }
+    .player-action-popup button[data-action="BET"],
+    .player-action-popup button[data-action="RAISE"] {
+        background-color: #2ecc71;
+        color: white;
+    }
+    .player-action-popup button[data-action="ALLIN"] {
+        background-color: #f39c12;
+        color: white;
+        flex-basis: 100%; /* Make All-in button full width */
+    }
+
+
+    /* --- Amount Slider Section --- */
+    .player-action-popup .amount-slider {
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-top: 1px solid #eee;
+    }
+
+    .player-action-popup .amount-slider label {
+        font-size: 14px;
+        font-weight: 500;
+        color: #555;
+        display: block;
+        margin-bottom: 12px;
+    }
+
+    .player-action-popup .amount-slider .bet-amount-label {
+        font-weight: bold;
+        color: #2c3e50;
+        background-color: #eee;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .player-action-popup .amount-slider input[type="range"] {
+        width: 100%;
+        margin: 15px 0;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 8px;
+        background: #ddd;
+        border-radius: 5px;
+        outline: none;
+    }
+
+    .player-action-popup .amount-slider input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--accent-color);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .player-action-popup .amount-slider input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: var(--accent-color);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .player-action-popup .amount-slider .slider-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+    }
+
+    .player-action-popup .amount-slider .confirm-bet-btn {
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .player-action-popup .amount-slider .confirm-bet-btn:hover {
+        background-color: #218838;
+    }
+
+    .player-action-popup .amount-slider .cancel-bet-btn {
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 10px;
+    }
+
     .readonly-input { background-color: #eee; }
     #preset-controls { border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #fdfdfd; }
     .preset-card-slot {
@@ -416,42 +563,186 @@
           <div class="player" data-player="P1">
             <div class="fold-indicator">FOLD</div><div class="player-info">P1 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div class="player" data-player="P2">
             <div class="fold-indicator">FOLD</div><div class="player-info">P2 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div class="player" data-player="P3">
             <div class="fold-indicator">FOLD</div><div class="player-info">P3 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div class="player" data-player="P4">
             <div class="fold-indicator">FOLD</div><div class="player-info">P4 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div class="player" data-player="P5">
             <div class="fold-indicator">FOLD</div><div class="player-info">P5 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div class="player" data-player="P6">
             <div class="fold-indicator">FOLD</div><div class="player-info">P6 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div class="player" data-player="P7">
             <div class="fold-indicator">FOLD</div><div class="player-info">P7 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div class="player" data-player="P8">
             <div class="fold-indicator">FOLD</div><div class="player-info">P8 <span class="player-role"></span><br><span class="stack"></span></div>
             <div class="player-bet"></div><div class="action-bubble"></div><div class="hole-cards"><div class="hole-card"></div><div class="hole-card"></div></div>
-            <div class="player-action-popup"><div class="action-buttons"><button data-action="FOLD">Fold</button><button data-action="CHECK">Check</button><button data-action="CALL">Call</button><button data-action="BET">Bet</button><button data-action="RAISE">Raise</button><button data-action="ALLIN">All In</button></div><div class="amount-slider" style="display: none;"><label>金额: <span class="bet-amount-label">0</span></label><input type="range" class="bet-slider-input" min="5" max="100" step="5" value="5"><button class="confirm-bet-btn">确认</button></div></div>
+            <div class="player-action-popup">
+              <div class="popup-header">轮到你了</div>
+              <div class="action-buttons">
+                  <button data-action="FOLD">弃牌</button>
+                  <button data-action="CHECK">过牌</button>
+                  <button data-action="CALL">跟注</button>
+                  <button data-action="BET">下注</button>
+                  <button data-action="RAISE">加注</button>
+                  <button data-action="ALLIN">全下</button>
+              </div>
+              <div class="amount-slider" style="display: none;">
+                  <label>选择金额: <span class="bet-amount-label">0</span></label>
+                  <input type="range" class="bet-slider-input" min="5" max="100" step="1" value="5">
+                  <div class="slider-actions">
+                      <button class="cancel-bet-btn">取消</button>
+                      <button class="confirm-bet-btn">确认</button>
+                  </div>
+              </div>
+            </div>
           </div>
           <div id="pot-display" class="pot-display">底池: <span id="pot-amount">0</span></div>
           <div class="community-cards"><div class="card community-card"></div><div class="card community-card"></div><div class="card community-card"></div><div class="card community-card"></div><div class="card community-card"></div></div>

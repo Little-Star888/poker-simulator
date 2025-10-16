@@ -142,14 +142,17 @@ function init() {
     const playerElement = popup.closest('.player');
     const playerId = playerElement.dataset.player;
 
+    // 主行动按钮
     popup.querySelector('[data-action="FOLD"]').addEventListener('click', () => submitManualAction(playerId, 'FOLD'));
     popup.querySelector('[data-action="CHECK"]').addEventListener('click', () => submitManualAction(playerId, 'CHECK'));
     popup.querySelector('[data-action="CALL"]').addEventListener('click', () => submitManualAction(playerId, 'CALL'));
     popup.querySelector('[data-action="ALLIN"]').addEventListener('click', () => submitManualAction(playerId, 'ALLIN'));
 
+    // 打开滑块的按钮
     popup.querySelector('[data-action="BET"]').addEventListener('click', () => showAmountSlider(playerId, 'BET'));
     popup.querySelector('[data-action="RAISE"]').addEventListener('click', () => showAmountSlider(playerId, 'RAISE'));
 
+    // 滑块视图中的按钮
     popup.querySelector('.confirm-bet-btn').addEventListener('click', () => {
         const slider = popup.querySelector('.bet-slider-input');
         const amount = parseInt(slider.dataset.amount);
@@ -157,9 +160,14 @@ function init() {
         submitManualAction(playerId, action, amount);
     });
 
+    popup.querySelector('.cancel-bet-btn').addEventListener('click', () => {
+        // 点击取消，返回主按钮视图
+        popup.querySelector('.amount-slider').style.display = 'none';
+        popup.querySelector('.action-buttons').style.display = 'flex';
+    });
+
     const slider = popup.querySelector('.bet-slider-input');
     slider.addEventListener('input', () => updateSliderAmount(playerId, slider));
-    // 当用户释放滑块时，如果值为100%，则自动提交ALL IN
     slider.addEventListener('change', () => {
         if (slider.value === '100') {
             submitManualAction(playerId, 'ALLIN');
@@ -1226,20 +1234,24 @@ function showPlayerActionPopup(playerId) {
 
     // 根据规则决定显示哪些按钮
     const canCheck = toCall === 0;
-    actionButtons.querySelector('[data-action="CHECK"]').style.display = canCheck ? 'inline-block' : 'none';
-    actionButtons.querySelector('[data-action="CALL"]').style.display = !canCheck ? 'inline-block' : 'none';
+    actionButtons.querySelector('[data-action="CHECK"]').style.display = canCheck ? 'block' : 'none';
+    const callButton = actionButtons.querySelector('[data-action="CALL"]');
+    callButton.style.display = !canCheck ? 'block' : 'none';
     if (!canCheck) {
-        actionButtons.querySelector('[data-action="CALL"]').textContent = `Call (${toCall})`;
+        callButton.textContent = `跟注 (${toCall})`;
     }
 
     const canBet = gameState.highestBet === 0;
-    actionButtons.querySelector('[data-action="BET"]').style.display = canBet ? 'inline-block' : 'none';
-    actionButtons.querySelector('[data-action="RAISE"]').style.display = !canBet ? 'inline-block' : 'none';
+    actionButtons.querySelector('[data-action="BET"]').style.display = canBet ? 'block' : 'none';
+    actionButtons.querySelector('[data-action="RAISE"]').style.display = !canBet ? 'block' : 'none';
 
-    // 重置并隐藏滑块
+    // 重置视图：确保滑块隐藏，按钮显示
     amountSliderContainer.style.display = 'none';
-    actionButtons.style.display = 'block';
+    actionButtons.style.display = 'flex';
 
+    // 定位并显示弹窗
+    popup.style.top = '50%';
+    popup.style.left = '50%';
     popup.style.display = 'block';
     isWaitingForManualInput = true;
 }
@@ -1256,8 +1268,10 @@ function showAmountSlider(playerId, action) {
     const amountSliderContainer = popup.querySelector('.amount-slider');
     const slider = popup.querySelector('.bet-slider-input');
 
+    // 切换视图
     actionButtons.style.display = 'none';
     amountSliderContainer.style.display = 'block';
+    
     slider.dataset.action = action;
     // 重置滑块到最小值并更新标签
     slider.value = slider.min;
