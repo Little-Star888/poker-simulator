@@ -902,7 +902,6 @@ function renderSuggestion(suggestion, playerId, phase) {
                 const parts = [];
                 if (local.equity.winRate !== null) parts.push(`胜率: ${local.equity.winRate}%`);
                 if (local.equity.potOdds !== null) parts.push(`底池赔率: ${local.equity.potOdds}%`);
-                console.log("等会哦啊哈的：" + local.action);
                 if (local.action !== null) parts.push(`建议: ${local.action}`);
                 createRow('本地计算', parts.join('， '));
             }
