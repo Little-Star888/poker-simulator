@@ -545,6 +545,15 @@
         transform: translate(-50%, -50%) scale(1.1); /* Correctly combine transforms to prevent jumping */
     }
 
+    .player-action-popup .quick-bet-sizes button:disabled,
+    .player-action-popup .quick-bet-sizes button:disabled:hover {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.4);
+        cursor: not-allowed;
+        transform: translate(-50%, -50%) scale(1); /* 移除并覆盖悬浮动画 */
+    }
+
 
     .player-action-popup .quick-bet-sizes button span {
         font-size: 1em;
