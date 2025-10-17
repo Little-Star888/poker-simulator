@@ -885,6 +885,34 @@
     #snapshot-list li .snapshot-actions .delete-btn { background-color: #dc3545; color: white; border-color: #dc3545; }
     #snapshot-list li .snapshot-actions .delete-btn:hover { background-color: #c82333; }
 
+    #snapshot-list-container {
+      max-height: 210px; /* 大约3个列表项的高度 */
+      overflow-y: auto;
+      border: 1px solid #eee;
+      padding: 10px;
+      border-radius: 4px;
+      background: #fdfdfd;
+    }
+
+    /* 为快照列表定制滚动条样式 */
+    #snapshot-list-container::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    #snapshot-list-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    #snapshot-list-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+
+    #snapshot-list-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
     /* --- Styles for View Snapshot Modal --- */
     .snapshot-suggestion-item {
         display: flex;
@@ -1059,7 +1087,7 @@
 
         <div class="section" id="snapshot-management-section">
           <h3>💾 牌局快照管理</h3>
-          <div id="snapshot-list-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 4px;">
+          <div id="snapshot-list-container">
             <p style="text-align: center; color: #888;">暂无快照</p>
             <ul id="snapshot-list" style="list-style: none; padding: 0; margin: 0;">
               <!-- Snapshots will be rendered here -->
