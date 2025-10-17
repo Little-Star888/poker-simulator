@@ -1022,19 +1022,18 @@ async function captureAndProceed(cropOptions) {
         const imageData = canvas.toDataURL('image/png');
         log('✅ 截图已生成。正在整理当前GTO建议...');
 
-        const gameState = game.getGameState();
-        const activePlayers = gameState.players.filter(p => !p.isFolded && !p.isAllIn);
-        
-        // 从缓存中筛选出真正有建议的玩家，并构建建议列表
-        const allGtoSuggestions = activePlayers
-            .filter(player => currentSuggestionsCache.hasOwnProperty(player.id)) // 只包含在缓存中存在的玩家
-            .map(player => {
-                return {
-                    playerId: player.id,
-                    suggestion: currentSuggestionsCache[player.id],
-                    notes: '' 
-                };
-            });
+        const gameState = game.getGameState(); // 重新加入这行来定义gameState
+
+        // 直接遍历缓存的键，因为缓存本身就代表了本局所有已生成的建议
+        const playerIdsWithSuggestions = Object.keys(currentSuggestionsCache);
+
+        const allGtoSuggestions = playerIdsWithSuggestions.map(playerId => {
+            return {
+                playerId: playerId,
+                suggestion: currentSuggestionsCache[playerId],
+                notes: ''
+            };
+        });
 
         log('✅ 所有当前GTO建议已整理。请在弹窗中确认保存。');
 
