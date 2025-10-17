@@ -1339,9 +1339,9 @@ function showPlayerActionPopup(playerId) {
         if (actionForQuickBet === 'BET') {
             amount = Math.round(pot * multiplier);
         } else { // RAISE
-            // 加注的倍率通常是相对于底池大小，但实现方式多样
-            // 这里我们简单实现为：底池的X倍 + 需要跟注的额度
-            amount = Math.round(pot * multiplier) + toCall;
+            // 标准加注算法：总下注额 = 跟注额 + (跟注后的底池 * 倍率)
+            const potAfterCall = pot + toCall;
+            amount = toCall + Math.round(potAfterCall * multiplier);
         }
 
         // 金额必须有效
