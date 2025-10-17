@@ -1174,8 +1174,7 @@ function renderSnapshotList() {
         li.innerHTML = `
             <div class="snapshot-info">
                 <strong class="snapshot-name-display" data-snapshot-id="${snapshot.id}">${snapshot.name}</strong><br>
-                <small>${snapshot.timestamp}</small><br>
-                <small>备注: ${firstNote.substring(0, 50)}${firstNote.length > 50 ? '...' : ''}</small>
+                <small>${snapshot.timestamp}</small>
             </div>
             <div class="snapshot-actions">
                 <button class="view-btn">查看建议</button>
