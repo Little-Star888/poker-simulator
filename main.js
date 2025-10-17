@@ -192,7 +192,11 @@ function init() {
     });
     sliderOverlay.addEventListener('click', (e) => {
         if (e.target === sliderOverlay) { // Clicked on the slider background
-            hideAllActionPopups();
+            e.stopPropagation(); // Prevent click from bubbling to parent popup
+            // Go back to the action panel instead of closing the popup
+            const actionPanel = popup.querySelector('.action-panel');
+            sliderOverlay.style.display = 'none';
+            actionPanel.style.display = 'flex';
         }
     });
   });
