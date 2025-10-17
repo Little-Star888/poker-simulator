@@ -1243,6 +1243,54 @@ function hideAllActionPopups() {
 }
 
 /**
+ * Dynamically adjusts the player action popup's position to ensure it stays within the poker table boundaries.
+ * @param {HTMLElement} popup The popup element to adjust.
+ */
+function adjustPopupPosition(popup) {
+    const table = document.querySelector('.poker-table');
+    if (!table || !popup) return;
+
+    // Use rAF to ensure the browser has painted the popup and we can get an accurate measurement.
+    requestAnimationFrame(() => {
+        const tableRect = table.getBoundingClientRect();
+        const popupRect = popup.getBoundingClientRect();
+
+        // Default transform is translate(-50%, -50%)
+        let translateX = -50;
+        let translateY = -50;
+
+        // Check for horizontal overflow and adjust
+        const overflowLeft = tableRect.left - popupRect.left;
+        if (overflowLeft > 0) {
+            const adjustment = (overflowLeft / popupRect.width) * 100;
+            translateX += adjustment;
+        }
+
+        const overflowRight = popupRect.right - tableRect.right;
+        if (overflowRight > 0) {
+            const adjustment = (overflowRight / popupRect.width) * 100;
+            translateX -= adjustment;
+        }
+
+        // Check for vertical overflow and adjust
+        const overflowTop = tableRect.top - popupRect.top;
+        if (overflowTop > 0) {
+            const adjustment = (overflowTop / popupRect.height) * 100;
+            translateY += adjustment;
+        }
+
+        const overflowBottom = popupRect.bottom - tableRect.bottom;
+        if (overflowBottom > 0) {
+            const adjustment = (overflowBottom / popupRect.height) * 100;
+            translateY -= adjustment;
+        }
+        
+        // Apply the final calculated transform
+        popup.style.transform = `translate(${translateX}%, ${translateY}%)`;
+    });
+}
+
+/**
  * 为指定玩家显示行动弹出窗口。
  * @param {string} playerId
  */
@@ -1255,6 +1303,9 @@ function showPlayerActionPopup(playerId) {
     const popup = playerElement.querySelector('.player-action-popup');
     const actionPanel = popup.querySelector('.action-panel');
     const sliderOverlay = popup.querySelector('.amount-slider-overlay');
+
+    // Reset transform before showing to ensure calculations are fresh
+    popup.style.transform = 'translate(-50%, -50%)';
 
     const betRaiseBtn = popup.querySelector('.bet-raise');
     const checkCallBtn = popup.querySelector('.check-call');
@@ -1312,6 +1363,10 @@ function showPlayerActionPopup(playerId) {
     actionPanel.style.display = 'flex';
     sliderOverlay.style.display = 'none';
     popup.style.display = 'flex';
+
+    // Adjust position to stay within the table
+    adjustPopupPosition(popup);
+
     isWaitingForManualInput = true;
 }
 
