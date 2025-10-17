@@ -159,10 +159,14 @@
       border: none;
       color: white;
       cursor: pointer;
-      transition: background-color 0.2s;
+      transition: background-color 0.2s, transform 0.2s ease-out, box-shadow 0.2s ease-out;
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+    .game-control-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
     #start-btn { background-color: var(--accent-color); }
     #pause-btn { background-color: #ffc107; }
@@ -171,6 +175,45 @@
       display: flex;
       gap: 10px; /* 增加按钮间距 */
     }
+
+    /* --- Custom Button Colors --- */
+    /* “保存快照”和“保存备注”按钮 */
+    #save-snapshot-btn,
+    #save-snapshot-remarks-btn {
+      background-color: #007bff; /* 蓝色主色调 */
+    }
+    #save-snapshot-btn:hover,
+    #save-snapshot-remarks-btn:hover {
+      background-color: #0069d9;
+    }
+
+    /* 次要/取消操作的通用样式 */
+    .game-control-btn.secondary-btn {
+      background-color: #6c757d;
+    }
+    .game-control-btn.secondary-btn:hover {
+      background-color: #5a6268;
+    }
+
+    /* 删除确认弹出框的按钮 */
+    #delete-confirm-popover #delete-confirm-yes {
+        background-color: #dc3545; /* 红色，表示危险操作 */
+    }
+    #delete-confirm-popover #delete-confirm-yes:hover {
+        background-color: #c82333;
+    }
+
+    /* 截图确认按钮 */
+    #save-snapshot-confirm-btn {
+      background-color: var(--accent-color); /* 绿色 */
+    }
+    #save-snapshot-confirm-btn:hover {
+      background-color: #218838; /* 深绿色 */
+    }
+    #save-snapshot-confirm-btn:hover {
+      background-color: #218838;
+    }
+
 
     .game-control-btn:disabled {
       background-color: #cccccc;
