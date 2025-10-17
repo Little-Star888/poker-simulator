@@ -414,9 +414,15 @@ function handleSlotClick(event) {
   activeSelectionSlot.classList.add('active-selection');
 }
 
-function animateCardToSlot(pickerCard, destinationElement, cardText, originalSlot) {
+function animateCardToSlot(pickerCard, destinationElement, cardText) { // Removed originalSlot parameter
     const startRect = pickerCard.getBoundingClientRect();
     const endRect = destinationElement.getBoundingClientRect();
+
+    // If destination element is not visible or has zero dimensions, skip animation.
+    if (endRect.width === 0 || endRect.height === 0) {
+        console.warn("Destination element for card animation is not visible or has zero dimensions. Skipping animation for this target.");
+        return; // Just return, caller handles assignCard and activateNextEmptySlot
+    }
 
     const movingCard = document.createElement('div');
     movingCard.style.position = 'fixed';
@@ -424,7 +430,7 @@ function animateCardToSlot(pickerCard, destinationElement, cardText, originalSlo
     movingCard.style.left = `${startRect.left}px`;
     movingCard.style.top = `${startRect.top}px`;
     movingCard.style.width = `${startRect.width}px`;
-    movingCard.style.height = `${startRect.height}px`;
+    movingCard.style.height = `${endRect.height}px`;
     movingCard.style.backgroundImage = `url(${getCardImagePath(cardText)})`;
     movingCard.style.backgroundSize = 'contain';
     movingCard.style.backgroundRepeat = 'no-repeat';
@@ -442,13 +448,10 @@ function animateCardToSlot(pickerCard, destinationElement, cardText, originalSlo
         movingCard.style.height = `${endRect.height}px`;
     }, 20);
 
-    // After the animation finishes
+    // After the animation finishes, only remove the moving card.
+    // The caller will handle assignCard and activateNextEmptySlot.
     setTimeout(() => {
         document.body.removeChild(movingCard);
-        // Call assignCard with the original preset slot
-        assignCard(originalSlot, cardText);
-        // 自动激活下一个空槽位
-        activateNextEmptySlot();
     }, 420); // Slightly longer than the transition duration
 }
 
@@ -467,23 +470,32 @@ function handleCardPickerClick(event) {
   }
 
   const { type, playerId, cardIndex } = activeSelectionSlot.dataset;
-  let destinationElement = activeSelectionSlot; // Default to the slot itself for community cards
+  
+  let animationsInitiated = 0; // Counter for initiated animations
 
-  if (type === 'player') {
+  // 动画到抽屉中的预设卡槽
+  animateCardToSlot(pickerCard, activeSelectionSlot, cardText);
+  animationsInitiated++;
+
+  // 如果是玩家手牌，并且启用了预设手牌，则同时动画到主牌桌上的底牌位置
+  if (type === 'player' && Settings.usePresetHands) {
     const playerOnTable = document.querySelector(`.player[data-player="${playerId}"]`);
     if (playerOnTable) {
         const cardOnTable = playerOnTable.querySelectorAll('.hole-card')[parseInt(cardIndex)];
         if (cardOnTable) {
-            destinationElement = cardOnTable; // The animation's destination is the card on the table
+            animateCardToSlot(pickerCard, cardOnTable, cardText);
+            animationsInitiated++;
         }
     }
   }
 
-  // Pass the original slot `activeSelectionSlot` to the animation function
-  // so it knows which preset slot to update after the animation.
-  animateCardToSlot(pickerCard, destinationElement, cardText, activeSelectionSlot);
-
-  // The active slot is now managed by activateNextEmptySlot() within the animation callback.
+  // 在所有动画启动后，延迟执行数据更新和激活下一个槽位
+  if (animationsInitiated > 0) {
+      setTimeout(() => {
+          assignCard(activeSelectionSlot, cardText); // originalSlot is activeSelectionSlot
+          activateNextEmptySlot();
+      }, 420); // 匹配动画持续时间
+  }
 }
 
 function assignCard(slot, cardText) {
