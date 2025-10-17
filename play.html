@@ -487,9 +487,10 @@
         width: 100%;
         max-width: 100%;
         /* Background is now on the panel, not the parent popup */
-        background: rgba(0, 0, 0, 0.75);
+        background: transparent;
         padding: 15px;
-        border-radius: 15px;
+        border-radius: 0;
+        box-shadow: none;
     }
 
     .player-action-popup .quick-bet-sizes {
@@ -645,7 +646,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background: transparent; /* No fill */
+        background: rgba(0, 0, 0, 0.3); /* 新增：给轨道一个半透明的黑色背景 */
         border: 1px solid rgba(255, 255, 255, 0.4); /* But with a border to be visible */
         box-shadow: none;
         border-radius: 25px; /* 50px width / 2 */
