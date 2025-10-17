@@ -562,10 +562,11 @@
         justify-content: center;
         align-items: center;
         gap: 15px;
-        width: 100%;
+        /* width: 100%; */ /* Removing width to prevent stretching issues */
     }
 
     .player-action-popup .main-action-btn {
+        flex-shrink: 0; /* Prevent button from being stretched or shrunk by flex container */
         border: 2px solid rgba(255, 255, 255, 0.5);
         border-radius: 50%;
         color: white;
@@ -574,6 +575,15 @@
         cursor: pointer;
         transition: all 0.2s ease;
         box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        /* Add display flex to center content within the button itself */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        padding: 5px; /* Add some padding to prevent text from touching edges */
+        box-sizing: border-box; /* Ensure padding is included in width/height */
+        overflow: hidden; /* Clip any content that overflows the button's bounds */
+        text-align: center; /* Center text horizontally */
     }
 
     .player-action-popup .main-action-btn:hover {
@@ -600,6 +610,7 @@
         height: 55px;
     }
      .player-action-popup .main-action-btn.check-call .amount {
+        display: block; /* Ensure amount appears on a new line */
         font-size: 10px;
         margin-top: 2px;
         font-weight: normal;

@@ -1304,57 +1304,86 @@ function showPlayerActionPopup(playerId) {
     // Reset transform before showing to ensure calculations are fresh
     popup.style.transform = 'translate(-50%, -50%)';
 
+    // Get all UI elements inside the popup
     const betRaiseBtn = popup.querySelector('.bet-raise');
     const checkCallBtn = popup.querySelector('.check-call');
+    const foldBtn = popup.querySelector('.fold');
+    const quickBetContainer = popup.querySelector('.quick-bet-sizes');
+    const mainButtonsContainer = popup.querySelector('.main-action-buttons');
     const quickBetBtns = popup.querySelectorAll('.quick-bet-sizes button');
 
     const gameState = game.getGameState();
     const player = gameState.players.find(p => p.id === playerId);
     const toCall = gameState.highestBet - player.bet;
 
-    // --- 配置主行动按钮 ---
-    if (toCall === 0) {
-        // 场景:无人下注,可让牌或下注 (Check or Bet)
+    // Reset all buttons and containers to default visibility and layout
+    quickBetContainer.style.display = 'block';
+    mainButtonsContainer.style.justifyContent = 'center'; // default is center
+    betRaiseBtn.style.display = 'block';
+    checkCallBtn.style.display = 'block';
+    foldBtn.style.display = 'block';
+
+
+    // --- Configure buttons based on game state ---
+
+    if (toCall > 0 && player.stack < toCall) {
+        // ** SCENARIO: INSUFFICIENT STACK **
+        // Player cannot afford to call, so options are FOLD or ALL-IN.
+        quickBetContainer.style.display = 'none';
+        betRaiseBtn.style.display = 'none'; // Hide the regular Bet/Raise button
+
+        // Repurpose the Check/Call button to be the ALL-IN button
+        checkCallBtn.innerHTML = `ALL-IN<span class="amount">${player.stack}</span>`;
+        checkCallBtn.dataset.action = 'ALLIN';
+
+        // The Fold button is already visible. We can adjust layout if needed.
+        mainButtonsContainer.style.justifyContent = 'space-around'; // Space out Fold and All-in
+
+    } else if (toCall === 0) {
+        // ** SCENARIO: CHECK or BET **
         checkCallBtn.textContent = '让牌';
         checkCallBtn.dataset.action = 'CHECK';
 
         betRaiseBtn.textContent = '下注';
         betRaiseBtn.dataset.action = 'BET';
     } else {
-        // 场景:有人下注,可弃牌、跟注或加注 (Fold, Call, or Raise)
-        checkCallBtn.innerHTML = `跟注<div class="amount">${toCall}</div>`;
+        // ** SCENARIO: FOLD, CALL, or RAISE **
+        checkCallBtn.innerHTML = `跟注<span class="amount">${toCall}</span>`;
         checkCallBtn.dataset.action = 'CALL';
 
         betRaiseBtn.textContent = '加注';
         betRaiseBtn.dataset.action = 'RAISE';
     }
 
-    // --- 配置快捷下注按钮 ---
-    const pot = gameState.pot;
-    const actionForQuickBet = toCall === 0 ? 'BET' : 'RAISE';
+    // --- Configure quick bet buttons (only if they are visible) ---
+    if (quickBetContainer.style.display !== 'none') {
+        const pot = gameState.pot;
+        const actionForQuickBet = toCall === 0 ? 'BET' : 'RAISE';
 
-    quickBetBtns.forEach(btn => {
-        const multiplier = parseFloat(btn.dataset.sizeMultiplier);
-        let amount = 0;
-        if (actionForQuickBet === 'BET') {
-            amount = Math.round(pot * multiplier);
-        } else { // RAISE
-            // 标准加注算法：总下注额 = 跟注额 + (跟注后的底池 * 倍率)
-            const potAfterCall = pot + toCall;
-            amount = toCall + Math.round(potAfterCall * multiplier);
-        }
+        quickBetBtns.forEach(btn => {
+            const multiplier = parseFloat(btn.dataset.sizeMultiplier);
+            let amount = 0;
+            if (actionForQuickBet === 'BET') {
+                amount = Math.round(pot * multiplier);
+            } else { // RAISE
+                // 标准加注算法：总下注额 = 跟注额 + (跟注后的底池 * 倍率)
+                const potAfterCall = pot + toCall;
+                amount = toCall + Math.round(potAfterCall * multiplier);
+            }
 
-        // 金额必须有效
-        const minBet = Settings.bb;
-        const minRaiseTo = gameState.highestBet + gameState.lastRaiseAmount;
-        let finalAmount = (actionForQuickBet === 'BET') ? Math.max(amount, minBet) : Math.max(amount, minRaiseTo);
+            // 金额必须有效
+            const minBet = Settings.bb;
+            const minRaiseTo = gameState.highestBet + gameState.lastRaiseAmount;
+            let finalAmount = (actionForQuickBet === 'BET') ? Math.max(amount, minBet) : Math.max(amount, minRaiseTo);
 
-        // 不能超过自己的总筹码
-        finalAmount = Math.min(finalAmount, player.stack + player.bet);
+            // 不能超过自己的总筹码
+            finalAmount = Math.min(finalAmount, player.stack + player.bet);
 
-        btn.querySelector('small').textContent = finalAmount > 0 ? finalAmount : '-';
-        btn.dataset.amount = finalAmount;
-    });
+            btn.querySelector('small').textContent = finalAmount > 0 ? finalAmount : '-';
+            btn.dataset.amount = finalAmount;
+        });
+    }
+
 
     // --- 显示UI ---
     actionPanel.style.display = 'flex';
