@@ -132,6 +132,7 @@ function init() {
 
   startBtn.addEventListener('click', handleStartStopClick);
   pauseBtn.addEventListener('click', handlePauseResumeClick);
+  document.getElementById('save-snapshot-btn').addEventListener('click', takeSnapshot);
 
   // 绑定牌局预设功能
   usePresetHandsCheckbox.addEventListener('change', updatePresetVisibility);
@@ -255,6 +256,8 @@ function init() {
     resizeObserver.observe(table);
   }
 
+  initSnapshotModalListeners(); // 初始化快照模态框的事件监听器
+  renderSnapshotList(); // 页面加载时渲染快照列表
   updatePresetVisibility(); // Ensure preset UI visibility is correct on load
 }
 
@@ -1065,6 +1068,422 @@ async function showdown() {
 
   await new Promise(resolve => setTimeout(resolve, 1000));
   endGame();
+}
+
+/**
+ * 触发快照流程：截图、获取所有GTO建议，然后弹出确认框
+ */
+async function takeSnapshot() {
+    if (!isGameRunning) {
+        log('⚠️ 游戏未开始，无法保存快照。');
+        return;
+    }
+    log('📸 正在准备快照...');
+    const pokerTableElement = document.querySelector('.poker-table');
+
+    if (!pokerTableElement) {
+        log('❌ 无法找到牌桌元素进行截图。');
+        return;
+    }
+
+    try {
+        // 1. 截取牌桌图片
+        const canvas = await html2canvas(pokerTableElement, {
+            useCORS: true,
+            backgroundColor: null,
+            scale: 2,
+        });
+        const imageData = canvas.toDataURL('image/png');
+        log('✅ 牌桌截图已生成。正在获取所有玩家的GTO建议...');
+
+        // 2. 获取所有活跃玩家的GTO建议
+        const gameState = game.getGameState();
+        const activePlayers = gameState.players.filter(p => !p.isFolded && !p.isAllIn);
+        
+        const suggestionPromises = activePlayers.map(player => 
+            getSuggestion(gameState, player.id, actionRecords)
+                .then(suggestion => ({ playerId: player.id, suggestion, notes: '' }))
+                .catch(error => {
+                    log(`❌ 获取 ${player.id} 的建议失败: ${error.message}`);
+                    return { playerId: player.id, suggestion: { error: `API请求失败: ${error.message}` }, notes: '' };
+                })
+        );
+        
+        const allGtoSuggestions = await Promise.all(suggestionPromises);
+        log('✅ 所有GTO建议已获取。请在弹窗中确认保存。');
+
+        // 3. 将所有数据暂存，并显示确认模态框
+        window.pendingSnapshotData = {
+            timestamp: new Date().toLocaleString(),
+            gameState: gameState,
+            imageData: imageData,
+            allGtoSuggestions: allGtoSuggestions,
+        };
+        
+        showSnapshotModal();
+
+    } catch (error) {
+        log('❌ 快照创建失败: ' + error.message);
+        console.error('快照创建失败:', error);
+        window.pendingSnapshotData = null; // 发生错误时清除暂存数据
+    }
+}
+
+/**
+ * 显示快照确认模态框
+ */
+function showSnapshotModal() {
+    const modal = document.getElementById('snapshot-modal');
+    const preview = document.getElementById('snapshot-preview');
+
+    // 设置截图预览
+    if (window.pendingSnapshotData && window.pendingSnapshotData.imageData) {
+        preview.src = window.pendingSnapshotData.imageData;
+    } else {
+        preview.src = ''; // 清空
+    }
+
+    modal.classList.add('is-visible');
+}
+
+/**
+ * 隐藏快照确认模态框，并清除暂存数据
+ */
+function hideSnapshotModal() {
+    const modal = document.getElementById('snapshot-modal');
+    modal.classList.remove('is-visible');
+    window.pendingSnapshotData = null; // 清除临时数据
+}
+
+/**
+ * 初始化所有快照相关的事件监听器
+ */
+function initSnapshotModalListeners() {
+    // 确认保存快照的模态框
+    document.getElementById('save-snapshot-confirm-btn').addEventListener('click', savePendingSnapshot);
+    document.getElementById('cancel-snapshot-btn').addEventListener('click', hideSnapshotModal);
+
+    // 查看快照详情的模态框
+    document.getElementById('close-view-snapshot-modal-btn').addEventListener('click', () => {
+        document.getElementById('view-snapshot-modal').classList.remove('is-visible');
+    });
+    document.getElementById('save-snapshot-remarks-btn').addEventListener('click', saveSnapshotRemarks);
+}
+
+/**
+ * 保存当前暂存的快照到 localStorage
+ */
+function savePendingSnapshot() {
+    const pendingData = window.pendingSnapshotData;
+
+    if (!pendingData) {
+        log('❌ 无法保存快照：没有待处理的快照数据。');
+        hideSnapshotModal();
+        return;
+    }
+
+    // 生成唯一ID
+    const snapshotId = `snapshot_${Date.now()}`;
+
+    const snapshot = {
+        id: snapshotId,
+        ...pendingData
+    };
+
+    // 从 localStorage 读取现有快照，将新快照添加到最前面
+    let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
+    savedSnapshots.unshift(snapshot);
+    localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
+
+    log(`✅ 快照 "${snapshotId}" 已保存。`);
+    hideSnapshotModal(); // 隐藏模态框并清除暂存数据
+    renderSnapshotList(); // 更新快照列表显示
+}
+
+/**
+ * 渲染快照列表到UI
+ */
+function renderSnapshotList() {
+    const snapshotListUl = document.getElementById('snapshot-list');
+    snapshotListUl.innerHTML = ''; // 清空现有列表
+
+    const savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
+
+    if (savedSnapshots.length === 0) {
+        snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">暂无快照</li>';
+        return;
+    }
+
+    savedSnapshots.forEach(snapshot => {
+        const li = document.createElement('li');
+        li.dataset.snapshotId = snapshot.id;
+        // 提取第一个备注作为预览，如果没有则显示默认文本
+        const firstNote = snapshot.allGtoSuggestions?.find(s => s.notes)?.notes || '暂无备注';
+        li.innerHTML = `
+            <div class="snapshot-info">
+                <strong>${snapshot.id}</strong><br>
+                <small>${snapshot.timestamp}</small><br>
+                <small>备注: ${firstNote.substring(0, 50)}${firstNote.length > 50 ? '...' : ''}</small>
+            </div>
+            <div class="snapshot-actions">
+                <button class="view-btn">查看建议</button>
+                <button class="delete-btn">删除快照</button>
+            </div>
+        `;
+        snapshotListUl.appendChild(li);
+    });
+
+    // 绑定事件监听器
+    snapshotListUl.querySelectorAll('.view-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const snapshotId = e.target.closest('li').dataset.snapshotId;
+            showViewSnapshotModal(snapshotId);
+        });
+    });
+    snapshotListUl.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const snapshotId = e.target.closest('li').dataset.snapshotId;
+            deleteSnapshot(snapshotId);
+        });
+    });
+}
+
+/**
+ * 为查看快照模态框构建单个建议的HTML元素
+ * @param {object} suggestion - GTO建议对象
+ * @param {string} playerId - 玩家ID
+ * @param {string} phase - 游戏阶段
+ * @returns {HTMLElement} - 包含建议内容的div元素
+ */
+function buildSuggestionElement(suggestion, playerId, phase) {
+    const suggestionWrapper = document.createElement('div');
+
+    const title = document.createElement('h4');
+    title.innerHTML = `给 ${playerId} 的建议 <span style="color: #fd971f;">[${phase.toUpperCase()}]</span>:`;
+    title.style.margin = '0 0 8px 0';
+    title.style.color = '#66d9ef';
+    suggestionWrapper.appendChild(title);
+
+    if (suggestion && suggestion.error) {
+        suggestionWrapper.innerHTML += `<div style="color: #ff6b6b;">获取建议失败: ${suggestion.error}</div>`;
+        return suggestionWrapper;
+    }
+    
+    if (!suggestion) {
+        suggestionWrapper.innerHTML += `<div style="color: #ff6b6b;">建议数据为空。</div>`;
+        return suggestionWrapper;
+    }
+
+    if ((phase === 'preflop' || phase === 'flop' || phase === 'turn' || phase === 'river') && suggestion.localResult) {
+        try {
+            const container = document.createElement('div');
+            const local = suggestion.localResult;
+
+            const createRow = (label, value) => {
+                if (value === null || value === undefined || value === '') return;
+                const row = document.createElement('div');
+                row.style.marginBottom = '4px';
+                const labelEl = document.createElement('strong');
+                labelEl.textContent = `${label}: `;
+                labelEl.style.color = '#a6e22e';
+                row.appendChild(labelEl);
+                row.appendChild(document.createTextNode(value));
+                container.appendChild(row);
+            };
+
+            const createSection = (title) => {
+                const titleEl = document.createElement('h5');
+                titleEl.textContent = title;
+                titleEl.style.color = '#f92672';
+                titleEl.style.marginTop = '12px';
+                titleEl.style.marginBottom = '8px';
+                titleEl.style.borderBottom = '1px solid #555';
+                titleEl.style.paddingBottom = '4px';
+                container.appendChild(titleEl);
+            };
+
+            createSection('牌局信息');
+            createRow('手牌', suggestion.myCards?.join(', '));
+            if (phase !== 'preflop') {
+                createRow('公共牌', suggestion.boardCards?.join(', '));
+                createRow('牌面', local.boardType);
+                createRow('牌型', local.handType);
+            }
+
+            createSection('局势分析');
+            if (phase !== 'preflop') {
+                createRow('位置', local.hasPosition ? '有利位置' : '不利位置');
+            }
+            createRow('行动场景', local.scenarioDescription);
+
+            createSection('最终建议');
+            const actionRow = document.createElement('div');
+            actionRow.style.marginBottom = '4px';
+            const actionLabelEl = document.createElement('strong');
+            actionLabelEl.textContent = `行动: `;
+            actionLabelEl.style.color = '#a6e22e';
+            actionRow.appendChild(actionLabelEl);
+            const actionValueEl = document.createElement('strong');
+            actionValueEl.textContent = local.action;
+            actionValueEl.style.color = '#e6db74';
+            actionValueEl.style.fontSize = '1.2em';
+            actionRow.appendChild(actionValueEl);
+            container.appendChild(actionRow);
+
+            const reasonRow = document.createElement('div');
+            reasonRow.style.lineHeight = '1.6';
+            reasonRow.style.marginTop = '4px';
+            const reasonLabelEl = document.createElement('strong');
+            reasonLabelEl.textContent = '理由: ';
+            reasonLabelEl.style.color = '#a6e22e';
+            reasonRow.appendChild(reasonLabelEl);
+            const reasoningText = phase === 'preflop' ? (local.reasoning || local.description || '') : `(以本地计算为准) ${local.reasoning || ''}`;
+            reasonRow.appendChild(document.createTextNode(reasoningText));
+            container.appendChild(reasonRow);
+            
+            suggestionWrapper.appendChild(container);
+
+        } catch (e) {
+            console.error(`格式化 ${phase} 建议时出错:`, e, suggestion);
+            const pre = document.createElement('pre');
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.textContent = JSON.stringify(suggestion, null, 2);
+            suggestionWrapper.appendChild(pre);
+        }
+    } else {
+        const pre = document.createElement('pre');
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.textContent = JSON.stringify(suggestion, null, 2);
+        suggestionWrapper.appendChild(pre);
+    }
+    
+    return suggestionWrapper;
+}
+
+/**
+ * 显示查看快照的模态框，并填充内容
+ * @param {string} snapshotId
+ */
+async function showViewSnapshotModal(snapshotId) {
+    const savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
+    const snapshot = savedSnapshots.find(s => s.id === snapshotId);
+
+    if (!snapshot) {
+        log(`❌ 无法找到快照: ${snapshotId}`);
+        return;
+    }
+
+    const modal = document.getElementById('view-snapshot-modal');
+    const imageEl = document.getElementById('view-snapshot-image');
+    const suggestionsListEl = document.getElementById('view-snapshot-suggestions-list');
+
+    // 清空旧内容
+    suggestionsListEl.innerHTML = '';
+    
+    // 填充模态框
+    modal.dataset.snapshotId = snapshotId;
+    imageEl.src = snapshot.imageData;
+
+    // 渲染GTO建议和备注
+    if (snapshot.allGtoSuggestions && snapshot.allGtoSuggestions.length > 0) {
+        snapshot.allGtoSuggestions.forEach(suggestionData => {
+            const { playerId, suggestion, notes } = suggestionData;
+            
+            const itemWrapper = document.createElement('div');
+            itemWrapper.className = 'snapshot-suggestion-item';
+
+            // 创建建议内容的HTML
+            const suggestionContent = document.createElement('div');
+            suggestionContent.className = 'snapshot-suggestion-content';
+            const phase = suggestion?.localResult?.strategyPhase?.toLowerCase() || suggestion?.phase?.toLowerCase() || 'unknown';
+            const suggestionElement = buildSuggestionElement(suggestion, playerId, phase);
+            suggestionContent.appendChild(suggestionElement);
+
+            // 创建备注区域的HTML
+            const notesContainer = document.createElement('div');
+            notesContainer.className = 'snapshot-suggestion-notes';
+            const notesTextarea = document.createElement('textarea');
+            notesTextarea.placeholder = `关于 ${playerId} 建议的备注...`;
+            notesTextarea.value = notes || '';
+            notesTextarea.dataset.playerId = playerId;
+            notesContainer.appendChild(notesTextarea);
+
+            itemWrapper.appendChild(suggestionContent);
+            itemWrapper.appendChild(notesContainer);
+            suggestionsListEl.appendChild(itemWrapper);
+        });
+    } else {
+        suggestionsListEl.innerHTML = '<p style="text-align: center; padding: 20px;">此快照没有保存GTO建议。</p>';
+    }
+
+    // 显示模态框
+    modal.classList.add('is-visible');
+}
+
+/**
+ * 保存快照中修改的备注
+ */
+function saveSnapshotRemarks() {
+    const modal = document.getElementById('view-snapshot-modal');
+    const snapshotId = modal.dataset.snapshotId;
+
+    if (!snapshotId) {
+        log('❌ 保存备注失败：无法识别快照ID。');
+        return;
+    }
+
+    let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
+    const snapshotIndex = savedSnapshots.findIndex(s => s.id === snapshotId);
+
+    if (snapshotIndex === -1) {
+        log(`❌ 保存备注失败：找不到快照 ${snapshotId}。`);
+        return;
+    }
+
+    const snapshotToUpdate = savedSnapshots[snapshotIndex];
+    
+    const textareas = modal.querySelectorAll('#view-snapshot-suggestions-list textarea');
+    let remarksChanged = false;
+    textareas.forEach(textarea => {
+        const playerId = textarea.dataset.playerId;
+        const suggestionToUpdate = snapshotToUpdate.allGtoSuggestions.find(s => s.playerId === playerId);
+        if (suggestionToUpdate && suggestionToUpdate.notes !== textarea.value) {
+            suggestionToUpdate.notes = textarea.value;
+            remarksChanged = true;
+        }
+    });
+
+    if (remarksChanged) {
+        savedSnapshots[snapshotIndex] = snapshotToUpdate;
+        localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
+        log(`✅ 快照 "${snapshotId}" 的备注已保存。`);
+        renderSnapshotList(); // 重新渲染列表以更新备注预览
+    } else {
+        log('ℹ️ 备注没有变化。');
+    }
+}
+
+
+/**
+ * 删除指定快照
+ * @param {string} snapshotId
+ */
+function deleteSnapshot(snapshotId) {
+    if (!confirm(`确定要删除快照 "${snapshotId}" 吗？此操作不可撤销。`)) {
+        return;
+    }
+
+    let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
+    const initialLength = savedSnapshots.length;
+    savedSnapshots = savedSnapshots.filter(s => s.id !== snapshotId);
+
+    if (savedSnapshots.length < initialLength) {
+        localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
+        log(`🗑️ 快照 "${snapshotId}" 已删除。`);
+        renderSnapshotList(); // 重新渲染列表
+    } else {
+        log(`❌ 无法找到快照: ${snapshotId} 进行删除。`);
+    }
 }
 
 function renderSuggestion(suggestion, playerId, phase) {

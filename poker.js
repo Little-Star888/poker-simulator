@@ -545,8 +545,49 @@ export class PokerGame {
       highestBet: this.highestBet,
       lastRaiseAmount: this.lastRaiseAmount, // 新增
       preflopRaiseCount: this.preflopRaiseCount, // 新增
-      minRaise: this.minRaise
+      minRaise: this.minRaise,
+      // 新增：保存关键索引，以便精确恢复游戏状态
+      dealerIndex: this.dealerIndex,
+      sbIndex: this.sbIndex,
+      bbIndex: this.bbIndex,
+      lastAggressorIndex: this.lastAggressorIndex,
+      currentPlayerIndex: this.currentPlayerIndex // 确保保存当前玩家的索引
     };
+  }
+
+  /**
+   * 从保存的状态对象加载游戏
+   * @param {object} savedState - 包含完整游戏状态的对象
+   */
+  loadState(savedState) {
+    // 确保传入的状态对象有效
+    if (!savedState || !savedState.players || !savedState.communityCards) {
+      throw new Error("Invalid saved game state provided.");
+    }
+
+    // 重新初始化游戏状态
+    this.players = savedState.players.map(p => ({ ...p })); // 深拷贝玩家数组和玩家对象
+    this.communityCards = [...savedState.communityCards];
+    this.pot = savedState.pot;
+    this.currentRound = savedState.currentRound;
+    this.currentPlayerIndex = savedState.currentPlayerIndex; // 直接使用保存的索引
+    this.highestBet = savedState.highestBet;
+    this.minRaise = savedState.minRaise;
+    this.lastRaiseAmount = savedState.lastRaiseAmount;
+    this.lastAggressorIndex = savedState.lastAggressorIndex; // 直接使用保存的索引
+    this.preflopRaiseCount = savedState.preflopRaiseCount;
+    this.dealerIndex = savedState.dealerIndex; // 直接使用保存的索引
+    this.sbIndex = savedState.sbIndex; // 直接使用保存的索引
+    this.bbIndex = savedState.bbIndex; // 直接使用保存的索引
+
+    // 注意：deck 和 settings 不会从 savedState 恢复，因为它们是游戏启动时的配置和牌堆状态
+    // 如果需要精确回放，deck也需要保存和恢复，但目前简化处理。
+    // settings 应该在reset时传入，这里不修改。
+
+    // 重新分配角色，以防玩家顺序或角色在保存后发生变化
+    this._assignPlayerRoles(); // 确保角色与索引一致
+
+    console.log("游戏状态已从快照加载。");
   }
 
   // --- 工具方法 ---
