@@ -1242,51 +1242,44 @@ function hideAllActionPopups() {
     isWaitingForManualInput = false;
 }
 
-/**
- * Dynamically adjusts the player action popup's position to ensure it stays within the poker table boundaries.
- * @param {HTMLElement} popup The popup element to adjust.
- */
 function adjustPopupPosition(popup) {
     const table = document.querySelector('.poker-table');
     if (!table || !popup) return;
 
-    // Use rAF to ensure the browser has painted the popup and we can get an accurate measurement.
     requestAnimationFrame(() => {
+        // Reset adjustments to get a clean calculation
+        popup.style.margin = '0';
+
         const tableRect = table.getBoundingClientRect();
         const popupRect = popup.getBoundingClientRect();
 
-        // Default transform is translate(-50%, -50%)
-        let translateX = -50;
-        let translateY = -50;
+        let marginLeft = 0;
+        let marginTop = 0;
 
-        // Check for horizontal overflow and adjust
+        // Check for horizontal overflow
         const overflowLeft = tableRect.left - popupRect.left;
         if (overflowLeft > 0) {
-            const adjustment = (overflowLeft / popupRect.width) * 100;
-            translateX += adjustment;
+            marginLeft += overflowLeft;
         }
-
         const overflowRight = popupRect.right - tableRect.right;
         if (overflowRight > 0) {
-            const adjustment = (overflowRight / popupRect.width) * 100;
-            translateX -= adjustment;
+            marginLeft -= overflowRight;
         }
 
-        // Check for vertical overflow and adjust
+        // Check for vertical overflow
         const overflowTop = tableRect.top - popupRect.top;
         if (overflowTop > 0) {
-            const adjustment = (overflowTop / popupRect.height) * 100;
-            translateY += adjustment;
+            marginTop += overflowTop;
         }
-
         const overflowBottom = popupRect.bottom - tableRect.bottom;
         if (overflowBottom > 0) {
-            const adjustment = (overflowBottom / popupRect.height) * 100;
-            translateY -= adjustment;
+            marginTop -= overflowBottom;
         }
         
-        // Apply the final calculated transform
-        popup.style.transform = `translate(${translateX}%, ${translateY}%)`;
+        // Apply adjustments via margin, which works alongside the centering transform
+        if (marginLeft !== 0 || marginTop !== 0) {
+            popup.style.margin = `${marginTop}px 0 0 ${marginLeft}px`;
+        }
     });
 }
 
@@ -1407,6 +1400,9 @@ function showVerticalSlider(playerId, action) {
     // 重置滑块到最小值并更新标签
     slider.value = 0;
     updateSliderAmount(playerId, slider);
+
+    // Adjust position AFTER the slider view is displayed and popup has resized
+    adjustPopupPosition(popup);
 }
 
 /**

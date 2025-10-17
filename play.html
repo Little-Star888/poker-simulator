@@ -467,9 +467,8 @@
         width: 240px;
         z-index: 200;
 
-        background: rgba(0, 0, 0, 0.7);
-        border-radius: 15px;
-        padding: 10px;
+        background: transparent;
+        /* No background, padding, or border-radius on the main container */
         box-sizing: border-box;
 
         display: none;
@@ -487,9 +486,10 @@
         gap: 10px;
         width: 100%;
         max-width: 100%;
-        background: transparent;
-        padding: 0;
-        border-radius: 0;
+        /* Background is now on the panel, not the parent popup */
+        background: rgba(0, 0, 0, 0.75);
+        padding: 15px;
+        border-radius: 15px;
     }
 
     .player-action-popup .quick-bet-sizes {
@@ -627,13 +627,13 @@
     }
     
     .amount-slider-overlay .slider-value-display {
-        position: absolute;
-        top: -50px; /* Position above the slider track */
+        /* position: absolute; */ /* Removed to place it in the layout flow */
+        /* top: -50px; */
         background: rgba(0,0,0,0.8);
         color: white;
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-size: 20px;
+        padding: 4px 15px; /* Smaller padding */
+        border-radius: 15px;
+        font-size: 18px; /* Smaller font */
         font-weight: bold;
         border: 1px solid rgba(255,255,255,0.5);
     }
@@ -641,15 +641,15 @@
     .amount-slider-overlay .slider-track-container {
         position: relative;
         height: 200px;
-        width: 70px;
+        width: 50px; /* Thinner container */
         display: flex;
         justify-content: center;
         align-items: center;
-        background: rgba(20, 20, 20, 0.7);
-        border-radius: 35px;
+        background: transparent; /* No fill */
+        border: 1px solid rgba(255, 255, 255, 0.4); /* But with a border to be visible */
+        box-shadow: none;
+        border-radius: 25px; /* 50px width / 2 */
         padding: 15px 0;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
     }
 
     .amount-slider-overlay .bet-slider-input {
@@ -665,8 +665,8 @@
 
     .amount-slider-overlay .bet-slider-input::-webkit-slider-runnable-track {
         background: #555;
-        height: 8px;
-        border-radius: 4px;
+        height: 2px;
+        border-radius: 1px;
     }
 
     .amount-slider-overlay .bet-slider-input::-webkit-slider-thumb {
@@ -677,14 +677,14 @@
         background: #f39c12;
         border-radius: 50%;
         border: 4px solid white;
-        margin-top: -16px; /* Center thumb on track */
+        margin-top: -19px; /* Re-center thumb on 2px track */
         box-shadow: 0 0 10px rgba(243, 156, 18, 0.7);
     }
     
     .amount-slider-overlay .bet-slider-input::-moz-range-track {
         background: #555;
-        height: 8px;
-        border-radius: 4px;
+        height: 2px;
+        border-radius: 1px;
     }
 
     .amount-slider-overlay .bet-slider-input::-moz-range-thumb {
