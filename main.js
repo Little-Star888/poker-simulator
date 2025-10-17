@@ -1359,28 +1359,37 @@ function showPlayerActionPopup(playerId) {
     if (quickBetContainer.style.display !== 'none') {
         const pot = gameState.pot;
         const actionForQuickBet = toCall === 0 ? 'BET' : 'RAISE';
+        const playerTotalChips = player.stack + player.bet;
 
         quickBetBtns.forEach(btn => {
             const multiplier = parseFloat(btn.dataset.sizeMultiplier);
-            let amount = 0;
+            let idealAmount = 0;
             if (actionForQuickBet === 'BET') {
-                amount = Math.round(pot * multiplier);
+                idealAmount = Math.round(pot * multiplier);
             } else { // RAISE
                 // 标准加注算法：总下注额 = 跟注额 + (跟注后的底池 * 倍率)
                 const potAfterCall = pot + toCall;
-                amount = toCall + Math.round(potAfterCall * multiplier);
+                idealAmount = toCall + Math.round(potAfterCall * multiplier);
             }
 
-            // 金额必须有效
+            // 金额必须有效 (Validate against min bet/raise)
             const minBet = Settings.bb;
             const minRaiseTo = gameState.highestBet + gameState.lastRaiseAmount;
-            let finalAmount = (actionForQuickBet === 'BET') ? Math.max(amount, minBet) : Math.max(amount, minRaiseTo);
+            const validatedIdealAmount = (actionForQuickBet === 'BET') ? Math.max(idealAmount, minBet) : Math.max(idealAmount, minRaiseTo);
 
-            // 不能超过自己的总筹码
-            finalAmount = Math.min(finalAmount, player.stack + player.bet);
+            // 按钮上显示理想金额
+            btn.querySelector('small').textContent = validatedIdealAmount > 0 ? validatedIdealAmount : '-';
 
-            btn.querySelector('small').textContent = finalAmount > 0 ? finalAmount : '-';
-            btn.dataset.amount = finalAmount;
+            // 检查玩家是否有足够筹码
+            if (validatedIdealAmount > playerTotalChips) {
+                // 筹码不足，禁用按钮
+                btn.disabled = true;
+                btn.dataset.amount = playerTotalChips; // 数据上设为 all-in 金额
+            } else {
+                // 筹码充足，启用按钮
+                btn.disabled = false;
+                btn.dataset.amount = validatedIdealAmount;
+            }
         });
     }
 
