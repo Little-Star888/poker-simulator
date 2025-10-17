@@ -995,6 +995,14 @@ async function processNextAction() {
 
 
 function advanceToNextStage() {
+  // 在进入下一轮之前，检查是否只剩一个玩家，如果是，则游戏直接结束
+  const activePlayers = game.players.filter(p => !p.isFolded);
+  if (activePlayers.length <= 1) {
+    // 延迟一小段时间再结束，让玩家有时间看到最后一个动作
+    setTimeout(endGame, 500);
+    return;
+  }
+
   const currentRound = game.currentRound;
   if (currentRound === 'river') {
     endGame();
