@@ -1498,13 +1498,29 @@ function submitManualAction(playerId, action, amount) {
     }
 
     try {
-        // 'CALL'动作不需要金额，引擎会自动计算
-        const actionAmount = (action === 'CALL' || action === 'CHECK' || action === 'FOLD') ? undefined : amount;
+        const player = game.players.find(p => p.id === playerId);
+        let displayAction = action;
+        // 'CALL'等动作不需要金额，引擎会自动计算。对于UI显示，我们在这里处理金额。
+        let actionAmount = (action === 'CALL' || action === 'CHECK' || action === 'FOLD') ? undefined : amount;
 
-        game.executeAction(currentPlayerId, action, actionAmount);
-        log(`[${game.currentRound}] ${currentPlayerId} ${action}${actionAmount ? ' ' + actionAmount : ''}`);
-        showActionBubble(currentPlayerId, action, actionAmount);
-        updateActionSheet(currentPlayerId, action, actionAmount);
+        // 如果提供了金额 (BET/RAISE)，检查这是否构成 all-in
+        if (player && actionAmount !== undefined) {
+            if ((player.stack + player.bet) === actionAmount) {
+                displayAction = 'ALLIN';
+            }
+        }
+        // 如果动作是 'ALLIN' 但没有提供金额 (例如来自快捷按钮), 为UI显示计算正确的 all-in 金额
+        else if (player && action === 'ALLIN' && actionAmount === undefined) {
+            actionAmount = player.stack + player.bet;
+        }
+
+        // 核心逻辑：执行动作。注意：传递原始的 action 和 amount 给游戏引擎
+        game.executeAction(currentPlayerId, action, amount);
+        
+        // UI 更新：使用美化过的 displayAction 和计算出的 actionAmount
+        log(`[${game.currentRound}] ${currentPlayerId} ${displayAction}${actionAmount ? ' ' + actionAmount : ''}`);
+        showActionBubble(currentPlayerId, displayAction, actionAmount);
+        updateActionSheet(currentPlayerId, displayAction, actionAmount);
 
         hideAllActionPopups();
 
