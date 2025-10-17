@@ -1455,17 +1455,21 @@ function updateSliderAmount(playerId, slider) {
     const max = parseInt(slider.dataset.maxAmount);
 
     let finalAmount;
+    const range = max - min;
 
     if (percentage === 100) {
         finalAmount = max;
+    } else if (range <= 0) { // 处理最小加注即为 all-in 的情况
+        finalAmount = max;
     } else {
-        // 线性插值计算金额
-        const range = max - min;
-        finalAmount = min + Math.round((range * (percentage / 100)) / 10) * 10; // 四舍五入到最接近的10
+        // 标准线性插值
+        const rawAmount = min + (range * (percentage / 100));
+        // 四舍五入到最接近的10，以提供更清晰的用户体验
+        finalAmount = Math.round(rawAmount / 10) * 10;
     }
 
-    // 确保金额不超过最大值
-    finalAmount = Math.min(finalAmount, max);
+    // 确保最终金额被限制在 [min, max] 区间内
+    finalAmount = Math.max(min, Math.min(finalAmount, max));
 
     slider.dataset.finalAmount = finalAmount;
 
