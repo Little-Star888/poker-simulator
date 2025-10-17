@@ -11,6 +11,7 @@ let isWaitingForManualInput = false;
 let isGamePaused = false;
 
 let gtoSuggestionFilter = new Set();
+let currentSuggestionsCache = {}; // 用于缓存当前牌局的GTO建议
 
 let actionRecords = {
   P1: { preflop: [], flop: [], turn: [], river: [] },
@@ -593,6 +594,7 @@ function handlePauseResumeClick() {
 }
 
 function startNewGame() {
+  currentSuggestionsCache = {}; // 清空GTO建议缓存
   document.getElementById('suggestion-display').innerHTML = '等待玩家行动...';
   if (isGameRunning && !isGamePaused) {
     log('游戏已在运行中');
@@ -811,6 +813,7 @@ async function processNextAction() {
     if (shouldSuggest) {
       try {
         const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
+        currentSuggestionsCache[currentPlayerId] = suggestion; // 立即更新缓存
         renderSuggestion(suggestion, currentPlayerId, round);
       } catch (apiError) {
         const display = document.getElementById('suggestion-display');
@@ -1017,22 +1020,23 @@ async function captureAndProceed(cropOptions) {
             ...cropOptions
         });
         const imageData = canvas.toDataURL('image/png');
-        log('✅ 截图已生成。正在获取所有玩家的GTO建议...');
+        log('✅ 截图已生成。正在整理当前GTO建议...');
 
         const gameState = game.getGameState();
         const activePlayers = gameState.players.filter(p => !p.isFolded && !p.isAllIn);
         
-        const suggestionPromises = activePlayers.map(player => 
-            getSuggestion(gameState, player.id, actionRecords)
-                .then(suggestion => ({ playerId: player.id, suggestion, notes: '' }))
-                .catch(error => {
-                    log(`❌ 获取 ${player.id} 的建议失败: ${error.message}`);
-                    return { playerId: player.id, suggestion: { error: `API请求失败: ${error.message}` }, notes: '' };
-                })
-        );
-        
-        const allGtoSuggestions = await Promise.all(suggestionPromises);
-        log('✅ 所有GTO建议已获取。请在弹窗中确认保存。');
+        // 从缓存中筛选出真正有建议的玩家，并构建建议列表
+        const allGtoSuggestions = activePlayers
+            .filter(player => currentSuggestionsCache.hasOwnProperty(player.id)) // 只包含在缓存中存在的玩家
+            .map(player => {
+                return {
+                    playerId: player.id,
+                    suggestion: currentSuggestionsCache[player.id],
+                    notes: '' 
+                };
+            });
+
+        log('✅ 所有当前GTO建议已整理。请在弹窗中确认保存。');
 
         window.pendingSnapshotData = {
             timestamp: new Date().toLocaleString(),
