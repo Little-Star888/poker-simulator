@@ -7,7 +7,7 @@
  */
 export const Settings = {
   // ===== 默认配置值 =====
-  mode: 'auto',           // 游戏模式: 'auto' | 'manual'
+  mode: 'manual',           // 游戏模式: 'auto' | 'manual'
   sb: 50,                 // 小盲注 (Small Blind)
   bb: 100,                // 大盲注 (Big Blind)
   autoDelay: 1500,        // 自动模式下每步延时（毫秒）
