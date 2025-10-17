@@ -159,8 +159,18 @@ function init() {
     });
 
     betRaiseBtn.addEventListener('click', () => {
-        const action = betRaiseBtn.dataset.action; // 'BET' or 'RAISE'
-        showVerticalSlider(playerId, action);
+        const action = betRaiseBtn.dataset.action; // Can be 'BET', 'RAISE', or 'ALLIN'
+        if (action === 'ALLIN') {
+            // 当按钮被直接配置为ALLIN时（例如筹码不足以最小加注），直接提交
+            const player = game.players.find(p => p.id === playerId);
+            if (player) {
+                const amount = player.stack + player.bet;
+                submitManualAction(playerId, 'ALLIN', amount);
+            }
+        } else {
+            // 否则，显示下注/加注滑块
+            showVerticalSlider(playerId, action);
+        }
     });
 
     // 2. 快捷下注按钮
@@ -1333,7 +1343,7 @@ function showPlayerActionPopup(playerId) {
         betRaiseBtn.style.display = 'none'; // Hide the regular Bet/Raise button
 
         // Repurpose the Check/Call button to be the ALL-IN button
-        checkCallBtn.innerHTML = `ALL-IN<span class="amount">${player.stack}</span>`;
+        checkCallBtn.textContent = 'ALL-IN';
         checkCallBtn.dataset.action = 'ALLIN';
 
         // The Fold button is already visible. We can adjust layout if needed.
@@ -1348,11 +1358,22 @@ function showPlayerActionPopup(playerId) {
         betRaiseBtn.dataset.action = 'BET';
     } else {
         // ** SCENARIO: FOLD, CALL, or RAISE **
-        checkCallBtn.innerHTML = `跟注<span class="amount">${toCall}</span>`;
+        checkCallBtn.textContent = '跟注';
         checkCallBtn.dataset.action = 'CALL';
 
-        betRaiseBtn.textContent = '加注';
-        betRaiseBtn.dataset.action = 'RAISE';
+        // 检查玩家是否有足够筹码进行一次最小加注
+        const minRaiseToAmount = gameState.highestBet + gameState.lastRaiseAmount;
+        const playerTotalChips = player.stack + player.bet;
+
+        // 如果玩家的总筹码小于或等于最小加注额，他们唯一的“加注”选项就是 all-in
+        if (playerTotalChips <= minRaiseToAmount) {
+            betRaiseBtn.textContent = 'ALL-IN';
+            betRaiseBtn.dataset.action = 'ALLIN';
+            quickBetContainer.style.display = 'none'; // 在此场景下隐藏快速按钮
+        } else {
+            betRaiseBtn.textContent = '加注';
+            betRaiseBtn.dataset.action = 'RAISE';
+        }
     }
 
     // --- Configure quick bet buttons (only if they are visible) ---
