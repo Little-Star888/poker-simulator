@@ -420,7 +420,7 @@ function animateCardToSlot(pickerCard, destinationElement, cardText, originalSlo
 
     const movingCard = document.createElement('div');
     movingCard.style.position = 'fixed';
-    movingCard.style.zIndex = '1000';
+    movingCard.style.zIndex = '2001'; // 确保高于配置抽屉的 z-index (2000)
     movingCard.style.left = `${startRect.left}px`;
     movingCard.style.top = `${startRect.top}px`;
     movingCard.style.width = `${startRect.width}px`;
