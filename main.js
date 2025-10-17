@@ -1307,9 +1307,14 @@ function savePendingSnapshot() {
     let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
     savedSnapshots.unshift(snapshot);
     localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
+
     log(`✅ 快照 "${snapshotId}" 已保存。`);
     hideSnapshotModal();
     renderSnapshotList();
+
+    // 自动打开新创建的快照详情
+    log(`自动打开快照详情...`);
+    showViewSnapshotModal(snapshotId);
 }
 
 /**
