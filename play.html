@@ -868,6 +868,55 @@
         border-radius: 4px;
         font-size: 13px;
     }
+
+    /* --- Styles for Screenshot Selection --- */
+    #screenshot-selection-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(100, 100, 100, 0.4);
+        cursor: crosshair;
+        z-index: 9998;
+    }
+    #selection-box {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.3);
+        border: 1px dashed #fff;
+    }
+
+    /* --- Styles for Delete Confirmation Popover --- */
+    #delete-confirm-popover {
+        position: absolute;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 15px;
+        z-index: 4000;
+        width: 220px;
+        text-align: center;
+    }
+    #delete-confirm-popover p {
+        margin: 0 0 15px 0;
+        font-size: 14px;
+        color: #333;
+    }
+    #delete-confirm-popover .popover-actions {
+        display: flex;
+        justify-content: space-around;
+    }
+    #delete-confirm-popover .popover-actions button {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+    #delete-confirm-popover #delete-confirm-yes {
+        background-color: #dc3545;
+    }
+    #delete-confirm-popover #delete-confirm-yes:hover {
+        background-color: #c82333;
+    }
   </style>
 </head>
 <body>  <div class="app-container">
@@ -1287,6 +1336,21 @@
             </div>
         </div>
     </div>
+
+  <!-- Screenshot Selection Overlay -->
+  <div id="screenshot-selection-overlay" style="display: none;">
+    <div id="selection-box"></div>
+  </div>
+
+  <!-- Delete Confirmation Popover -->
+  <div id="delete-confirm-popover" style="display: none;">
+    <p>确定删除此快照？</p>
+    <div class="popover-actions">
+        <button id="delete-confirm-yes" class="game-control-btn">确认</button>
+        <button id="delete-confirm-no" class="game-control-btn secondary-btn">取消</button>
+    </div>
+  </div>
+
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <script type="module" src="main.js"></script>
 </body>

@@ -28,35 +28,41 @@ let activeSelectionSlot = null;
 let usedCards = new Set();
 let isPresetUIInitialized = false;
 
+// --- DOM 元素变量 (在 init 函数中初始化) ---
+let modeSelect, playerCountInput, minStackInput, maxStackInput, potTypeSelect, p1RoleSelect;
+let sbInput, bbInput, autoDelayInput;
+let suggestPreflopCheckbox, suggestFlopCheckbox, suggestTurnCheckbox, suggestRiverCheckbox;
+let startBtn, pauseBtn, consoleLog;
+let usePresetHandsCheckbox, usePresetCommunityCheckbox, presetControls, presetPlayerHandsContainer, presetCommunityCardsContainer, cardPicker, gtoFilterPlayersContainer;
 
-
-const modeSelect = document.getElementById('mode-select');
-const playerCountInput = document.getElementById('player-count-input');
-const minStackInput = document.getElementById('min-stack-input');
-const maxStackInput = document.getElementById('max-stack-input');
-const potTypeSelect = document.getElementById('pot-type-select');
-const p1RoleSelect = document.getElementById('p1-role-select');
-const sbInput = document.getElementById('sb-input');
-const bbInput = document.getElementById('bb-input');
-const autoDelayInput = document.getElementById('auto-delay');
-const suggestPreflopCheckbox = document.getElementById('suggest-preflop');
-const suggestFlopCheckbox = document.getElementById('suggest-flop');
-const suggestTurnCheckbox = document.getElementById('suggest-turn');
-const suggestRiverCheckbox = document.getElementById('suggest-river');
-const startBtn = document.getElementById('start-btn');
-const pauseBtn = document.getElementById('pause-btn');
-const consoleLog = document.getElementById('console-log');
-
-const usePresetHandsCheckbox = document.getElementById('use-preset-hands-checkbox');
-const usePresetCommunityCheckbox = document.getElementById('use-preset-community-checkbox');
-const presetControls = document.getElementById('preset-controls');
-const presetPlayerHandsContainer = document.getElementById('preset-player-hands-container');
-const presetCommunityCardsContainer = document.getElementById('preset-community-cards-container');
-const cardPicker = document.getElementById('card-picker');
-const gtoFilterPlayersContainer = document.getElementById('gto-filter-players');
 
 // ========== 初始化 ==========
 function init() {
+  // --- DOM 元素获取 ---
+  modeSelect = document.getElementById('mode-select');
+  playerCountInput = document.getElementById('player-count-input');
+  minStackInput = document.getElementById('min-stack-input');
+  maxStackInput = document.getElementById('max-stack-input');
+  potTypeSelect = document.getElementById('pot-type-select');
+  p1RoleSelect = document.getElementById('p1-role-select');
+  sbInput = document.getElementById('sb-input');
+  bbInput = document.getElementById('bb-input');
+  autoDelayInput = document.getElementById('auto-delay');
+  suggestPreflopCheckbox = document.getElementById('suggest-preflop');
+  suggestFlopCheckbox = document.getElementById('suggest-flop');
+  suggestTurnCheckbox = document.getElementById('suggest-turn');
+  suggestRiverCheckbox = document.getElementById('suggest-river');
+  startBtn = document.getElementById('start-btn');
+  pauseBtn = document.getElementById('pause-btn');
+  consoleLog = document.getElementById('console-log');
+  usePresetHandsCheckbox = document.getElementById('use-preset-hands-checkbox');
+  usePresetCommunityCheckbox = document.getElementById('use-preset-community-checkbox');
+  presetControls = document.getElementById('preset-controls');
+  presetPlayerHandsContainer = document.getElementById('preset-player-hands-container');
+  presetCommunityCardsContainer = document.getElementById('preset-community-cards-container');
+  cardPicker = document.getElementById('card-picker');
+  gtoFilterPlayersContainer = document.getElementById('gto-filter-players');
+
   // On initial load, populate UI controls with values from the Settings object.
   modeSelect.value = Settings.mode;
   playerCountInput.value = Settings.playerCount;
@@ -132,7 +138,6 @@ function init() {
 
   startBtn.addEventListener('click', handleStartStopClick);
   pauseBtn.addEventListener('click', handlePauseResumeClick);
-  document.getElementById('save-snapshot-btn').addEventListener('click', takeSnapshot);
 
   // 绑定牌局预设功能
   usePresetHandsCheckbox.addEventListener('change', updatePresetVisibility);
@@ -509,7 +514,7 @@ function assignCard(slot, cardText) {
 
 
 
-  const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', '"' )}"]`);
+  const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', "'" )}"]`);
   if (pickerCard) {
     pickerCard.classList.add('dimmed');
   }
@@ -591,7 +596,7 @@ function unassignCard(slot) {
 
     // Update UI state
 
-    const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', '"' )}"]`);
+    const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', "'" )}"]`);
 
     if (pickerCard) {
 
@@ -614,6 +619,7 @@ function unassignCard(slot) {
     delete slot.dataset.card;
 
     // 自动激活下一个（现在是当前这个）空槽位
+
     activateNextEmptySlot();
 
   }, 300); // Must match animation duration
@@ -1070,33 +1076,131 @@ async function showdown() {
   endGame();
 }
 
+// ========== 快照功能 V3 (自定义截图 + 自定义确认 + Bug修复) ==========
+
+// --- 自定义截图相关全局变量 ---
+let isSelecting = false;
+let selectionStartX, selectionStartY;
+
 /**
- * 触发快照流程：截图、获取所有GTO建议，然后弹出确认框
+ * “保存快照”按钮的点击事件处理程序。
+ * 启动截图选择流程。
  */
-async function takeSnapshot() {
+function handleSnapshotButtonClick() {
     if (!isGameRunning) {
         log('⚠️ 游戏未开始，无法保存快照。');
         return;
     }
-    log('📸 正在准备快照...');
-    const pokerTableElement = document.querySelector('.poker-table');
+    log('🖱️ 请在页面上拖拽以选择截图区域...');
+    const overlay = document.getElementById('screenshot-selection-overlay');
+    if (!overlay) {
+        log('❌ 错误：无法找到截图覆盖层元素。');
+        return;
+    }
+    overlay.style.display = 'block';
+    document.body.style.userSelect = 'none';
 
-    if (!pokerTableElement) {
-        log('❌ 无法找到牌桌元素进行截图。');
+    overlay.addEventListener('mousedown', startSelection);
+    overlay.addEventListener('mousemove', dragSelection);
+    window.addEventListener('mouseup', endSelection);
+}
+
+/**
+ * 截图选择：鼠标按下事件
+ */
+function startSelection(e) {
+    if (e.button !== 0) return;
+    isSelecting = true;
+    selectionStartX = e.clientX;
+    selectionStartY = e.clientY;
+    const selectionBox = document.getElementById('selection-box');
+    if (!selectionBox) return;
+    
+    selectionBox.style.left = `${selectionStartX}px`;
+    selectionBox.style.top = `${selectionStartY}px`;
+    selectionBox.style.width = '0px';
+    selectionBox.style.height = '0px';
+    selectionBox.style.display = 'block';
+}
+
+/**
+ * 截图选择：鼠标移动事件，绘制选框
+ */
+function dragSelection(e) {
+    if (!isSelecting) return;
+    const selectionBox = document.getElementById('selection-box');
+    if (!selectionBox) return;
+
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+    const width = Math.abs(currentX - selectionStartX);
+    const height = Math.abs(currentY - selectionStartY);
+    const newX = Math.min(currentX, selectionStartX);
+    const newY = Math.min(currentY, selectionStartY);
+    selectionBox.style.left = `${newX}px`;
+    selectionBox.style.top = `${newY}px`;
+    selectionBox.style.width = `${width}px`;
+    selectionBox.style.height = `${height}px`;
+}
+
+/**
+ * 截图选择：鼠标释放事件，结束选择并触发截图
+ */
+function endSelection(e) {
+    const overlay = document.getElementById('screenshot-selection-overlay');
+    if (!overlay || overlay.style.display === 'none') {
+        window.removeEventListener('mouseup', endSelection);
+        return;
+    }
+    
+    isSelecting = false;
+    overlay.style.display = 'none';
+    document.body.style.userSelect = 'auto';
+
+    overlay.removeEventListener('mousedown', startSelection);
+    overlay.removeEventListener('mousemove', dragSelection);
+    window.removeEventListener('mouseup', endSelection);
+
+    const selectionBox = document.getElementById('selection-box');
+    if (!selectionBox) return;
+
+    selectionBox.style.display = 'none';
+    const finalWidth = parseFloat(selectionBox.style.width);
+    const finalHeight = parseFloat(selectionBox.style.height);
+
+    selectionBox.style.width = '0px';
+    selectionBox.style.height = '0px';
+
+    if (finalWidth < 20 || finalHeight < 20) {
+        log('截图区域太小，操作已取消。');
         return;
     }
 
+    const cropOptions = {
+        x: parseFloat(selectionBox.style.left),
+        y: parseFloat(selectionBox.style.top),
+        width: finalWidth,
+        height: finalHeight,
+    };
+
+    captureAndProceed(cropOptions);
+}
+
+/**
+ * 根据选定区域截图，并执行后续流程（获取GTO、显示确认框）
+ */
+async function captureAndProceed(cropOptions) {
+    log('📸 正在根据选定区域生成快照...');
     try {
-        // 1. 截取牌桌图片
-        const canvas = await html2canvas(pokerTableElement, {
+        const canvas = await html2canvas(document.body, {
             useCORS: true,
             backgroundColor: null,
-            scale: 2,
+            scale: 2, 
+            ...cropOptions
         });
         const imageData = canvas.toDataURL('image/png');
-        log('✅ 牌桌截图已生成。正在获取所有玩家的GTO建议...');
+        log('✅ 截图已生成。正在获取所有玩家的GTO建议...');
 
-        // 2. 获取所有活跃玩家的GTO建议
         const gameState = game.getGameState();
         const activePlayers = gameState.players.filter(p => !p.isFolded && !p.isAllIn);
         
@@ -1112,7 +1216,6 @@ async function takeSnapshot() {
         const allGtoSuggestions = await Promise.all(suggestionPromises);
         log('✅ 所有GTO建议已获取。请在弹窗中确认保存。');
 
-        // 3. 将所有数据暂存，并显示确认模态框
         window.pendingSnapshotData = {
             timestamp: new Date().toLocaleString(),
             gameState: gameState,
@@ -1123,9 +1226,9 @@ async function takeSnapshot() {
         showSnapshotModal();
 
     } catch (error) {
-        log('❌ 快照创建失败: ' + error.message);
-        console.error('快照创建失败:', error);
-        window.pendingSnapshotData = null; // 发生错误时清除暂存数据
+        log('❌ 截图失败: ' + error.message);
+        console.error('截图失败:', error);
+        window.pendingSnapshotData = null;
     }
 }
 
@@ -1135,15 +1238,12 @@ async function takeSnapshot() {
 function showSnapshotModal() {
     const modal = document.getElementById('snapshot-modal');
     const preview = document.getElementById('snapshot-preview');
-
-    // 设置截图预览
     if (window.pendingSnapshotData && window.pendingSnapshotData.imageData) {
         preview.src = window.pendingSnapshotData.imageData;
     } else {
-        preview.src = ''; // 清空
+        preview.src = '';
     }
-
-    modal.classList.add('is-visible');
+    if(modal) modal.classList.add('is-visible');
 }
 
 /**
@@ -1151,23 +1251,45 @@ function showSnapshotModal() {
  */
 function hideSnapshotModal() {
     const modal = document.getElementById('snapshot-modal');
-    modal.classList.remove('is-visible');
-    window.pendingSnapshotData = null; // 清除临时数据
+    if(modal) modal.classList.remove('is-visible');
+    window.pendingSnapshotData = null;
 }
 
 /**
  * 初始化所有快照相关的事件监听器
  */
 function initSnapshotModalListeners() {
-    // 确认保存快照的模态框
+    document.getElementById('save-snapshot-btn').addEventListener('click', handleSnapshotButtonClick);
     document.getElementById('save-snapshot-confirm-btn').addEventListener('click', savePendingSnapshot);
     document.getElementById('cancel-snapshot-btn').addEventListener('click', hideSnapshotModal);
-
-    // 查看快照详情的模态框
     document.getElementById('close-view-snapshot-modal-btn').addEventListener('click', () => {
-        document.getElementById('view-snapshot-modal').classList.remove('is-visible');
+        const modal = document.getElementById('view-snapshot-modal');
+        if(modal) modal.classList.remove('is-visible');
     });
     document.getElementById('save-snapshot-remarks-btn').addEventListener('click', saveSnapshotRemarks);
+
+    document.getElementById('delete-confirm-yes').addEventListener('click', () => {
+        const popover = document.getElementById('delete-confirm-popover');
+        if (popover) {
+            const snapshotId = popover.dataset.snapshotId;
+            if (snapshotId) {
+                deleteSnapshot(snapshotId);
+            }
+            popover.style.display = 'none';
+        }
+    });
+    document.getElementById('delete-confirm-no').addEventListener('click', () => {
+        const popover = document.getElementById('delete-confirm-popover');
+        if (popover) {
+            popover.style.display = 'none';
+        }
+    });
+    document.addEventListener('click', (e) => {
+        const popover = document.getElementById('delete-confirm-popover');
+        if (popover && popover.style.display === 'block' && !popover.contains(e.target) && !e.target.classList.contains('delete-btn')) {
+            popover.style.display = 'none';
+        }
+    });
 }
 
 /**
@@ -1175,29 +1297,19 @@ function initSnapshotModalListeners() {
  */
 function savePendingSnapshot() {
     const pendingData = window.pendingSnapshotData;
-
     if (!pendingData) {
         log('❌ 无法保存快照：没有待处理的快照数据。');
         hideSnapshotModal();
         return;
     }
-
-    // 生成唯一ID
     const snapshotId = `snapshot_${Date.now()}`;
-
-    const snapshot = {
-        id: snapshotId,
-        ...pendingData
-    };
-
-    // 从 localStorage 读取现有快照，将新快照添加到最前面
+    const snapshot = { id: snapshotId, ...pendingData };
     let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
     savedSnapshots.unshift(snapshot);
     localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
-
     log(`✅ 快照 "${snapshotId}" 已保存。`);
-    hideSnapshotModal(); // 隐藏模态框并清除暂存数据
-    renderSnapshotList(); // 更新快照列表显示
+    hideSnapshotModal();
+    renderSnapshotList();
 }
 
 /**
@@ -1205,19 +1317,16 @@ function savePendingSnapshot() {
  */
 function renderSnapshotList() {
     const snapshotListUl = document.getElementById('snapshot-list');
-    snapshotListUl.innerHTML = ''; // 清空现有列表
-
+    if (!snapshotListUl) return;
+    snapshotListUl.innerHTML = '';
     const savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
-
     if (savedSnapshots.length === 0) {
         snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">暂无快照</li>';
         return;
     }
-
     savedSnapshots.forEach(snapshot => {
         const li = document.createElement('li');
         li.dataset.snapshotId = snapshot.id;
-        // 提取第一个备注作为预览，如果没有则显示默认文本
         const firstNote = snapshot.allGtoSuggestions?.find(s => s.notes)?.notes || '暂无备注';
         li.innerHTML = `
             <div class="snapshot-info">
@@ -1232,8 +1341,6 @@ function renderSnapshotList() {
         `;
         snapshotListUl.appendChild(li);
     });
-
-    // 绑定事件监听器
     snapshotListUl.querySelectorAll('.view-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const snapshotId = e.target.closest('li').dataset.snapshotId;
@@ -1243,42 +1350,33 @@ function renderSnapshotList() {
     snapshotListUl.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const snapshotId = e.target.closest('li').dataset.snapshotId;
-            deleteSnapshot(snapshotId);
+            showDeleteConfirmation(snapshotId, e.target);
         });
     });
 }
 
 /**
  * 为查看快照模态框构建单个建议的HTML元素
- * @param {object} suggestion - GTO建议对象
- * @param {string} playerId - 玩家ID
- * @param {string} phase - 游戏阶段
- * @returns {HTMLElement} - 包含建议内容的div元素
  */
 function buildSuggestionElement(suggestion, playerId, phase) {
     const suggestionWrapper = document.createElement('div');
-
     const title = document.createElement('h4');
     title.innerHTML = `给 ${playerId} 的建议 <span style="color: #fd971f;">[${phase.toUpperCase()}]</span>:`;
     title.style.margin = '0 0 8px 0';
     title.style.color = '#66d9ef';
     suggestionWrapper.appendChild(title);
-
     if (suggestion && suggestion.error) {
         suggestionWrapper.innerHTML += `<div style="color: #ff6b6b;">获取建议失败: ${suggestion.error}</div>`;
         return suggestionWrapper;
     }
-    
     if (!suggestion) {
         suggestionWrapper.innerHTML += `<div style="color: #ff6b6b;">建议数据为空。</div>`;
         return suggestionWrapper;
     }
-
     if ((phase === 'preflop' || phase === 'flop' || phase === 'turn' || phase === 'river') && suggestion.localResult) {
         try {
             const container = document.createElement('div');
             const local = suggestion.localResult;
-
             const createRow = (label, value) => {
                 if (value === null || value === undefined || value === '') return;
                 const row = document.createElement('div');
@@ -1290,7 +1388,6 @@ function buildSuggestionElement(suggestion, playerId, phase) {
                 row.appendChild(document.createTextNode(value));
                 container.appendChild(row);
             };
-
             const createSection = (title) => {
                 const titleEl = document.createElement('h5');
                 titleEl.textContent = title;
@@ -1301,7 +1398,6 @@ function buildSuggestionElement(suggestion, playerId, phase) {
                 titleEl.style.paddingBottom = '4px';
                 container.appendChild(titleEl);
             };
-
             createSection('牌局信息');
             createRow('手牌', suggestion.myCards?.join(', '));
             if (phase !== 'preflop') {
@@ -1309,13 +1405,11 @@ function buildSuggestionElement(suggestion, playerId, phase) {
                 createRow('牌面', local.boardType);
                 createRow('牌型', local.handType);
             }
-
             createSection('局势分析');
             if (phase !== 'preflop') {
                 createRow('位置', local.hasPosition ? '有利位置' : '不利位置');
             }
             createRow('行动场景', local.scenarioDescription);
-
             createSection('最终建议');
             const actionRow = document.createElement('div');
             actionRow.style.marginBottom = '4px';
@@ -1329,7 +1423,6 @@ function buildSuggestionElement(suggestion, playerId, phase) {
             actionValueEl.style.fontSize = '1.2em';
             actionRow.appendChild(actionValueEl);
             container.appendChild(actionRow);
-
             const reasonRow = document.createElement('div');
             reasonRow.style.lineHeight = '1.6';
             reasonRow.style.marginTop = '4px';
@@ -1340,9 +1433,7 @@ function buildSuggestionElement(suggestion, playerId, phase) {
             const reasoningText = phase === 'preflop' ? (local.reasoning || local.description || '') : `(以本地计算为准) ${local.reasoning || ''}`;
             reasonRow.appendChild(document.createTextNode(reasoningText));
             container.appendChild(reasonRow);
-            
             suggestionWrapper.appendChild(container);
-
         } catch (e) {
             console.error(`格式化 ${phase} 建议时出错:`, e, suggestion);
             const pre = document.createElement('pre');
@@ -1356,50 +1447,35 @@ function buildSuggestionElement(suggestion, playerId, phase) {
         pre.textContent = JSON.stringify(suggestion, null, 2);
         suggestionWrapper.appendChild(pre);
     }
-    
     return suggestionWrapper;
 }
 
 /**
  * 显示查看快照的模态框，并填充内容
- * @param {string} snapshotId
  */
 async function showViewSnapshotModal(snapshotId) {
     const savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
     const snapshot = savedSnapshots.find(s => s.id === snapshotId);
-
     if (!snapshot) {
         log(`❌ 无法找到快照: ${snapshotId}`);
         return;
     }
-
     const modal = document.getElementById('view-snapshot-modal');
     const imageEl = document.getElementById('view-snapshot-image');
     const suggestionsListEl = document.getElementById('view-snapshot-suggestions-list');
-
-    // 清空旧内容
     suggestionsListEl.innerHTML = '';
-    
-    // 填充模态框
     modal.dataset.snapshotId = snapshotId;
     imageEl.src = snapshot.imageData;
-
-    // 渲染GTO建议和备注
     if (snapshot.allGtoSuggestions && snapshot.allGtoSuggestions.length > 0) {
         snapshot.allGtoSuggestions.forEach(suggestionData => {
             const { playerId, suggestion, notes } = suggestionData;
-            
             const itemWrapper = document.createElement('div');
             itemWrapper.className = 'snapshot-suggestion-item';
-
-            // 创建建议内容的HTML
             const suggestionContent = document.createElement('div');
             suggestionContent.className = 'snapshot-suggestion-content';
             const phase = suggestion?.localResult?.strategyPhase?.toLowerCase() || suggestion?.phase?.toLowerCase() || 'unknown';
             const suggestionElement = buildSuggestionElement(suggestion, playerId, phase);
             suggestionContent.appendChild(suggestionElement);
-
-            // 创建备注区域的HTML
             const notesContainer = document.createElement('div');
             notesContainer.className = 'snapshot-suggestion-notes';
             const notesTextarea = document.createElement('textarea');
@@ -1407,7 +1483,6 @@ async function showViewSnapshotModal(snapshotId) {
             notesTextarea.value = notes || '';
             notesTextarea.dataset.playerId = playerId;
             notesContainer.appendChild(notesTextarea);
-
             itemWrapper.appendChild(suggestionContent);
             itemWrapper.appendChild(notesContainer);
             suggestionsListEl.appendChild(itemWrapper);
@@ -1415,8 +1490,6 @@ async function showViewSnapshotModal(snapshotId) {
     } else {
         suggestionsListEl.innerHTML = '<p style="text-align: center; padding: 20px;">此快照没有保存GTO建议。</p>';
     }
-
-    // 显示模态框
     modal.classList.add('is-visible');
 }
 
@@ -1426,22 +1499,17 @@ async function showViewSnapshotModal(snapshotId) {
 function saveSnapshotRemarks() {
     const modal = document.getElementById('view-snapshot-modal');
     const snapshotId = modal.dataset.snapshotId;
-
     if (!snapshotId) {
         log('❌ 保存备注失败：无法识别快照ID。');
         return;
     }
-
     let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
     const snapshotIndex = savedSnapshots.findIndex(s => s.id === snapshotId);
-
     if (snapshotIndex === -1) {
         log(`❌ 保存备注失败：找不到快照 ${snapshotId}。`);
         return;
     }
-
     const snapshotToUpdate = savedSnapshots[snapshotIndex];
-    
     const textareas = modal.querySelectorAll('#view-snapshot-suggestions-list textarea');
     let remarksChanged = false;
     textareas.forEach(textarea => {
@@ -1452,35 +1520,45 @@ function saveSnapshotRemarks() {
             remarksChanged = true;
         }
     });
-
     if (remarksChanged) {
         savedSnapshots[snapshotIndex] = snapshotToUpdate;
         localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
         log(`✅ 快照 "${snapshotId}" 的备注已保存。`);
-        renderSnapshotList(); // 重新渲染列表以更新备注预览
+        renderSnapshotList();
     } else {
         log('ℹ️ 备注没有变化。');
     }
 }
 
+/**
+ * 显示删除快照的自定义确认框
+ */
+function showDeleteConfirmation(snapshotId, buttonElement) {
+    const popover = document.getElementById('delete-confirm-popover');
+    if (!popover) return;
+    popover.dataset.snapshotId = snapshotId;
+    const btnRect = buttonElement.getBoundingClientRect();
+    popover.style.display = 'block';
+    let top = btnRect.top - popover.offsetHeight - 10;
+    let left = btnRect.left + (btnRect.width / 2) - (popover.offsetWidth / 2);
+    if (top < 0) top = btnRect.bottom + 10;
+    if (left < 0) left = 5;
+    if (left + popover.offsetWidth > window.innerWidth) left = window.innerWidth - popover.offsetWidth - 5;
+    popover.style.top = `${top}px`;
+    popover.style.left = `${left}px`;
+}
 
 /**
  * 删除指定快照
- * @param {string} snapshotId
  */
 function deleteSnapshot(snapshotId) {
-    if (!confirm(`确定要删除快照 "${snapshotId}" 吗？此操作不可撤销。`)) {
-        return;
-    }
-
     let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
     const initialLength = savedSnapshots.length;
     savedSnapshots = savedSnapshots.filter(s => s.id !== snapshotId);
-
     if (savedSnapshots.length < initialLength) {
         localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
         log(`🗑️ 快照 "${snapshotId}" 已删除。`);
-        renderSnapshotList(); // 重新渲染列表
+        renderSnapshotList();
     } else {
         log(`❌ 无法找到快照: ${snapshotId} 进行删除。`);
     }
@@ -2017,7 +2095,6 @@ function submitManualAction(playerId, action, amount) {
 
 
 
-
 function renderActionSheetTemplate() {
   const tableBody = document.getElementById('action-sheet-body');
   tableBody.innerHTML = ''; // Clear existing rows
@@ -2145,15 +2222,21 @@ function updateUI(options = {}) {
             // This is important for showdown or if state changes mid-game.
             setCardImage(cardEls[0], player.holeCards[0]);
             setCardImage(cardEls[1], player.holeCards[1]);
+        } else {
+            // This handles the case where presets are used on initial deal (no animation)
+            setCardImage(cardEls[0], player.holeCards[0]);
+            setCardImage(cardEls[1], player.holeCards[1]);
         }
-        // If (isInitialDeal && usePresetHands), do nothing, as cards are already set by live-update.
     }
 
     const stackEl = el.querySelector('.stack');
-    if (stackEl) stackEl.textContent = `S: ${player.stack}`;
+    if (stackEl) stackEl.textContent = player.stack;
 
     const betEl = el.querySelector('.player-bet');
-    if (betEl) betEl.textContent = player.bet > 0 ? `B: ${player.bet}` : '';
+    if (betEl) {
+      betEl.textContent = player.bet > 0 ? `Bet: ${player.bet}` : '';
+      betEl.style.display = player.bet > 0 ? 'block' : 'none';
+    }
 
     const roleEl = el.querySelector('.player-role');
     if (roleEl) roleEl.textContent = player.role || '';
@@ -2161,92 +2244,74 @@ function updateUI(options = {}) {
 
   const communityCardEls = document.querySelectorAll('.community-card');
   communityCardEls.forEach((el, i) => {
-    setCardImage(el, gameState.communityCards[i]);
+    const cardText = gameState.communityCards[i];
+    const shouldAnimate = !el.style.backgroundImage && cardText;
+    setCardImage(el, cardText);
+    if (shouldAnimate) {
+        el.classList.add('card-dealt-anim');
+        setTimeout(() => el.classList.remove('card-dealt-anim'), 500);
+    }
   });
 
-  const potAmountEl = document.getElementById('pot-amount');
-  if (potAmountEl) {
-    potAmountEl.textContent = gameState.pot;
-  }
-}
-
-function log(message) {
-  const now = new Date().toLocaleTimeString();
-  consoleLog.value += `[${now}] ${message}\n`;
-  consoleLog.scrollTop = consoleLog.scrollHeight;
+  document.getElementById('pot-amount').textContent = gameState.pot;
 }
 
 function showActionBubble(playerId, action, amount) {
-    const playerElement = document.querySelector(`.player[data-player="${playerId}"]`);
-    if (!playerElement) return;
+    const playerEl = document.querySelector(`.player[data-player="${playerId}"]`);
+    if (!playerEl) return;
 
-    const bubble = playerElement.querySelector('.action-bubble');
+    const bubble = playerEl.querySelector('.action-bubble');
     if (!bubble) return;
 
     let text = action;
-    if (action === 'ALLIN') text = 'ALL-IN';
-    else if ((action === 'CALL' || action === 'RAISE' || action === 'BET') && amount > 0) text += ` ${amount}`;
-
-    bubble.classList.remove('show', 'fade-out');
-    bubble.style.animation = 'none';
-    bubble.offsetHeight;
-    bubble.style.animation = null;
-
+    if (amount) {
+        text += ` ${amount}`;
+    }
     bubble.textContent = text;
-    bubble.classList.add('show');
 
-    setTimeout(() => bubble.classList.add('fade-out'), 1500);
+    // Reset animation
+    bubble.classList.remove('show', 'fade-out');
+    // Force reflow
+    void bubble.offsetWidth;
+
+    // Start animation
+    bubble.classList.add('show');
+    // Schedule fade-out
+    setTimeout(() => {
+        bubble.classList.add('fade-out');
+    }, 1500); // Bubble is visible for 1.5s before starting to fade
 }
 
-
-
-function reorganizeLayout() {
-  // This function rearranges the DOM to create the desired 3-column layout.
-  // It moves the "Action Sheet" section from the left panel to the right panel.
-  
-  const actionSheetContainer = document.getElementById('action-sheet-container');
-  if (!actionSheetContainer) return;
-  
-  // Find the whole section for the action sheet
-  const actionSheetSection = actionSheetContainer.closest('.section');
-  const controlPanelRight = document.querySelector('.control-panel-right');
-
-  if (actionSheetSection && controlPanelRight) {
-    // Move the action sheet to be the first child of the right-hand panel
-    controlPanelRight.insertBefore(actionSheetSection, controlPanelRight.firstChild);
-//    log('⚙️ 应用三列布局结构。');
-  }
+function log(message) {
+  const time = new Date().toLocaleTimeString();
+  consoleLog.value += `[${time}] ${message}\n`;
+  consoleLog.scrollTop = consoleLog.scrollHeight;
 }
 
 function injectStyles() {
-  const css = `
-    /* --- JS Helper Class to forcefully hide elements --- */
-    .hidden-by-js {
-      display: none !important;
-    }
-
-    /* --- Preset Card Removal Animation --- */
-    .card-unassigned {
-      animation: card-unassign-anim 0.3s ease-in forwards;
-    }
-    @keyframes card-unassign-anim {
-      from { transform: scale(1); opacity: 1; }
-      to { transform: scale(0.5); opacity: 0; }
-    }
-
-    /* --- Card Dealing Animation --- */
-    .hole-card.card-dealt-anim {
-      animation: card-fade-in 0.5s ease-out;
-    }
-    @keyframes card-fade-in {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `;
-  const style = document.createElement('style');
-  style.type = 'text/css';
-  style.appendChild(document.createTextNode(css));
-  document.head.appendChild(style);
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes card-dealt-anim {
+            0% { transform: translateY(-200px) rotateX(-90deg); opacity: 0; }
+            100% { transform: translateY(0) rotateX(0deg); opacity: 1; }
+        }
+        .card-dealt-anim {
+            animation: card-dealt-anim 0.5s ease-out;
+        }
+        @keyframes card-unassigned-anim {
+            from { transform: scale(1); opacity: 1; }
+            to { transform: scale(0.5); opacity: 0; }
+        }
+        .card-unassigned {
+            animation: card-unassigned-anim 0.3s ease-in;
+        }
+        .hidden-by-js {
+            display: none !important;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+
+// ========== Main Execution ==========
+init();
