@@ -464,7 +464,7 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 280px;
+        width: 240px;
         z-index: 200;
 
         background: rgba(0, 0, 0, 0.7);
@@ -493,9 +493,10 @@
     }
 
     .player-action-popup .quick-bet-sizes {
-        display: flex;
-        justify-content: space-around;
-        width: 100%;
+        position: relative;
+        width: 180px;
+        height: 100px;
+        margin: 0 auto 15px auto; /* Center it and add margin below */
     }
 
     .player-action-popup .quick-bet-sizes button {
@@ -513,6 +514,30 @@
         font-size: 10px;
         font-weight: bold;
         transition: all 0.2s ease;
+        position: absolute;
+        transform: translate(-50%, -50%); /* Center the button on its coordinate */
+    }
+    
+    /* Arc positioning for 5 buttons, centered in a 180x100 box. Arc center at (50%, 100%) with ~90px radius */
+    .player-action-popup .quick-bet-sizes button:nth-child(1) {
+        left: 1%;
+        top: 84%;
+    }
+    .player-action-popup .quick-bet-sizes button:nth-child(2) {
+        left: 18%;
+        top: 31%;
+    }
+    .player-action-popup .quick-bet-sizes button:nth-child(3) {
+        left: 50%;
+        top: 10%;
+    }
+    .player-action-popup .quick-bet-sizes button:nth-child(4) {
+        left: 82%;
+        top: 31%;
+    }
+    .player-action-popup .quick-bet-sizes button:nth-child(5) {
+        left: 99%;
+        top: 84%;
     }
      .player-action-popup .quick-bet-sizes button:hover {
         background-color: rgba(255, 255, 255, 0.3);
