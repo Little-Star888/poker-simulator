@@ -1350,12 +1350,19 @@ function showPlayerActionPopup(playerId) {
         mainButtonsContainer.style.justifyContent = 'space-around'; // Space out Fold and All-in
 
     } else if (toCall === 0) {
-        // ** SCENARIO: CHECK or BET **
+        // ** SCENARIO: CHECK or BET/RAISE **
         checkCallBtn.textContent = '让牌';
         checkCallBtn.dataset.action = 'CHECK';
 
-        betRaiseBtn.textContent = '下注';
-        betRaiseBtn.dataset.action = 'BET';
+        // 如果场上最高下注额>0（例如，BB自己下的盲注），那么当前玩家的选择是“过牌”或“加注”
+        // 否则，如果最高下注额为0，那么选择是“过牌”或“下注”
+        if (gameState.highestBet > 0) {
+            betRaiseBtn.textContent = '加注';
+            betRaiseBtn.dataset.action = 'RAISE';
+        } else {
+            betRaiseBtn.textContent = '下注';
+            betRaiseBtn.dataset.action = 'BET';
+        }
     } else {
         // ** SCENARIO: FOLD, CALL, or RAISE **
         checkCallBtn.textContent = '跟注';
