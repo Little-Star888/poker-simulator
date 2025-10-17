@@ -618,6 +618,12 @@
         flex: 0 0 55px !important; /* Do not grow, do not shrink, base size 55px */
         max-width: 55px !important;
     }
+
+    /* 新增：确保 bet-raise 按钮在变成 ALLIN 时也保持圆形 */
+    .main-action-btn.bet-raise[data-action="ALLIN"] {
+        flex: 0 0 70px; /* 固定宽度，防止被内容撑开 */
+    }
+
      .player-action-popup .main-action-btn.check-call .amount {
         display: block; /* Ensure amount appears on a new line */
         font-size: 10px;
