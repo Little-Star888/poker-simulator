@@ -867,7 +867,19 @@
       flex-grow: 1;
       margin-right: 10px;
     }
-    #snapshot-list li .snapshot-info strong { color: #007bff; }
+    #snapshot-list li .snapshot-info strong { color: #007bff; cursor: pointer; }
+    #snapshot-list li .snapshot-info strong:hover { text-decoration: underline; }
+
+    .snapshot-name-edit {
+      font-size: 1em;
+      font-weight: bold;
+      color: #007bff;
+      border: 1px solid #007bff;
+      padding: 1px 3px;
+      border-radius: 3px;
+      width: 95%;
+    }
+
     #snapshot-list li .snapshot-actions button {
       margin-left: 5px;
       padding: 4px 8px;
@@ -1381,7 +1393,8 @@
       <div class="modal-content">
         <h3>确认快照</h3>
         <div class="modal-body">
-          <p>是否保存以下快照？取消后将不会保存任何数据。</p>
+          <p>为快照命名并确认保存。取消后将不会保存任何数据。</p>
+          <input type="text" id="snapshot-name-input" placeholder="输入快照名称（可选）" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
           <img id="snapshot-preview" src="" alt="牌局快照预览" style="max-width: 100%; height: auto; border: 1px solid #ccc; margin-bottom: 10px;">
         </div>
         <div class="modal-footer">
