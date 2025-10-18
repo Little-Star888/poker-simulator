@@ -1146,6 +1146,24 @@ function initSnapshotModalListeners() {
             popover.style.display = 'none';
         }
     });
+
+    // 新增：图片灯箱功能
+    const snapshotImage = document.getElementById('view-snapshot-image');
+    const lightboxOverlay = document.getElementById('image-lightbox-overlay');
+    const lightboxImage = document.getElementById('lightbox-image');
+
+    snapshotImage.addEventListener('click', () => {
+        // 确保图片src有效再打开灯箱
+        if (snapshotImage.src && snapshotImage.src !== window.location.href) { 
+            lightboxImage.src = snapshotImage.src;
+            lightboxOverlay.style.display = 'flex';
+        }
+    });
+
+    lightboxOverlay.addEventListener('click', () => {
+        lightboxOverlay.style.display = 'none';
+        lightboxImage.src = ''; // 清空src，避免闪现旧图
+    });
 }
 
 /**
