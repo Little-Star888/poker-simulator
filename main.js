@@ -28,6 +28,7 @@ let actionRecords = {
 let activeSelectionSlot = null;
 let usedCards = new Set();
 let isPresetUIInitialized = false;
+let postSnapshotAction = null;
 
 // --- DOM 元素变量 (在 init 函数中初始化) ---
 let modeSelect, playerCountInput, minStackInput, maxStackInput, potTypeSelect, p1RoleSelect;
@@ -904,14 +905,9 @@ let isSelecting = false;
 let selectionStartX, selectionStartY;
 
 /**
- * “保存快照”按钮的点击事件处理程序。
- * 启动截图选择流程。
+ * 启动截图选择流程的通用函数
  */
-function handleSnapshotButtonClick() {
-    if (!isGameRunning) {
-        log('⚠️ 游戏未开始，无法保存快照。');
-        return;
-    }
+function initiateSnapshotProcess() {
     log('🖱️ 请在页面上拖拽以选择截图区域...');
     const overlay = document.getElementById('screenshot-selection-overlay');
     if (!overlay) {
@@ -924,6 +920,17 @@ function handleSnapshotButtonClick() {
     overlay.addEventListener('mousedown', startSelection);
     overlay.addEventListener('mousemove', dragSelection);
     window.addEventListener('mouseup', endSelection);
+}
+
+/**
+ * “保存快照”按钮的点击事件处理程序。
+ */
+function handleSnapshotButtonClick() {
+    if (!isGameRunning) {
+        log('⚠️ 游戏未开始，无法保存快照。');
+        return;
+    }
+    initiateSnapshotProcess();
 }
 
 /**
@@ -994,6 +1001,10 @@ function endSelection(e) {
 
     if (finalWidth < 20 || finalHeight < 20) {
         log('截图区域太小，操作已取消。');
+        if (postSnapshotAction) {
+            postSnapshotAction();
+            postSnapshotAction = null;
+        }
         return;
     }
 
@@ -1072,6 +1083,12 @@ function hideSnapshotModal() {
     const modal = document.getElementById('snapshot-modal');
     if(modal) modal.classList.remove('is-visible');
     window.pendingSnapshotData = null;
+
+    // 如果存在快照后的回调，则执行它
+    if (postSnapshotAction) {
+        postSnapshotAction();
+        postSnapshotAction = null;
+    }
 }
 
 /**
@@ -1086,6 +1103,17 @@ function initSnapshotModalListeners() {
         if(modal) modal.classList.remove('is-visible');
     });
     document.getElementById('save-snapshot-remarks-btn').addEventListener('click', saveSnapshotRemarks);
+
+    // 新增：为牌局结束弹窗绑定事件
+    document.getElementById('eoh-confirm-save').addEventListener('click', () => {
+        hideEndOfHandModal();
+        postSnapshotAction = stopGame; // 设置快照结束后的回调
+        initiateSnapshotProcess(); // 启动快照流程
+    });
+    document.getElementById('eoh-cancel-save').addEventListener('click', () => {
+        hideEndOfHandModal();
+        stopGame(); // 直接重置游戏
+    });
 
     document.getElementById('delete-confirm-yes').addEventListener('click', () => {
         const popover = document.getElementById('delete-confirm-popover');
@@ -1569,25 +1597,26 @@ function renderSuggestion(suggestion, playerId, phase) {
     display.scrollTop = display.scrollHeight;
 }
 
+/**
+ * 显示牌局结束的确认弹窗
+ */
+function showEndOfHandModal() {
+    const modal = document.getElementById('end-of-hand-modal');
+    if (modal) modal.classList.add('is-visible');
+}
+
+/**
+ * 隐藏牌局结束的确认弹窗
+ */
+function hideEndOfHandModal() {
+    const modal = document.getElementById('end-of-hand-modal');
+    if (modal) modal.classList.remove('is-visible');
+}
+
 function endGame() {
-  isGameRunning = false;
-  isGamePaused = false;
-  isWaitingForManualInput = false;
-  hideAllActionPopups();
-  log('🎉 牌局结束！（本版本不计算胜负）');
-  startBtn.textContent = '▶️ 开始牌局';
-  startBtn.disabled = false;
-  pauseBtn.textContent = '⏸️ 暂停';
-  pauseBtn.disabled = true;
-  document.getElementById('preset-section').style.opacity = '1';
-  document.getElementById('preset-section').style.pointerEvents = 'auto';
-  const runtimeConfigSection = document.getElementById('runtime-config-section');
-  if (runtimeConfigSection) {
-      Array.from(runtimeConfigSection.querySelectorAll('.form-row')).forEach(row => {
-          row.style.opacity = '';
-          row.style.pointerEvents = '';
-      });
-  }
+  log('🎉 牌局结束！');
+  // Use a timeout to allow the final UI updates to render before showing the modal.
+  setTimeout(showEndOfHandModal, 500);
 }
 
 // ========== 新手动模式功能 V2 ========== 
