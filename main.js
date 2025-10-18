@@ -1338,7 +1338,8 @@ async function showViewSnapshotModal(snapshotId) {
             itemWrapper.className = 'snapshot-suggestion-item';
             const suggestionContent = document.createElement('div');
             suggestionContent.className = 'snapshot-suggestion-content';
-            const phase = suggestion?.localResult?.strategyPhase?.toLowerCase() || suggestion?.phase?.toLowerCase() || 'unknown';
+            const phaseStr = suggestion?.localResult?.strategyPhase?.toLowerCase() || suggestion?.phase?.toLowerCase() || 'unknown';
+            const phase = phaseStr.replace('_', ''); // 修复 API 返回的 "PRE_FLOP" 格式
             const suggestionElement = buildSuggestionElement(suggestion, playerId, phase);
             suggestionContent.appendChild(suggestionElement);
             const notesContainer = document.createElement('div');
