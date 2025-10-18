@@ -1386,23 +1386,67 @@ async function showViewSnapshotModal(snapshotId) {
         log(`❌ 无法找到快照: ${snapshotId}`);
         return;
     }
+
     const modal = document.getElementById('view-snapshot-modal');
     const imageEl = document.getElementById('view-snapshot-image');
     const suggestionsListEl = document.getElementById('view-snapshot-suggestions-list');
+    const filterContainer = document.getElementById('snapshot-suggestion-filter-container');
+
+    // 清空旧内容
     suggestionsListEl.innerHTML = '';
+    filterContainer.innerHTML = '';
     modal.dataset.snapshotId = snapshotId;
     imageEl.src = snapshot.imageData;
+
     if (snapshot.allGtoSuggestions && snapshot.allGtoSuggestions.length > 0) {
+        // 1. 获取唯一的玩家ID并初始化筛选状态（默认全选）
+        const playerIdsInSnapshot = [...new Set(snapshot.allGtoSuggestions.map(s => s.playerId))].sort();
+        const snapshotFilterState = new Set(playerIdsInSnapshot);
+
+        // 2. 动态创建筛选复选框
+        const filterTitle = document.createElement('strong');
+        filterTitle.textContent = '筛选:';
+        filterTitle.style.marginRight = '10px';
+        filterContainer.appendChild(filterTitle);
+
+        playerIdsInSnapshot.forEach(playerId => {
+            const label = document.createElement('label');
+            label.style.cursor = 'pointer';
+            label.style.userSelect = 'none';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = playerId;
+            checkbox.checked = true;
+            checkbox.style.marginRight = '4px';
+            
+            checkbox.addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    snapshotFilterState.add(playerId);
+                } else {
+                    snapshotFilterState.delete(playerId);
+                }
+                updateVisibility();
+            });
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(playerId));
+            filterContainer.appendChild(label);
+        });
+
+        // 3. 渲染建议列表项，并添加 data-player-id 属性
         snapshot.allGtoSuggestions.forEach(suggestionData => {
             const { playerId, suggestion, notes } = suggestionData;
             const itemWrapper = document.createElement('div');
             itemWrapper.className = 'snapshot-suggestion-item';
+            itemWrapper.dataset.playerId = playerId; // 为筛选功能添加的关键属性
+
             const suggestionContent = document.createElement('div');
             suggestionContent.className = 'snapshot-suggestion-content';
             const phaseStr = suggestion?.localResult?.strategyPhase?.toLowerCase() || suggestion?.phase?.toLowerCase() || 'unknown';
             const phase = phaseStr.replace('_', ''); // 修复 API 返回的 "PRE_FLOP" 格式
             const suggestionElement = buildSuggestionElement(suggestion, playerId, phase);
             suggestionContent.appendChild(suggestionElement);
+
             const notesContainer = document.createElement('div');
             notesContainer.className = 'snapshot-suggestion-notes';
             const notesTextarea = document.createElement('textarea');
@@ -1410,13 +1454,24 @@ async function showViewSnapshotModal(snapshotId) {
             notesTextarea.value = notes || '';
             notesTextarea.dataset.playerId = playerId;
             notesContainer.appendChild(notesTextarea);
+
             itemWrapper.appendChild(suggestionContent);
             itemWrapper.appendChild(notesContainer);
             suggestionsListEl.appendChild(itemWrapper);
         });
+
+        // 4. 定义一个内部函数来更新建议的可见性
+        const updateVisibility = () => {
+            suggestionsListEl.querySelectorAll('.snapshot-suggestion-item').forEach(item => {
+                const itemPlayerId = item.dataset.playerId;
+                item.style.display = snapshotFilterState.has(itemPlayerId) ? 'flex' : 'none';
+            });
+        };
+
     } else {
         suggestionsListEl.innerHTML = '<p style="text-align: center; padding: 20px;">此快照没有保存GTO建议。</p>';
     }
+
     modal.classList.add('is-visible');
 }
 
