@@ -1083,12 +1083,6 @@ function hideSnapshotModal() {
     const modal = document.getElementById('snapshot-modal');
     if(modal) modal.classList.remove('is-visible');
     window.pendingSnapshotData = null;
-
-    // 如果存在快照后的回调，则执行它
-    if (postSnapshotAction) {
-        postSnapshotAction();
-        postSnapshotAction = null;
-    }
 }
 
 /**
@@ -1097,7 +1091,22 @@ function hideSnapshotModal() {
 function initSnapshotModalListeners() {
     document.getElementById('save-snapshot-btn').addEventListener('click', handleSnapshotButtonClick);
     document.getElementById('save-snapshot-confirm-btn').addEventListener('click', savePendingSnapshot);
-    document.getElementById('cancel-snapshot-btn').addEventListener('click', hideSnapshotModal);
+    
+    // 修改：为“取消”按钮绑定回调逻辑
+    document.getElementById('cancel-snapshot-btn').addEventListener('click', () => {
+        hideSnapshotModal();
+        if (postSnapshotAction) {
+            postSnapshotAction();
+            postSnapshotAction = null;
+        }
+    });
+
+    // 新增：为“重新截取”按钮绑定事件
+    document.getElementById('recapture-snapshot-btn').addEventListener('click', () => {
+        hideSnapshotModal();
+        setTimeout(initiateSnapshotProcess, 100); // 延迟以确保弹窗消失
+    });
+
     document.getElementById('close-view-snapshot-modal-btn').addEventListener('click', () => {
         const modal = document.getElementById('view-snapshot-modal');
         if(modal) modal.classList.remove('is-visible');
@@ -1182,6 +1191,12 @@ function savePendingSnapshot() {
     // 自动打开新创建的快照详情
     log(`自动打开快照详情...`);
     showViewSnapshotModal(snapshotId);
+
+    // 执行快照后的回调（如果存在）
+    if (postSnapshotAction) {
+        postSnapshotAction();
+        postSnapshotAction = null;
+    }
 }
 
 /**
