@@ -1028,6 +1028,33 @@
         opacity: 1;
         visibility: visible;
     }
+    /* --- Toast Notification --- */
+    .toast-notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background-color: rgba(40, 167, 69, 0.95); /* Success green with high opacity */
+      color: white;
+      padding: 16px 32px;
+      border-radius: 8px;
+      z-index: 9999;
+      font-size: 1.1em;
+      font-weight: 600;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none; /* Allow clicks to pass through */
+    }
+
+    .toast-notification.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .toast-notification.error {
+      background-color: rgba(220, 53, 69, 0.95); /* Error red */
+    }
   </style>
 </head>
 <body>  <div class="app-container">

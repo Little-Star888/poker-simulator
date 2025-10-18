@@ -1508,6 +1508,46 @@ async function showViewSnapshotModal(snapshotId) {
     }
 }
 
+
+/**
+ * 显示一个短暂的提示消息 (Toast)
+ * @param {string} message 要显示的消息
+ * @param {number} duration 显示时长 (毫秒)
+ * @param {boolean} isError 是否为错误消息 (红色背景)
+ */
+function showToast(message, duration = 2000, isError = false) {
+    // 移除任何已存在的toast
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    if (isError) {
+        toast.classList.add('error');
+    }
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    // 触发 "show" 动画
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10); // 短暂延迟以确保CSS过渡生效
+
+    // 在指定时长后隐藏并移除 toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // 在渐隐动画结束后从DOM中移除
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.parentElement.removeChild(toast);
+            }
+        }, 300); // 匹配CSS过渡时间
+    }, duration);
+}
+
 /**
  * 保存快照中修改的备注
  */
@@ -1516,6 +1556,7 @@ async function saveSnapshotRemarks() {
     const snapshotId = modal.dataset.snapshotId;
     if (!snapshotId) {
         log('❌ 保存备注失败：无法识别快照ID。');
+        showToast('保存失败：无快照ID', 3000, true);
         return;
     }
 
@@ -1530,7 +1571,7 @@ async function saveSnapshotRemarks() {
         textareas.forEach(textarea => {
             const index = parseInt(textarea.dataset.suggestionIndex, 10);
             if (!isNaN(index) && allGtoSuggestions[index]) {
-                if (allGtoSuggestions[index].notes !== textarea.value) {
+                if ((allGtoSuggestions[index].notes || '') !== textarea.value) {
                     allGtoSuggestions[index].notes = textarea.value;
                     remarksChanged = true;
                 }
@@ -1543,12 +1584,14 @@ async function saveSnapshotRemarks() {
             const updateData = { gtoSuggestions: JSON.stringify(allGtoSuggestions) };
             await snapshotService.updateSnapshot(snapshotId, updateData);
             log(`✅ 快照 (ID: ${snapshotId}) 的备注已保存。`);
-            // 备注更新通常不需要刷新整个列表
+            showToast('备注保存成功！');
         } else {
             log('ℹ️ 备注没有变化。');
+            showToast('备注没有变化', 1500);
         }
     } catch (error) {
         log(`❌ 保存备注失败: ${error.message}`);
+        showToast(`保存失败: ${error.message}`, 3000, true);
     }
 }
 
