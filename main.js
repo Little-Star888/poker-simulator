@@ -594,7 +594,7 @@ function handlePauseResumeClick() {
 }
 
 function startNewGame() {
-  currentSuggestionsCache = {}; // 清空GTO建议缓存
+  currentSuggestionsCache = []; // 清空GTO建议缓存
   document.getElementById('suggestion-display').innerHTML = '等待玩家行动...';
   if (isGameRunning && !isGamePaused) {
     log('游戏已在运行中');
@@ -813,7 +813,7 @@ async function processNextAction() {
     if (shouldSuggest) {
       try {
         const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
-        currentSuggestionsCache[currentPlayerId] = suggestion; // 立即更新缓存
+        currentSuggestionsCache.push({ playerId: currentPlayerId, suggestion: suggestion }); // 立即更新缓存
         renderSuggestion(suggestion, currentPlayerId, round);
       } catch (apiError) {
         const display = document.getElementById('suggestion-display');
@@ -1024,13 +1024,11 @@ async function captureAndProceed(cropOptions) {
 
         const gameState = game.getGameState(); // 重新加入这行来定义gameState
 
-        // 直接遍历缓存的键，因为缓存本身就代表了本局所有已生成的建议
-        const playerIdsWithSuggestions = Object.keys(currentSuggestionsCache);
-
-        const allGtoSuggestions = playerIdsWithSuggestions.map(playerId => {
+        // 直接从缓存数组映射，该数组包含本局所有已生成的建议
+        const allGtoSuggestions = currentSuggestionsCache.map(item => {
             return {
-                playerId: playerId,
-                suggestion: currentSuggestionsCache[playerId],
+                playerId: item.playerId,
+                suggestion: item.suggestion,
                 notes: ''
             };
         });
@@ -1255,6 +1253,24 @@ function buildSuggestionElement(suggestion, playerId, phase) {
                 createRow('位置', local.hasPosition ? '有利位置' : '不利位置');
             }
             createRow('行动场景', local.scenarioDescription);
+            if (phase !== 'preflop') {
+                createSection('数据参考');
+                if (local.equity) {
+                    const parts = [];
+                    if (local.equity.winRate !== null) parts.push(`胜率: ${local.equity.winRate}%`);
+                    if (local.equity.potOdds !== null) parts.push(`底池赔率: ${local.equity.potOdds}%`);
+                    if (local.action !== null) parts.push(`建议: ${local.action}`);
+                    createRow('本地计算', parts.join('， '));
+                }
+                if (suggestion.thirdPartyResult && suggestion.thirdPartyResult.equity) {
+                    const treys = suggestion.thirdPartyResult.equity;
+                    const parts = [];
+                    if (treys.winRate !== null) parts.push(`胜率: ${treys.winRate}%`);
+                    if (treys.potOdds !== null) parts.push(`底池赔率: ${treys.potOdds}%`);
+                    if (treys.action) parts.push(`建议: ${treys.action}`);
+                    createRow('Treys (仅作对比参考)', parts.join('， '));
+                }
+            }
             createSection('最终建议');
             const actionRow = document.createElement('div');
             actionRow.style.marginBottom = '4px';
@@ -1280,15 +1296,19 @@ function buildSuggestionElement(suggestion, playerId, phase) {
             container.appendChild(reasonRow);
             suggestionWrapper.appendChild(container);
         } catch (e) {
-            console.error(`格式化 ${phase} 建议时出错:`, e, suggestion);
+            console.error(`Error formatting ${phase} suggestion:`, e, suggestion);
             const pre = document.createElement('pre');
+            pre.style.margin = '0';
             pre.style.whiteSpace = 'pre-wrap';
+            pre.style.wordBreak = 'break-all';
             pre.textContent = JSON.stringify(suggestion, null, 2);
             suggestionWrapper.appendChild(pre);
         }
     } else {
         const pre = document.createElement('pre');
+        pre.style.margin = '0';
         pre.style.whiteSpace = 'pre-wrap';
+        pre.style.wordBreak = 'break-all';
         pre.textContent = JSON.stringify(suggestion, null, 2);
         suggestionWrapper.appendChild(pre);
     }
