@@ -1002,6 +1002,32 @@
     #delete-confirm-popover #delete-confirm-yes:hover {
         background-color: #c82333;
     }
+
+    /* 新增：图片悬浮提示样式 */
+    #image-hover-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.65);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 16px;
+        font-weight: bold;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    }
+
+    #view-snapshot-image-container:hover #image-hover-overlay {
+        opacity: 1;
+        visibility: visible;
+    }
   </style>
 </head>
 <body>  <div class="app-container">
@@ -1409,8 +1435,11 @@
         <div class="modal-content" style="width: 95vw; max-width: 1200px; height: 90vh; display: flex; flex-direction: column;">
             <h3 style="flex-shrink: 0;">查看快照建议</h3>
             <div class="modal-body" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
-                <div style="flex-basis: 40%; flex-shrink: 0; overflow: auto; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
-                    <img id="view-snapshot-image" src="" alt="牌局快照" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                <div id="view-snapshot-image-container" style="position: relative; flex-basis: 40%; flex-shrink: 0; overflow: auto; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+                    <img id="view-snapshot-image" src="" alt="牌局快照" style="max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer;">
+                    <div id="image-hover-overlay">
+                        <span style="display: flex; align-items: center; gap: 8px;"><i class="material-icons">zoom_in</i> 查看大图</span>
+                    </div>
                 </div>
                 <div id="view-snapshot-suggestions-list" style="flex-grow: 1; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 4px;">
                     <!-- Suggestions will be rendered here by JS -->
