@@ -224,23 +224,51 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
 
 
 
-    const response = await fetch(`/poker/suggestion?${params.toString()}`);
+        const response = await fetch(`/poker/suggestion?${params.toString()}`);
+
+
+
+        
+
+
+
+        if (!response.ok) {
+
+
+
+            const errorText = await response.text();
+
+
+
+            console.error('GTO suggestion API error:', errorText);
+
+
+
+            throw new Error(`API请求失败: ${response.status} ${errorText}`);
+
+
+
+        }
+
+
 
     
 
-    if (!response.ok) {
 
-        const errorText = await response.text();
 
-        console.error('GTO suggestion API error:', errorText);
-
-        throw new Error(`API请求失败: ${response.status} ${errorText}`);
-
-    }
+        const suggestionResponse = await response.json();
 
 
 
-    return response.json();
+    
+
+
+
+        // 同时返回请求和响应，以便保存快照
+
+
+
+        return { request: requestDto, response: suggestionResponse };
 
 }
 

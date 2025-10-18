@@ -1,4 +1,5 @@
 // main.js
+import * as snapshotService from './snapshot_api_service.js';
 import { Settings } from './setting.js';
 import { PokerGame } from './poker.js';
 import { getDecision } from './ai.js';
@@ -253,16 +254,24 @@ function makeSnapshotNameEditable(nameElement) {
     nameElement.parentNode.replaceChild(input, nameElement);
     input.focus();
     input.select();
-    const saveChanges = () => {
+
+    const saveChanges = async () => {
         const newName = input.value.trim();
-        let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
-        const snapshotIndex = savedSnapshots.findIndex(s => s.id === snapshotId);
         const finalName = newName || currentName;
-        if (snapshotIndex > -1 && newName && newName !== currentName) {
-            savedSnapshots[snapshotIndex].name = finalName;
-            localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
-            log(`快照名称已更新为 "${finalName}"`);
+
+        // 如果名称有变化，则调用API更新
+        if (newName && newName !== currentName) {
+            try {
+                log(`💾 正在更新快照名称 (ID: ${snapshotId})...`);
+                await snapshotService.updateSnapshot(snapshotId, { name: finalName });
+                log(`✅ 快照名称已更新为 "${finalName}"`);
+            } catch (error) {
+                log(`❌ 更新名称失败: ${error.message}`);
+                // 即使失败，也恢复UI到最终名称，但下次刷新时会变回原样
+            }
         }
+
+        // 更新UI
         const newNameElement = document.createElement('strong');
         newNameElement.className = 'snapshot-name-display';
         newNameElement.dataset.snapshotId = snapshotId;
@@ -270,7 +279,10 @@ function makeSnapshotNameEditable(nameElement) {
         if (input.parentNode) {
             input.parentNode.replaceChild(newNameElement, input);
         }
+        // 刷新列表以确保与数据库完全同步
+        renderSnapshotList();
     };
+
     input.addEventListener('blur', saveChanges);
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -813,8 +825,23 @@ async function processNextAction() {
     if (round === 'river' && Settings.suggestOnRiver) shouldSuggest = true;
     if (shouldSuggest) {
       try {
-        const suggestion = await getSuggestion(gameState, currentPlayerId, actionRecords);
-        currentSuggestionsCache.push({ playerId: currentPlayerId, suggestion: suggestion }); // 立即更新缓存
+        const result = await getSuggestion(gameState, currentPlayerId, actionRecords);
+        console.log("[DEBUG] Raw result from getSuggestion:", result);
+
+        // 增加代码健壮性，处理 getSuggestion 可能返回不一致结果的情况
+        const isWrapper = result && result.response !== undefined && result.request !== undefined;
+        const suggestion = isWrapper ? result.response : result;
+        const request = isWrapper ? result.request : null;
+
+        if (!isWrapper) {
+            console.warn(`[WARN] For player ${currentPlayerId}, getSuggestion did not return a wrapper object. Snapshots for this action will be incomplete.`);
+        }
+
+        currentSuggestionsCache.push({ 
+            playerId: currentPlayerId, 
+            suggestion: suggestion, 
+            request: request 
+        });
         renderSuggestion(suggestion, currentPlayerId, round);
       } catch (apiError) {
         const display = document.getElementById('suggestion-display');
@@ -1040,6 +1067,7 @@ async function captureAndProceed(cropOptions) {
             return {
                 playerId: item.playerId,
                 suggestion: item.suggestion,
+                request: item.request, // 包含请求DTO
                 notes: ''
             };
         });
@@ -1169,7 +1197,7 @@ function initSnapshotModalListeners() {
 /**
  * 保存当前暂存的快照到 localStorage
  */
-function savePendingSnapshot() {
+async function savePendingSnapshot() {
     const pendingData = window.pendingSnapshotData;
     if (!pendingData) {
         log('❌ 无法保存快照：没有待处理的快照数据。');
@@ -1177,86 +1205,90 @@ function savePendingSnapshot() {
         return;
     }
 
-    // 从输入框获取名称
     const nameInput = document.getElementById('snapshot-name-input');
     let snapshotName = nameInput.value.trim();
 
-    // 如果名称为空，则使用时间戳作为默认名称
     if (!snapshotName) {
-        snapshotName = `快照 ${pendingData.timestamp}`;
+        snapshotName = `快照 ${new Date().toLocaleString()}`;
     }
 
-    const snapshotId = `snapshot_${Date.now()}`;
-    
-    const snapshot = {
-        id: snapshotId,
-        name: snapshotName, // 添加 name 属性
-        ...pendingData
+    // 为后端准备数据，将对象字符串化
+    const snapshotData = {
+        name: snapshotName,
+        gameState: JSON.stringify(pendingData.gameState),
+        imageData: pendingData.imageData,
+        gtoSuggestions: JSON.stringify(pendingData.allGtoSuggestions)
     };
 
-    let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
-    savedSnapshots.unshift(snapshot);
-    localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
+    try {
+        log(`💾 正在保存快照到数据库...`);
+        const savedSnapshot = await snapshotService.createSnapshot(snapshotData);
+        log(`✅ 快照 "${savedSnapshot.name}" (ID: ${savedSnapshot.id}) 已成功保存。`);
+        
+        nameInput.value = '';
+        hideSnapshotModal(); // 这会触发可能存在的 postSnapshotAction
+        await renderSnapshotList(); // 从后端刷新列表
 
-    log(`✅ 快照 "${snapshotName}" (ID: ${snapshotId}) 已保存。`);
-    
-    // 为下次使用清空输入框
-    nameInput.value = '';
+        // 自动打开新创建的快照详情
+        log(`自动打开快照详情...`);
+        showViewSnapshotModal(savedSnapshot.id);
 
-    hideSnapshotModal();
-    renderSnapshotList();
-
-    // 自动打开新创建的快照详情
-    log(`自动打开快照详情...`);
-    showViewSnapshotModal(snapshotId);
-
-    // 执行快照后的回调（如果存在）
-    if (postSnapshotAction) {
-        postSnapshotAction();
-        postSnapshotAction = null;
+    } catch (error) {
+        log(`❌ 保存快照失败: ${error.message}`);
+        // 可以在此添加UI提示，告知用户保存失败
     }
 }
 
 /**
  * 渲染快照列表到UI
  */
-function renderSnapshotList() {
+async function renderSnapshotList() {
     const snapshotListUl = document.getElementById('snapshot-list');
     if (!snapshotListUl) return;
-    snapshotListUl.innerHTML = '';
-    const savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
-    if (savedSnapshots.length === 0) {
-        snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">暂无快照</li>';
-        return;
+    snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">加载中...</li>';
+
+    try {
+        const savedSnapshots = await snapshotService.getSnapshots();
+        snapshotListUl.innerHTML = '';
+
+        if (savedSnapshots.length === 0) {
+            snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">暂无快照</li>';
+            return;
+        }
+
+        savedSnapshots.forEach(snapshot => {
+            const li = document.createElement('li');
+            li.dataset.snapshotId = snapshot.id;
+            li.innerHTML = `
+                <div class="snapshot-info">
+                    <strong class="snapshot-name-display" data-snapshot-id="${snapshot.id}">${snapshot.name}</strong><br>
+                    <small>${new Date(snapshot.timestamp).toLocaleString()}</small>
+                </div>
+                <div class="snapshot-actions">
+                    <button class="view-btn">查看建议</button>
+                    <button class="delete-btn">删除快照</button>
+                </div>
+            `;
+            snapshotListUl.appendChild(li);
+        });
+
+        snapshotListUl.querySelectorAll('.view-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const snapshotId = e.target.closest('li').dataset.snapshotId;
+                showViewSnapshotModal(snapshotId);
+            });
+        });
+
+        snapshotListUl.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const snapshotId = e.target.closest('li').dataset.snapshotId;
+                showDeleteConfirmation(snapshotId, e.target);
+            });
+        });
+    } catch (error) {
+        log(`❌ 加载快照列表失败: ${error.message}`);
+        snapshotListUl.innerHTML = `<li style="text-align: center; color: #ff6b6b; padding: 20px 0;">列表加载失败</li>`;
     }
-    savedSnapshots.forEach(snapshot => {
-        const li = document.createElement('li');
-        li.dataset.snapshotId = snapshot.id;
-        const firstNote = snapshot.allGtoSuggestions?.find(s => s.notes)?.notes || '暂无备注';
-        li.innerHTML = `
-            <div class="snapshot-info">
-                <strong class="snapshot-name-display" data-snapshot-id="${snapshot.id}">${snapshot.name}</strong><br>
-                <small>${snapshot.timestamp}</small>
-            </div>
-            <div class="snapshot-actions">
-                <button class="view-btn">查看建议</button>
-                <button class="delete-btn">删除快照</button>
-            </div>
-        `;
-        snapshotListUl.appendChild(li);
-    });
-    snapshotListUl.querySelectorAll('.view-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const snapshotId = e.target.closest('li').dataset.snapshotId;
-            showViewSnapshotModal(snapshotId);
-        });
-    });
-    snapshotListUl.querySelectorAll('.delete-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const snapshotId = e.target.closest('li').dataset.snapshotId;
-            showDeleteConfirmation(snapshotId, e.target);
-        });
-    });
 }
 
 /**
@@ -1380,135 +1412,143 @@ function buildSuggestionElement(suggestion, playerId, phase) {
  * 显示查看快照的模态框，并填充内容
  */
 async function showViewSnapshotModal(snapshotId) {
-    const savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
-    const snapshot = savedSnapshots.find(s => s.id === snapshotId);
-    if (!snapshot) {
-        log(`❌ 无法找到快照: ${snapshotId}`);
-        return;
-    }
+    log(`正在从数据库加载快照 (ID: ${snapshotId})...`);
+    try {
+        const snapshot = await snapshotService.getSnapshotById(snapshotId);
 
-    const modal = document.getElementById('view-snapshot-modal');
-    const imageEl = document.getElementById('view-snapshot-image');
-    const suggestionsListEl = document.getElementById('view-snapshot-suggestions-list');
-    const filterContainer = document.getElementById('snapshot-suggestion-filter-container');
+        // 后端返回的JSON字段是字符串，需要解析成对象
+        snapshot.allGtoSuggestions = JSON.parse(snapshot.gtoSuggestions || '[]');
 
-    // 清空旧内容
-    suggestionsListEl.innerHTML = '';
-    filterContainer.innerHTML = '';
-    modal.dataset.snapshotId = snapshotId;
-    imageEl.src = snapshot.imageData;
+        const modal = document.getElementById('view-snapshot-modal');
+        const imageEl = document.getElementById('view-snapshot-image');
+        const suggestionsListEl = document.getElementById('view-snapshot-suggestions-list');
+        const filterContainer = document.getElementById('snapshot-suggestion-filter-container');
 
-    if (snapshot.allGtoSuggestions && snapshot.allGtoSuggestions.length > 0) {
-        // 1. 获取唯一的玩家ID并初始化筛选状态（默认全选）
-        const playerIdsInSnapshot = [...new Set(snapshot.allGtoSuggestions.map(s => s.playerId))].sort();
-        const snapshotFilterState = new Set(playerIdsInSnapshot);
+        // 清空旧内容
+        suggestionsListEl.innerHTML = '';
+        filterContainer.innerHTML = '';
+        modal.dataset.snapshotId = snapshotId;
+        imageEl.src = snapshot.imageData;
 
-        // 2. 动态创建筛选复选框
-        const filterTitle = document.createElement('strong');
-        filterTitle.textContent = '筛选:';
-        filterTitle.style.marginRight = '10px';
-        filterContainer.appendChild(filterTitle);
+        if (snapshot.allGtoSuggestions && snapshot.allGtoSuggestions.length > 0) {
+            const playerIdsInSnapshot = [...new Set(snapshot.allGtoSuggestions.map(s => s.playerId))].sort();
+            const snapshotFilterState = new Set(playerIdsInSnapshot);
 
-        playerIdsInSnapshot.forEach(playerId => {
-            const label = document.createElement('label');
-            label.style.cursor = 'pointer';
-            label.style.userSelect = 'none';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = playerId;
-            checkbox.checked = true;
-            checkbox.style.marginRight = '4px';
-            
-            checkbox.addEventListener('change', (event) => {
-                if (event.target.checked) {
-                    snapshotFilterState.add(playerId);
-                } else {
-                    snapshotFilterState.delete(playerId);
-                }
-                updateVisibility();
+            const filterTitle = document.createElement('strong');
+            filterTitle.textContent = '筛选:';
+            filterTitle.style.marginRight = '10px';
+            filterContainer.appendChild(filterTitle);
+
+            playerIdsInSnapshot.forEach(playerId => {
+                const label = document.createElement('label');
+                label.style.cursor = 'pointer';
+                label.style.userSelect = 'none';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = playerId;
+                checkbox.checked = true;
+                checkbox.style.marginRight = '4px';
+                
+                checkbox.addEventListener('change', (event) => {
+                    if (event.target.checked) {
+                        snapshotFilterState.add(playerId);
+                    } else {
+                        snapshotFilterState.delete(playerId);
+                    }
+                    updateVisibility();
+                });
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(playerId));
+                filterContainer.appendChild(label);
             });
 
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(playerId));
-            filterContainer.appendChild(label);
-        });
+            snapshot.allGtoSuggestions.forEach((suggestionData, index) => {
+                const { playerId, suggestion, notes } = suggestionData;
+                const itemWrapper = document.createElement('div');
+                itemWrapper.className = 'snapshot-suggestion-item';
+                itemWrapper.dataset.playerId = playerId;
 
-        // 3. 渲染建议列表项，并添加 data-player-id 属性
-        snapshot.allGtoSuggestions.forEach(suggestionData => {
-            const { playerId, suggestion, notes } = suggestionData;
-            const itemWrapper = document.createElement('div');
-            itemWrapper.className = 'snapshot-suggestion-item';
-            itemWrapper.dataset.playerId = playerId; // 为筛选功能添加的关键属性
+                const suggestionContent = document.createElement('div');
+                suggestionContent.className = 'snapshot-suggestion-content';
+                const phaseStr = suggestion?.localResult?.strategyPhase?.toLowerCase() || suggestion?.phase?.toLowerCase() || 'unknown';
+                const phase = phaseStr.replace('_', '');
+                const suggestionElement = buildSuggestionElement(suggestion, playerId, phase);
+                suggestionContent.appendChild(suggestionElement);
 
-            const suggestionContent = document.createElement('div');
-            suggestionContent.className = 'snapshot-suggestion-content';
-            const phaseStr = suggestion?.localResult?.strategyPhase?.toLowerCase() || suggestion?.phase?.toLowerCase() || 'unknown';
-            const phase = phaseStr.replace('_', ''); // 修复 API 返回的 "PRE_FLOP" 格式
-            const suggestionElement = buildSuggestionElement(suggestion, playerId, phase);
-            suggestionContent.appendChild(suggestionElement);
+                const notesContainer = document.createElement('div');
+                notesContainer.className = 'snapshot-suggestion-notes';
+                const notesTextarea = document.createElement('textarea');
+                notesTextarea.placeholder = `关于 ${playerId} 建议的备注...`;
+                notesTextarea.value = notes || '';
+                notesTextarea.dataset.playerId = playerId;
+                notesTextarea.dataset.suggestionIndex = index;
+                notesContainer.appendChild(notesTextarea);
 
-            const notesContainer = document.createElement('div');
-            notesContainer.className = 'snapshot-suggestion-notes';
-            const notesTextarea = document.createElement('textarea');
-            notesTextarea.placeholder = `关于 ${playerId} 建议的备注...`;
-            notesTextarea.value = notes || '';
-            notesTextarea.dataset.playerId = playerId;
-            notesContainer.appendChild(notesTextarea);
-
-            itemWrapper.appendChild(suggestionContent);
-            itemWrapper.appendChild(notesContainer);
-            suggestionsListEl.appendChild(itemWrapper);
-        });
-
-        // 4. 定义一个内部函数来更新建议的可见性
-        const updateVisibility = () => {
-            suggestionsListEl.querySelectorAll('.snapshot-suggestion-item').forEach(item => {
-                const itemPlayerId = item.dataset.playerId;
-                item.style.display = snapshotFilterState.has(itemPlayerId) ? 'flex' : 'none';
+                itemWrapper.appendChild(suggestionContent);
+                itemWrapper.appendChild(notesContainer);
+                suggestionsListEl.appendChild(itemWrapper);
             });
-        };
 
-    } else {
-        suggestionsListEl.innerHTML = '<p style="text-align: center; padding: 20px;">此快照没有保存GTO建议。</p>';
+            const updateVisibility = () => {
+                suggestionsListEl.querySelectorAll('.snapshot-suggestion-item').forEach(item => {
+                    const itemPlayerId = item.dataset.playerId;
+                    item.style.display = snapshotFilterState.has(itemPlayerId) ? 'flex' : 'none';
+                });
+            };
+
+        } else {
+            suggestionsListEl.innerHTML = '<p style="text-align: center; padding: 20px;">此快照没有保存GTO建议。</p>';
+        }
+
+        modal.classList.add('is-visible');
+
+    } catch (error) {
+        log(`❌ 加载快照详情失败: ${error.message}`);
     }
-
-    modal.classList.add('is-visible');
 }
 
 /**
  * 保存快照中修改的备注
  */
-function saveSnapshotRemarks() {
+async function saveSnapshotRemarks() {
     const modal = document.getElementById('view-snapshot-modal');
     const snapshotId = modal.dataset.snapshotId;
     if (!snapshotId) {
         log('❌ 保存备注失败：无法识别快照ID。');
         return;
     }
-    let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
-    const snapshotIndex = savedSnapshots.findIndex(s => s.id === snapshotId);
-    if (snapshotIndex === -1) {
-        log(`❌ 保存备注失败：找不到快照 ${snapshotId}。`);
-        return;
-    }
-    const snapshotToUpdate = savedSnapshots[snapshotIndex];
-    const textareas = modal.querySelectorAll('#view-snapshot-suggestions-list textarea');
-    let remarksChanged = false;
-    textareas.forEach(textarea => {
-        const playerId = textarea.dataset.playerId;
-        const suggestionToUpdate = snapshotToUpdate.allGtoSuggestions.find(s => s.playerId === playerId);
-        if (suggestionToUpdate && suggestionToUpdate.notes !== textarea.value) {
-            suggestionToUpdate.notes = textarea.value;
-            remarksChanged = true;
+
+    try {
+        // 1. 获取最新的快照数据
+        const snapshot = await snapshotService.getSnapshotById(snapshotId);
+        const allGtoSuggestions = JSON.parse(snapshot.gtoSuggestions || '[]');
+
+        // 2. 根据索引更新备注
+        const textareas = modal.querySelectorAll('#view-snapshot-suggestions-list textarea');
+        let remarksChanged = false;
+        textareas.forEach(textarea => {
+            const index = parseInt(textarea.dataset.suggestionIndex, 10);
+            if (!isNaN(index) && allGtoSuggestions[index]) {
+                if (allGtoSuggestions[index].notes !== textarea.value) {
+                    allGtoSuggestions[index].notes = textarea.value;
+                    remarksChanged = true;
+                }
+            }
+        });
+
+        // 3. 如果有变动，则调用API更新
+        if (remarksChanged) {
+            log(`💾 正在更新备注 (ID: ${snapshotId})...`);
+            const updateData = { gtoSuggestions: JSON.stringify(allGtoSuggestions) };
+            await snapshotService.updateSnapshot(snapshotId, updateData);
+            log(`✅ 快照 (ID: ${snapshotId}) 的备注已保存。`);
+            // 备注更新通常不需要刷新整个列表
+        } else {
+            log('ℹ️ 备注没有变化。');
         }
-    });
-    if (remarksChanged) {
-        savedSnapshots[snapshotIndex] = snapshotToUpdate;
-        localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
-        log(`✅ 快照 "${snapshotId}" 的备注已保存。`);
-        renderSnapshotList();
-    } else {
-        log('ℹ️ 备注没有变化。');
+    } catch (error) {
+        log(`❌ 保存备注失败: ${error.message}`);
     }
 }
 
@@ -1533,16 +1573,14 @@ function showDeleteConfirmation(snapshotId, buttonElement) {
 /**
  * 删除指定快照
  */
-function deleteSnapshot(snapshotId) {
-    let savedSnapshots = JSON.parse(localStorage.getItem('pokerSnapshots') || '[]');
-    const initialLength = savedSnapshots.length;
-    savedSnapshots = savedSnapshots.filter(s => s.id !== snapshotId);
-    if (savedSnapshots.length < initialLength) {
-        localStorage.setItem('pokerSnapshots', JSON.stringify(savedSnapshots));
-        log(`🗑️ 快照 "${snapshotId}" 已删除。`);
-        renderSnapshotList();
-    } else {
-        log(`❌ 无法找到快照: ${snapshotId} 进行删除。`);
+async function deleteSnapshot(snapshotId) {
+    try {
+        log(`🗑️ 正在从数据库删除快照 (ID: ${snapshotId})...`);
+        await snapshotService.deleteSnapshotById(snapshotId);
+        log(`✅ 快照 (ID: ${snapshotId}) 已成功删除。`);
+        await renderSnapshotList(); // 从后端刷新列表
+    } catch (error) {
+        log(`❌ 删除快照失败: ${error.message}`);
     }
 }
 
