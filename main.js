@@ -648,17 +648,17 @@ function startNewGame() {
     });
     game.startNewRound('preflop');
     isGameRunning = true;
-    document.getElementById('preset-section').style.opacity = '0.5';
-    document.getElementById('preset-section').style.pointerEvents = 'none';
+    const presetSection = document.getElementById('preset-section');
+    if (presetSection) {
+        presetSection.style.opacity = '0.5';
+        presetSection.style.pointerEvents = 'none';
+        presetSection.querySelectorAll('input, select').forEach(el => el.disabled = true);
+    }
     const runtimeConfigSection = document.getElementById('runtime-config-section');
     if (runtimeConfigSection) {
-        Array.from(runtimeConfigSection.querySelectorAll('.form-row')).forEach(row => {
-            // Exclude the GTO filter row from being disabled
-            if (!row.querySelector('#gto-filter-players')) {
-                row.style.opacity = '0.5';
-                row.style.pointerEvents = 'none';
-            }
-        });
+        runtimeConfigSection.style.opacity = '0.5';
+        runtimeConfigSection.style.pointerEvents = 'none';
+        runtimeConfigSection.querySelectorAll('input, select').forEach(el => el.disabled = true);
     }
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
@@ -814,14 +814,17 @@ function stopGame() {
   startBtn.disabled = false;
   pauseBtn.textContent = '⏸️ 暂停';
   pauseBtn.disabled = true;
-  document.getElementById('preset-section').style.opacity = '1';
-  document.getElementById('preset-section').style.pointerEvents = 'auto';
+  const presetSection = document.getElementById('preset-section');
+  if (presetSection) {
+      presetSection.style.opacity = '1';
+      presetSection.style.pointerEvents = 'auto';
+      presetSection.querySelectorAll('input, select').forEach(el => el.disabled = false);
+  }
   const runtimeConfigSection = document.getElementById('runtime-config-section');
   if (runtimeConfigSection) {
-      Array.from(runtimeConfigSection.querySelectorAll('.form-row')).forEach(row => {
-          row.style.opacity = '';
-          row.style.pointerEvents = '';
-      });
+      runtimeConfigSection.style.opacity = '1';
+      runtimeConfigSection.style.pointerEvents = 'auto';
+      runtimeConfigSection.querySelectorAll('input, select').forEach(el => el.disabled = false);
   }
 }
 
@@ -2368,10 +2371,13 @@ function enterReplayMode() {
     document.getElementById('replay-controls').style.display = 'flex';
     
     // 禁用配置区
-    document.getElementById('config-drawer').style.pointerEvents = 'none';
-    document.getElementById('config-drawer').style.opacity = '0.6';
-    if (usePresetCommunityCheckbox) usePresetCommunityCheckbox.disabled = true;
-    if (usePresetHandsCheckbox) usePresetHandsCheckbox.disabled = true;
+    const configDrawer = document.getElementById('config-drawer');
+    if (configDrawer) {
+        configDrawer.style.pointerEvents = 'none';
+        configDrawer.style.opacity = '0.6';
+        // Robustly disable all form controls within the drawer
+        configDrawer.querySelectorAll('input, select').forEach(el => el.disabled = true);
+    }
 
     resetReplay();
 }
@@ -2388,10 +2394,13 @@ function exitReplay() {
     document.getElementById('replay-controls').style.display = 'none';
 
     // 恢复配置区
-    document.getElementById('config-drawer').style.pointerEvents = 'auto';
-    document.getElementById('config-drawer').style.opacity = '1';
-    if (usePresetCommunityCheckbox) usePresetCommunityCheckbox.disabled = false;
-    if (usePresetHandsCheckbox) usePresetHandsCheckbox.disabled = false;
+    const configDrawer = document.getElementById('config-drawer');
+    if (configDrawer) {
+        configDrawer.style.pointerEvents = 'auto';
+        configDrawer.style.opacity = '1';
+        // Robustly re-enable all form controls
+        configDrawer.querySelectorAll('input, select').forEach(el => el.disabled = false);
+    }
 
     stopGame(); // 调用stopGame以确保完全重置到初始状态
     log("[REPLAY] 已退出回放模式。");
