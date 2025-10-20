@@ -2370,6 +2370,8 @@ function enterReplayMode() {
     // 禁用配置区
     document.getElementById('config-drawer').style.pointerEvents = 'none';
     document.getElementById('config-drawer').style.opacity = '0.6';
+    if (usePresetCommunityCheckbox) usePresetCommunityCheckbox.disabled = true;
+    if (usePresetHandsCheckbox) usePresetHandsCheckbox.disabled = true;
 
     resetReplay();
 }
@@ -2388,6 +2390,8 @@ function exitReplay() {
     // 恢复配置区
     document.getElementById('config-drawer').style.pointerEvents = 'auto';
     document.getElementById('config-drawer').style.opacity = '1';
+    if (usePresetCommunityCheckbox) usePresetCommunityCheckbox.disabled = false;
+    if (usePresetHandsCheckbox) usePresetHandsCheckbox.disabled = false;
 
     stopGame(); // 调用stopGame以确保完全重置到初始状态
     log("[REPLAY] 已退出回放模式。");
