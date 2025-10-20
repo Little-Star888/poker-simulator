@@ -897,6 +897,32 @@
     #snapshot-list li .snapshot-actions .delete-btn { background-color: #dc3545; color: white; border-color: #dc3545; }
     #snapshot-list li .snapshot-actions .delete-btn:hover { background-color: #c82333; }
 
+    /* 新增：查看快照按钮样式 (蓝色) */
+    #snapshot-list li .snapshot-actions .view-btn {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    #snapshot-list li .snapshot-actions .view-btn:hover { background-color: #0069d9; }
+
+    /* 新增：回放按钮样式 (绿色) */
+    #snapshot-list li .snapshot-actions .replay-btn {
+        background-color: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+    #snapshot-list li .snapshot-actions .replay-btn:hover { background-color: #218838; }
+
+    /* 新增：回放控制面板按钮颜色 */
+    #replay-play-pause-btn { background-color: #28a745; } /* 绿色 */
+    #replay-play-pause-btn:hover:not(:disabled) { background-color: #218838; }
+    #replay-next-btn, #replay-prev-btn { background-color: #17a2b8; } /* 信息蓝 */
+    #replay-next-btn:hover:not(:disabled), #replay-prev-btn:hover:not(:disabled) { background-color: #138496; }
+    #replay-reset-btn { background-color: #ffc107; } /* 警告黄 */
+    #replay-reset-btn:hover:not(:disabled) { background-color: #e0a800; }
+
+
+
     #snapshot-list-container {
       max-height: 210px; /* 大约3个列表项的高度 */
       overflow-y: auto;
