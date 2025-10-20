@@ -651,6 +651,15 @@ function startNewGame() {
     document.getElementById('preset-section').style.opacity = '0.5';
     document.getElementById('preset-section').style.pointerEvents = 'none';
     const runtimeConfigSection = document.getElementById('runtime-config-section');
+    if (runtimeConfigSection) {
+        Array.from(runtimeConfigSection.querySelectorAll('.form-row')).forEach(row => {
+            // Exclude the GTO filter row from being disabled
+            if (!row.querySelector('#gto-filter-players')) {
+                row.style.opacity = '0.5';
+                row.style.pointerEvents = 'none';
+            }
+        });
+    }
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
     log('✅ 新牌局开始！盲注: SB=' + Settings.sb + ', BB=' + Settings.bb);
