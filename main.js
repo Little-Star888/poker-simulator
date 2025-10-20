@@ -340,6 +340,7 @@ function activateNextEmptySlot() {
 }
 
 function updatePresetVisibility() {
+    if (isInReplayMode) return; // 在回放模式下禁用
     Settings.update({
         usePresetHands: usePresetHandsCheckbox.checked,
         usePresetCommunity: usePresetCommunityCheckbox.checked,
@@ -423,6 +424,7 @@ function resetPresetData() {
 }
 
 function handleSlotClick(event) {
+  if (isInReplayMode) return; // 在回放模式下禁用
   const clickedSlot = event.currentTarget;
   if (clickedSlot.dataset.card) {
     unassignCard(clickedSlot);
@@ -473,6 +475,7 @@ function animateCardToSlot(pickerCard, destinationElement, cardText) {
 }
 
 function handleCardPickerClick(event) {
+  if (isInReplayMode) return; // 在回放模式下禁用
   const pickerCard = event.currentTarget;
   const cardText = pickerCard.dataset.card;
   if (pickerCard.classList.contains('dimmed')) {
