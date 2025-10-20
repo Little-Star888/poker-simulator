@@ -659,6 +659,14 @@ function startNewGame() {
         runtimeConfigSection.style.opacity = '0.5';
         runtimeConfigSection.style.pointerEvents = 'none';
         runtimeConfigSection.querySelectorAll('input, select').forEach(el => el.disabled = true);
+
+        // Punch a hole for the GTO filter to keep it interactive during a normal game
+        const gtoFilterRow = runtimeConfigSection.querySelector('#gto-filter-players')?.closest('.form-row');
+        if (gtoFilterRow) {
+            gtoFilterRow.style.opacity = '1'; // Make it fully visible
+            gtoFilterRow.style.pointerEvents = 'auto';
+            gtoFilterRow.querySelectorAll('input, select').forEach(el => el.disabled = false);
+        }
     }
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
