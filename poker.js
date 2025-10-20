@@ -15,7 +15,7 @@ export class PokerGame {
   /**
    * 重置整个牌局（新游戏开始前调用）
    */
-  reset(settings) {
+  reset(settings, forceDealerIndex = null) {
     if (!settings) {
       throw new Error("Settings object must be provided to the game engine.");
     }
@@ -56,7 +56,9 @@ export class PokerGame {
     this.preflopRaiseCount = 0; // 新增：翻牌前加注次数计数器
 
     // 动态确定位置
-    if (this.settings.p1Role === 'random') {
+    if (forceDealerIndex !== null) {
+        this.dealerIndex = forceDealerIndex;
+    } else if (this.settings.p1Role === 'random') {
         this.dealerIndex = Math.floor(Math.random() * playerCount);
     } else {
         const roles = this._getRoleOrder(playerCount);
@@ -270,6 +272,7 @@ export class PokerGame {
     let attempts = 0;
     while (attempts < playerCount && 
            (this.players[this.currentPlayerIndex].isFolded || this.players[this.currentPlayerIndex].isAllIn)) {
+      console.log(`[startNewRound] Skipping player ${this.players[this.currentPlayerIndex].id} (folded: ${this.players[this.currentPlayerIndex].isFolded}, allIn: ${this.players[this.currentPlayerIndex].isAllIn})`);
       this.currentPlayerIndex = (this.currentPlayerIndex + 1) % playerCount;
       attempts++;
     }
@@ -430,16 +433,20 @@ export class PokerGame {
    * 由 main.js 在需要时调用
    */
   moveToNextPlayer() {
+    console.log(`[moveToNextPlayer] Starting. Current index: ${this.currentPlayerIndex}`);
     let attempts = 0;
     const totalPlayers = this.players.length;
     do {
       this.currentPlayerIndex = (this.currentPlayerIndex + 1) % totalPlayers;
       const currentPlayer = this.players[this.currentPlayerIndex];
+      console.log(`[moveToNextPlayer] Trying index ${this.currentPlayerIndex} (${currentPlayer.id}). isFolded: ${currentPlayer.isFolded}`);
       if (!currentPlayer.isFolded && !currentPlayer.isAllIn) {
+        console.log(`[moveToNextPlayer] Found active player: ${currentPlayer.id}. Returning.`);
         return; // 找到有效玩家
       }
       attempts++;
     } while (attempts < totalPlayers);
+    console.log(`[moveToNextPlayer] No active player found.`);
   }
 
   /**
@@ -500,30 +507,9 @@ export class PokerGame {
    * 获取当前行动玩家 ID，确保返回的是有效的未弃牌玩家
    */
   getCurrentPlayerId() {
-    if (this.currentPlayerIndex === -1) return null;
-    
-    // 检查当前玩家是否有效（未弃牌且未全押）
-    const currentPlayer = this.players[this.currentPlayerIndex];
-    if (currentPlayer && !currentPlayer.isFolded && !currentPlayer.isAllIn) {
-      return currentPlayer.id;
+    if (this.currentPlayerIndex >= 0 && this.players[this.currentPlayerIndex]) {
+        return this.players[this.currentPlayerIndex].id;
     }
-    
-    // 如果当前玩家无效，尝试找到下一个有效玩家
-    let attempts = 0;
-    const totalPlayers = this.players.length;
-    let tempIndex = this.currentPlayerIndex;
-    
-    do {
-      tempIndex = (tempIndex + 1) % totalPlayers;
-      const player = this.players[tempIndex];
-      if (player && !player.isFolded && !player.isAllIn) {
-        this.currentPlayerIndex = tempIndex; // 更新当前玩家索引
-        return player.id;
-      }
-      attempts++;
-    } while (attempts < totalPlayers);
-    
-    // 如果所有玩家都无效
     return null;
   }
 
