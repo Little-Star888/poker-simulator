@@ -1096,12 +1096,22 @@ async function captureAndProceed(cropOptions) {
 function showSnapshotModal() {
     const modal = document.getElementById('snapshot-modal');
     const preview = document.getElementById('snapshot-preview');
+    const nameInput = document.getElementById('snapshot-name-input'); // 获取输入框
+
     if (window.pendingSnapshotData && window.pendingSnapshotData.imageData) {
         preview.src = window.pendingSnapshotData.imageData;
     } else {
         preview.src = '';
     }
-    if(modal) modal.classList.add('is-visible');
+    if(modal) {
+        modal.classList.add('is-visible');
+        // 确保模态框可见后再聚焦，使用一个短暂的延时
+        setTimeout(() => {
+            if (nameInput) {
+                nameInput.focus();
+            }
+        }, 100);
+    }
 }
 
 /**
@@ -1420,9 +1430,15 @@ async function showViewSnapshotModal(snapshotId) {
         snapshot.allGtoSuggestions = JSON.parse(snapshot.gtoSuggestions || '[]');
 
         const modal = document.getElementById('view-snapshot-modal');
+        const titleEl = document.getElementById('view-snapshot-title');
         const imageEl = document.getElementById('view-snapshot-image');
         const suggestionsListEl = document.getElementById('view-snapshot-suggestions-list');
         const filterContainer = document.getElementById('snapshot-suggestion-filter-container');
+
+        // 更新标题
+        if (titleEl) {
+            titleEl.textContent = `${snapshot.name}`;
+        }
 
         // 清空旧内容
         suggestionsListEl.innerHTML = '';
