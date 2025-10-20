@@ -1528,6 +1528,7 @@ function buildSuggestionElement(suggestion, playerId, phase) {
  */
 async function showViewSnapshotModal(snapshotId) {
     log(`正在从数据库加载快照 (ID: ${snapshotId})...`);
+    showLoader(); // 显示加载动画
     try {
         const snapshot = await snapshotService.getSnapshotById(snapshotId);
 
@@ -1626,6 +1627,8 @@ async function showViewSnapshotModal(snapshotId) {
 
     } catch (error) {
         log(`❌ 加载快照详情失败: ${error.message}`);
+    } finally {
+        hideLoader(); // 隐藏加载动画
     }
 }
 
@@ -1901,6 +1904,22 @@ function showEndOfHandModal() {
 function hideEndOfHandModal() {
     const modal = document.getElementById('end-of-hand-modal');
     if (modal) modal.classList.remove('is-visible');
+}
+
+// 显示全局加载动画
+function showLoader() {
+    const loader = document.getElementById('global-loader-overlay');
+    if (loader) {
+        loader.style.display = 'flex';
+    }
+}
+
+// 隐藏全局加载动画
+function hideLoader() {
+    const loader = document.getElementById('global-loader-overlay');
+    if (loader) {
+        loader.style.display = 'none';
+    }
 }
 
 function endGame() {
@@ -2356,6 +2375,7 @@ async function startReplay(snapshotId) {
         return;
     }
     log(`[REPLAY] 开始加载快照 #${snapshotId} 用于回放...`);
+    showLoader(); // 显示加载动画
     try {
         const snapshot = await snapshotService.getSnapshotById(snapshotId);
         if (!snapshot.settings || !snapshot.actionHistory) {
@@ -2372,6 +2392,8 @@ async function startReplay(snapshotId) {
 
     } catch (error) {
         log(`❌ 加载快照失败: ${error.message}`);
+    } finally {
+        hideLoader(); // 隐藏加载动画
     }
 }
 
