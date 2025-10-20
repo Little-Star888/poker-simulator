@@ -1364,7 +1364,7 @@ function renderSnapshotPagination(pageData) {
 
     paginationContainer.innerHTML = `
         <button id="snapshot-prev-btn" class="game-control-btn secondary-btn" ${isFirst ? 'disabled' : ''}>&lt; 上一页</button>
-        <span style="margin: 0 15px; font-size: 14px; color: #555;">第 ${currentPage + 1} / ${totalPages} 页</span>
+        <span style="font-size: 14px; color: #555;">第 ${currentPage + 1} / ${totalPages} 页</span>
         <button id="snapshot-next-btn" class="game-control-btn secondary-btn" ${isLast ? 'disabled' : ''}>下一页 &gt;</button>
     `;
 
