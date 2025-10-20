@@ -1265,7 +1265,7 @@ async function renderSnapshotList() {
                     <small>${new Date(snapshot.timestamp).toLocaleString()}</small>
                 </div>
                 <div class="snapshot-actions">
-                    <button class="view-btn">查看建议</button>
+                    <button class="view-btn">查看快照</button>
                     <button class="delete-btn">删除快照</button>
                 </div>
             `;
