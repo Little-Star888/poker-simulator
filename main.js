@@ -1249,7 +1249,14 @@ async function savePendingSnapshot() {
         log(`✅ 快照 "${savedSnapshot.name}" (ID: ${savedSnapshot.id}) 已成功保存。`);
         
         nameInput.value = '';
-        hideSnapshotModal(); // 这会触发可能存在的 postSnapshotAction
+        hideSnapshotModal();
+
+        // 修复：执行在牌局结束后设置的回调函数（例如 stopGame）
+        if (postSnapshotAction) {
+            postSnapshotAction();
+            postSnapshotAction = null;
+        }
+
         await renderSnapshotList(); // 从后端刷新列表
 
         // 自动打开新创建的快照详情
