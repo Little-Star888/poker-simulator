@@ -1327,7 +1327,7 @@ async function renderSnapshotList(page = 0) {
             li.dataset.snapshotId = snapshot.id;
             li.innerHTML = `
                 <div class="snapshot-info">
-                    <strong class="snapshot-name-display" data-snapshot-id="${snapshot.id}">${snapshot.name}</strong><br>
+                    <strong class="snapshot-name-display" data-snapshot-id="${snapshot.id}" title="${snapshot.name}">${snapshot.name}</strong><br>
                     <small>${new Date(snapshot.timestamp).toLocaleString()}</small>
                 </div>
                 <div class="snapshot-actions">
