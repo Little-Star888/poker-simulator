@@ -272,18 +272,6 @@ function makeSnapshotNameEditable(nameElement) {
         const newName = input.value.trim();
         const finalName = newName || currentName;
 
-        // 如果名称有变化，则调用API更新
-        if (newName && newName !== currentName) {
-            try {
-                log(`💾 正在更新快照名称 (ID: ${snapshotId})...`);
-                await snapshotService.updateSnapshot(snapshotId, { name: finalName });
-                log(`✅ 快照名称已更新为 "${finalName}"`);
-            } catch (error) {
-                log(`❌ 更新名称失败: ${error.message}`);
-                // 即使失败，也恢复UI到最终名称，但下次刷新时会变回原样
-            }
-        }
-
         // 更新UI
         const newNameElement = document.createElement('strong');
         newNameElement.className = 'snapshot-name-display';
@@ -292,8 +280,19 @@ function makeSnapshotNameEditable(nameElement) {
         if (input.parentNode) {
             input.parentNode.replaceChild(newNameElement, input);
         }
-        // 刷新列表以确保与数据库完全同步
-        renderSnapshotList();
+
+        // 如果名称有变化，则调用API更新并刷新列表
+        if (newName && newName !== currentName) {
+            try {
+                log(`💾 正在更新快照名称 (ID: ${snapshotId})...`);
+                await snapshotService.updateSnapshot(snapshotId, { name: finalName });
+                log(`✅ 快照名称已更新为 "${finalName}"`);
+            } catch (error) {
+                log(`❌ 更新名称失败: ${error.message}`);
+            }
+            // 刷新列表以确保与数据库完全同步
+            renderSnapshotList();
+        }
     };
 
     input.addEventListener('blur', saveChanges);
