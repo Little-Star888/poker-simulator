@@ -51,7 +51,7 @@ export async function createSnapshot(snapshotData) {
 }
 
 /**
- * 更新指定ID快照的指定信息（如名称、备注等）
+ * 更新指定ID快照的指定信息（如名称、批注等）
  * @param {number} id 快照ID
  * @param {Object} updateData 包含待更新字段的对象
  * @returns {Promise<Object>} 后端返回的已更新的快照对象

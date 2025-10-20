@@ -1479,7 +1479,7 @@ async function showViewSnapshotModal(snapshotId) {
                 const notesContainer = document.createElement('div');
                 notesContainer.className = 'snapshot-suggestion-notes';
                 const notesTextarea = document.createElement('textarea');
-                notesTextarea.placeholder = `关于 ${playerId} 建议的备注...`;
+                notesTextarea.placeholder = `关于 ${playerId} 建议的批注...`;
                 notesTextarea.value = notes || '';
                 notesTextarea.dataset.playerId = playerId;
                 notesTextarea.dataset.suggestionIndex = index;
@@ -1549,13 +1549,13 @@ function showToast(message, duration = 2000, isError = false) {
 }
 
 /**
- * 保存快照中修改的备注
+ * 保存快照中修改的批注
  */
 async function saveSnapshotRemarks() {
     const modal = document.getElementById('view-snapshot-modal');
     const snapshotId = modal.dataset.snapshotId;
     if (!snapshotId) {
-        log('❌ 保存备注失败：无法识别快照ID。');
+        log('❌ 保存批注失败：无法识别快照ID。');
         showToast('保存失败：无快照ID', 3000, true);
         return;
     }
@@ -1565,7 +1565,7 @@ async function saveSnapshotRemarks() {
         const snapshot = await snapshotService.getSnapshotById(snapshotId);
         const allGtoSuggestions = JSON.parse(snapshot.gtoSuggestions || '[]');
 
-        // 2. 根据索引更新备注
+        // 2. 根据索引更新批注
         const textareas = modal.querySelectorAll('#view-snapshot-suggestions-list textarea');
         let remarksChanged = false;
         textareas.forEach(textarea => {
@@ -1580,17 +1580,17 @@ async function saveSnapshotRemarks() {
 
         // 3. 如果有变动，则调用API更新
         if (remarksChanged) {
-            log(`💾 正在更新备注 (ID: ${snapshotId})...`);
+            log(`💾 正在更新批注 (ID: ${snapshotId})...`);
             const updateData = { gtoSuggestions: JSON.stringify(allGtoSuggestions) };
             await snapshotService.updateSnapshot(snapshotId, updateData);
-            log(`✅ 快照 (ID: ${snapshotId}) 的备注已保存。`);
-            showToast('备注保存成功！');
+            log(`✅ 快照 (ID: ${snapshotId}) 的批注已保存。`);
+            showToast('批注保存成功！');
         } else {
-            log('ℹ️ 备注没有变化。');
-            showToast('备注没有变化', 1500);
+            log('ℹ️ 批注没有变化。');
+            showToast('批注没有变化', 1500);
         }
     } catch (error) {
-        log(`❌ 保存备注失败: ${error.message}`);
+        log(`❌ 保存批注失败: ${error.message}`);
         showToast(`保存失败: ${error.message}`, 3000, true);
     }
 }
