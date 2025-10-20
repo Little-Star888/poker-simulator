@@ -1543,7 +1543,7 @@ async function showViewSnapshotModal(snapshotId) {
 
         // 更新标题
         if (titleEl) {
-            titleEl.textContent = `查看快照: ${snapshot.name}`;
+            titleEl.textContent = `${snapshot.name}`;
         }
 
         // 清空旧内容
