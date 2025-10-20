@@ -656,17 +656,20 @@ function startNewGame() {
     }
     const runtimeConfigSection = document.getElementById('runtime-config-section');
     if (runtimeConfigSection) {
-        runtimeConfigSection.style.opacity = '0.5';
-        runtimeConfigSection.style.pointerEvents = 'none';
-        runtimeConfigSection.querySelectorAll('input, select').forEach(el => el.disabled = true);
-
-        // Punch a hole for the GTO filter to keep it interactive during a normal game
-        const gtoFilterRow = runtimeConfigSection.querySelector('#gto-filter-players')?.closest('.form-row');
-        if (gtoFilterRow) {
-            gtoFilterRow.style.opacity = '1'; // Make it fully visible
-            gtoFilterRow.style.pointerEvents = 'auto';
-            gtoFilterRow.querySelectorAll('input, select').forEach(el => el.disabled = false);
-        }
+        runtimeConfigSection.querySelectorAll('.form-row').forEach(row => {
+            const isGtoFilterRow = row.querySelector('#gto-filter-players');
+            if (!isGtoFilterRow) {
+                // Disable all other rows
+                row.style.opacity = '0.5';
+                row.style.pointerEvents = 'none';
+                row.querySelectorAll('input, select').forEach(el => el.disabled = true);
+            } else {
+                // Ensure the GTO filter row is fully enabled (just in case)
+                row.style.opacity = '1';
+                row.style.pointerEvents = 'auto';
+                row.querySelectorAll('input, select').forEach(el => el.disabled = false);
+            }
+        });
     }
     updateActionSheet(game.players[game.sbIndex].id, 'BET', Settings.sb);
     updateActionSheet(game.players[game.bbIndex].id, 'BET', Settings.bb);
@@ -828,12 +831,15 @@ function stopGame() {
       presetSection.style.pointerEvents = 'auto';
       presetSection.querySelectorAll('input, select').forEach(el => el.disabled = false);
   }
-  const runtimeConfigSection = document.getElementById('runtime-config-section');
-  if (runtimeConfigSection) {
-      runtimeConfigSection.style.opacity = '1';
-      runtimeConfigSection.style.pointerEvents = 'auto';
-      runtimeConfigSection.querySelectorAll('input, select').forEach(el => el.disabled = false);
-  }
+        const runtimeConfigSection = document.getElementById('runtime-config-section');
+        if (runtimeConfigSection) {
+            runtimeConfigSection.querySelectorAll('.form-row').forEach(row => {
+                row.style.opacity = '';
+                row.style.pointerEvents = '';
+                row.querySelectorAll('input, select').forEach(el => el.disabled = false);
+            });
+        }
+  
 }
 
 async function processNextAction() {
