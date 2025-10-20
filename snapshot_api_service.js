@@ -7,11 +7,13 @@
 const API_BASE_URL = '/poker/snapshots';
 
 /**
- * 从后端获取所有快照的摘要列表
- * @returns {Promise<Array>} 快照摘要数组
+ * 从后端获取快照的摘要列表（支持分页）
+ * @param {number} page 页码 (0-based)
+ * @param {number} size 每页数量
+ * @returns {Promise<Object>} 包含快照摘要数组和分页信息的Page对象
  */
-export async function getSnapshots() {
-    const response = await fetch(API_BASE_URL);
+export async function getSnapshots(page = 0, size = 5) {
+    const response = await fetch(`${API_BASE_URL}?page=${page}&size=${size}`);
     if (!response.ok) {
         throw new Error(`获取快照列表失败: ${response.statusText}`);
     }

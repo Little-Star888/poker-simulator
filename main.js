@@ -38,6 +38,10 @@ let usedCards = new Set();
 let isPresetUIInitialized = false;
 let postSnapshotAction = null;
 
+// ========== 快照分页状态 ==========
+let snapshotCurrentPage = 0;
+let snapshotTotalPages = 0;
+
 // --- DOM 元素变量 (在 init 函数中初始化) ---
 let modeSelect, playerCountInput, minStackInput, maxStackInput, potTypeSelect, p1RoleSelect;
 let sbInput, bbInput, autoDelayInput;
@@ -1272,17 +1276,23 @@ async function savePendingSnapshot() {
 /**
  * 渲染快照列表到UI
  */
-async function renderSnapshotList() {
+async function renderSnapshotList(page = 0) {
     const snapshotListUl = document.getElementById('snapshot-list');
     if (!snapshotListUl) return;
     snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">加载中...</li>';
 
     try {
-        const savedSnapshots = await snapshotService.getSnapshots();
+        const pageData = await snapshotService.getSnapshots(page, 5);
+        const savedSnapshots = pageData.content;
+
+        snapshotCurrentPage = pageData.number;
+        snapshotTotalPages = pageData.totalPages;
+
         snapshotListUl.innerHTML = '';
 
-        if (savedSnapshots.length === 0) {
+        if (!savedSnapshots || savedSnapshots.length === 0) {
             snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">暂无快照</li>';
+            renderSnapshotPagination(null); // 清空分页
             return;
         }
 
@@ -1303,6 +1313,7 @@ async function renderSnapshotList() {
             snapshotListUl.appendChild(li);
         });
 
+        // 为新渲染的按钮绑定事件
         snapshotListUl.querySelectorAll('.view-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 const snapshotId = e.target.closest('li').dataset.snapshotId;
@@ -1323,9 +1334,50 @@ async function renderSnapshotList() {
                 showDeleteConfirmation(snapshotId, e.target);
             });
         });
+
+        renderSnapshotPagination(pageData);
+
     } catch (error) {
         log(`❌ 加载快照列表失败: ${error.message}`);
         snapshotListUl.innerHTML = `<li style="text-align: center; color: #ff6b6b; padding: 20px 0;">列表加载失败</li>`;
+        renderSnapshotPagination(null); // 清空分页
+    }
+}
+
+/**
+ * 渲染快照列表的分页控件
+ * @param {object | null} pageData 从后端获取的分页对象
+ */
+function renderSnapshotPagination(pageData) {
+    const paginationContainer = document.getElementById('snapshot-pagination-controls');
+    if (!paginationContainer) return;
+
+    if (!pageData || pageData.totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    const isFirst = pageData.first;
+    const isLast = pageData.last;
+    const currentPage = pageData.number; // 0-based
+    const totalPages = pageData.totalPages;
+
+    paginationContainer.innerHTML = `
+        <button id="snapshot-prev-btn" class="game-control-btn secondary-btn" ${isFirst ? 'disabled' : ''}>&lt; 上一页</button>
+        <span style="margin: 0 15px; font-size: 14px; color: #555;">第 ${currentPage + 1} / ${totalPages} 页</span>
+        <button id="snapshot-next-btn" class="game-control-btn secondary-btn" ${isLast ? 'disabled' : ''}>下一页 &gt;</button>
+    `;
+
+    if (!isFirst) {
+        document.getElementById('snapshot-prev-btn').addEventListener('click', () => {
+            renderSnapshotList(currentPage - 1);
+        });
+    }
+
+    if (!isLast) {
+        document.getElementById('snapshot-next-btn').addEventListener('click', () => {
+            renderSnapshotList(currentPage + 1);
+        });
     }
 }
 
