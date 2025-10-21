@@ -2719,17 +2719,59 @@ function injectStyles() {
  * 初始化回放功能的事件监听
  */
 function setupReplayControls() {
-    // 使用统一的安全绑定函数绑定回放控制按钮事件
-    const replayButtons = {
-        'replay-play-pause-btn': playPauseReplay,
-        'replay-next-btn': nextReplayStep,
-        'replay-prev-btn': prevReplayStep,
-        'replay-reset-btn': resetReplay,
-        'replay-exit-btn': exitReplay
-    };
+    // 播放/暂停、重置、退出按钮直接绑定
+    safeBindEvent('replay-play-pause-btn', playPauseReplay, '未找到播放/暂停按钮');
+    safeBindEvent('replay-reset-btn', resetReplay, '未找到重置按钮');
+    safeBindEvent('replay-exit-btn', exitReplay, '未找到退出按钮');
 
-    Object.entries(replayButtons).forEach(([id, handler]) => {
-        safeBindEvent(id, handler, `未找到回放按钮: ${id}`);
+    // 上一步/下一步按钮需要包装为手动点击
+    safeBindEvent('replay-next-btn', () => nextReplayStep(true), '未找到下一步按钮');
+    safeBindEvent('replay-prev-btn', prevReplayStep, '未找到上一步按钮');
+}
+
+/**
+ * 更新回放控制按钮的启用/禁用状态
+ * @param {Object} options - 按钮状态配置
+ */
+function updateReplayButtonStates(options = {}) {
+    const playPauseBtn = document.getElementById('replay-play-pause-btn');
+    const nextBtn = document.getElementById('replay-next-btn');
+    const prevBtn = document.getElementById('replay-prev-btn');
+    const resetBtn = document.getElementById('replay-reset-btn');
+    const exitBtn = document.getElementById('replay-exit-btn');
+
+    if (!playPauseBtn || !nextBtn || !prevBtn || !resetBtn || !exitBtn) return;
+
+    // 播放/暂停按钮总是可用
+    playPauseBtn.disabled = false;
+
+    // 根据选项设置其他按钮状态
+    nextBtn.disabled = options.disableNext || false;
+    prevBtn.disabled = options.disablePrev || false;
+    resetBtn.disabled = options.disableReset || false;
+    exitBtn.disabled = options.disableExit || false;
+
+    // 自动播放时禁用手动控制按钮
+    if (options.isPlaying) {
+        nextBtn.disabled = true;
+        prevBtn.disabled = true;
+        resetBtn.disabled = true;
+    }
+
+    // 根据回放位置禁用相应按钮
+    if (options.atBeginning) {
+        prevBtn.disabled = true;
+    }
+    if (options.atEnd) {
+        nextBtn.disabled = true;
+    }
+
+    console.log('[DEBUG] Replay button states updated:', {
+        isPlaying: options.isPlaying,
+        disableNext: nextBtn.disabled,
+        disablePrev: prevBtn.disabled,
+        atBeginning: options.atBeginning,
+        atEnd: options.atEnd
     });
 }
 
@@ -2837,13 +2879,22 @@ function resetReplay() {
     updateUI({ isInitialDeal: true }); 
     
     document.getElementById('replay-play-pause-btn').textContent = '▶️ 播放';
+
+    // 重置按钮状态：回到开始位置
+    updateReplayButtonStates({
+        isPlaying: false,
+        atBeginning: true,
+        atEnd: false
+    });
+
     log("[REPLAY] 回放已重置，准备就绪。");
 }
 
 /**
  * 执行回放的下一步
+ * @param {boolean} isManual - 是否为手动点击（默认为false，即自动播放）
  */
-function nextReplayStep() {
+function nextReplayStep(isManual = false) {
     if (!isInReplayMode) return;
 
     if (currentReplayStep >= replayData.actions.length) {
@@ -2851,6 +2902,13 @@ function nextReplayStep() {
             clearInterval(replayInterval);
             replayInterval = null;
             document.getElementById('replay-play-pause-btn').textContent = '▶️ 播放';
+
+            // 回放结束，恢复所有按钮状态
+            updateReplayButtonStates({
+                isPlaying: false,
+                atBeginning: false,
+                atEnd: true
+            });
         }
         log('[REPLAY] 回放结束。');
         return;
@@ -2908,6 +2966,15 @@ function nextReplayStep() {
     }
 
     currentReplayStep++;
+
+    // 如果是手动操作，更新按钮状态
+    if (isManual && !replayInterval) {
+        updateReplayButtonStates({
+            isPlaying: false,
+            atBeginning: currentReplayStep === 0,
+            atEnd: currentReplayStep >= replayData.actions.length
+        });
+    }
 }
 
 /**
@@ -2921,6 +2988,13 @@ function prevReplayStep() {
         clearInterval(replayInterval);
         replayInterval = null;
         document.getElementById('replay-play-pause-btn').textContent = '▶️ 播放';
+
+        // 恢复手动控制按钮状态
+        updateReplayButtonStates({
+            isPlaying: false,
+            atBeginning: false,
+            atEnd: false
+        });
     }
 
     const targetStep = currentReplayStep - 2; // 因为要回到上一步的“开始”状态
@@ -2934,8 +3008,15 @@ function prevReplayStep() {
 
     // 快速执行到目标步骤
     for (let i = 0; i <= targetStep; i++) {
-        nextReplayStep();
+        nextReplayStep(false); // 使用false表示是程序化执行，不是手动点击
     }
+
+    // 手动上一步操作完成，更新按钮状态
+    updateReplayButtonStates({
+        isPlaying: false,
+        atBeginning: currentReplayStep === 0,
+        atEnd: currentReplayStep >= replayData.actions.length
+    });
 }
 
 /**
@@ -2951,15 +3032,30 @@ function playPauseReplay() {
         replayInterval = null;
         btn.textContent = '▶️ 播放';
         log('[REPLAY] 暂停。');
+
+        // 恢复手动控制按钮
+        updateReplayButtonStates({
+            isPlaying: false,
+            atBeginning: currentReplayStep === 0,
+            atEnd: currentReplayStep >= replayData.actions.length
+        });
     } else { // 已暂停 -> 播放
         if (currentReplayStep >= replayData.actions.length) {
             resetReplay();
         }
         btn.textContent = '⏸️ 暂停';
         log('[REPLAY] 播放...');
+
+        // 禁用手动控制按钮，启用自动播放
+        updateReplayButtonStates({
+            isPlaying: true,
+            atBeginning: false,
+            atEnd: false
+        });
+
         // 立即执行一步，然后开始定时
-        nextReplayStep();
-        replayInterval = setInterval(nextReplayStep, 1500);
+        nextReplayStep(false); // 自动播放，不是手动点击
+        replayInterval = setInterval(() => nextReplayStep(false), 1500);
     }
 }
 
