@@ -1609,9 +1609,9 @@ function renderSnapshotPagination(pageData) {
     const totalPages = pageData.totalPages;
 
     paginationContainer.innerHTML = `
-        <button id="snapshot-prev-btn" class="game-control-btn secondary-btn" ${isFirst ? 'disabled' : ''}>&lt; 上一页</button>
+        <button id="snapshot-prev-btn" class="game-control-btn secondary-btn" ${isFirst ? 'disabled' : ''}>上一页</button>
         <span style="font-size: 14px; color: #555;">第 ${currentPage + 1} / ${totalPages} 页</span>
-        <button id="snapshot-next-btn" class="game-control-btn secondary-btn" ${isLast ? 'disabled' : ''}>下一页 &gt;</button>
+        <button id="snapshot-next-btn" class="game-control-btn secondary-btn" ${isLast ? 'disabled' : ''}>下一页</button>
     `;
 
     if (!isFirst) {

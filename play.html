@@ -1029,6 +1029,148 @@
       transform: none;
     }
 
+    /* 快照分页按钮美化样式 */
+    #snapshot-prev-btn, #snapshot-next-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      border: none;
+      border-radius: 8px;
+      color: white !important;
+      font-weight: 600;
+      padding: 8px 16px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      position: relative;
+      overflow: hidden;
+      font-size: 14px;
+      min-width: 100px;
+    }
+
+    #snapshot-prev-btn:hover:not(:disabled), #snapshot-next-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    #snapshot-prev-btn:active:not(:disabled), #snapshot-next-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+    }
+
+    #snapshot-prev-btn:disabled, #snapshot-next-btn:disabled {
+      background: linear-gradient(135deg, #adb5bd 0%, #6c757d 100%) !important;
+      color: #e9ecef !important;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      opacity: 0.7;
+    }
+
+    /* 分页按钮文字样式优化 */
+    #snapshot-prev-btn, #snapshot-next-btn {
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      min-width: 80px;
+    }
+
+    /* 添加光泽扫过效果 */
+    #snapshot-prev-btn, #snapshot-next-btn {
+      position: relative;
+      overflow: hidden;
+    }
+
+    #snapshot-prev-btn::after, #snapshot-next-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+      );
+      transition: left 0.5s ease;
+      z-index: 1;
+    }
+
+    #snapshot-prev-btn:hover:not(:disabled)::after,
+    #snapshot-next-btn:hover:not(:disabled)::after {
+      left: 100%;
+    }
+
+    /* 禁用状态下禁用动画 */
+    #snapshot-prev-btn:disabled::after,
+    #snapshot-next-btn:disabled::after {
+      display: none;
+    }
+
+    /* 分页容器美化 */
+    #snapshot-pagination-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 16px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 12px;
+      margin-top: 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border: 1px solid #dee2e6;
+    }
+
+    #snapshot-pagination-controls span {
+      font-size: 15px;
+      color: #495057;
+      font-weight: 600;
+      background: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      min-width: 120px;
+      text-align: center;
+      border: 1px solid #e9ecef;
+      letter-spacing: 0.5px;
+    }
+
+    /* 分页按钮加载动画 */
+    @keyframes pagination-pulse {
+      0% {
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+      50% {
+        box-shadow: 0 4px 25px rgba(102, 126, 234, 0.5);
+      }
+      100% {
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+    }
+
+    #snapshot-prev-btn:not(:disabled):hover, #snapshot-next-btn:not(:disabled):hover {
+      animation: pagination-pulse 1.5s infinite;
+    }
+
+    /* 按钮容器响应式设计 */
+    @media (max-width: 480px) {
+      #snapshot-pagination-controls {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+      }
+
+      #snapshot-prev-btn, #snapshot-next-btn {
+        width: 100%;
+        max-width: 200px;
+      }
+
+      #snapshot-pagination-controls span {
+        order: -1;
+        min-width: auto;
+        padding: 6px 12px;
+      }
+    }
+
 
 
     #snapshot-list-container {
