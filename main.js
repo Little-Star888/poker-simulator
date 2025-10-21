@@ -37,6 +37,7 @@ let activeSelectionSlot = null;
 let usedCards = new Set();
 let isPresetUIInitialized = false;
 let postSnapshotAction = null;
+let isProcessingCardSelection = false; // 防抖标记
 
 // ========== 快照分页状态 ==========
 let snapshotCurrentPage = 0;
@@ -340,6 +341,8 @@ function activateNextEmptySlot() {
             return;
         }
     }
+    // 如果所有槽位都满了，重置处理状态
+    isProcessingCardSelection = false;
 }
 
 function updatePresetVisibility() {
@@ -424,6 +427,8 @@ function resetPresetData() {
         activeSelectionSlot.classList.remove('active-selection');
     }
     activeSelectionSlot = null;
+    // 重置防抖状态
+    isProcessingCardSelection = false;
 }
 
 function handleSlotClick(event) {
@@ -479,6 +484,13 @@ function animateCardToSlot(pickerCard, destinationElement, cardText) {
 
 function handleCardPickerClick(event) {
   if (isInReplayMode) return; // 在回放模式下禁用
+
+  // 防抖：如果正在处理其他选择，直接返回
+  if (isProcessingCardSelection) {
+    log('正在处理上一张牌的选择，请稍候...');
+    return;
+  }
+
   const pickerCard = event.currentTarget;
   const cardText = pickerCard.dataset.card;
   if (pickerCard.classList.contains('dimmed')) {
@@ -489,9 +501,20 @@ function handleCardPickerClick(event) {
     log('没有可用的空卡槽来放置扑克牌，或所有卡槽已满。');
     return;
   }
-  const { type, playerId, cardIndex } = activeSelectionSlot.dataset;
+
+  // 立即设置处理状态
+  isProcessingCardSelection = true;
+
+  // 立即标记牌为已使用，防止重复选择
+  pickerCard.classList.add('dimmed');
+  usedCards.add(cardText);
+
+  // 立即更新槽位数据，防止重复分配
+  const currentSlot = activeSelectionSlot;
+  const { type, playerId, cardIndex } = currentSlot.dataset;
+
   let animationsInitiated = 0;
-  animateCardToSlot(pickerCard, activeSelectionSlot, cardText);
+  animateCardToSlot(pickerCard, currentSlot, cardText);
   animationsInitiated++;
   if (type === 'player' && Settings.usePresetHands) {
     const playerOnTable = document.querySelector(`.player[data-player="${playerId}"]`);
@@ -505,20 +528,21 @@ function handleCardPickerClick(event) {
   }
   if (animationsInitiated > 0) {
       setTimeout(() => {
-          assignCard(activeSelectionSlot, cardText);
+          assignCard(currentSlot, cardText);
           activateNextEmptySlot();
+          // 动画完成后重置处理状态
+          isProcessingCardSelection = false;
       }, 420);
+  } else {
+      // 如果没有动画，立即重置状态
+      isProcessingCardSelection = false;
   }
 }
 
 function assignCard(slot, cardText) {
   slot.style.backgroundImage = `url(${getCardImagePath(cardText)})`;
   slot.dataset.card = cardText;
-  const pickerCard = cardPicker.querySelector(`.picker-card[data-card="${cardText.replace('"', '"' )}"]`);
-  if (pickerCard) {
-    pickerCard.classList.add('dimmed');
-  }
-  usedCards.add(cardText);
+  // 注意：pickerCard的dimmed和usedCards的添加已经在handleCardPickerClick中完成
   const { type, playerId, cardIndex, stage } = slot.dataset;
   if (type === 'player') {
     Settings.presetCards.players[playerId][parseInt(cardIndex)] = cardText;
