@@ -50,34 +50,73 @@ let suggestPreflopCheckbox, suggestFlopCheckbox, suggestTurnCheckbox, suggestRiv
 let startBtn, pauseBtn, consoleLog;
 let usePresetHandsCheckbox, usePresetCommunityCheckbox, presetControls, presetPlayerHandsContainer, presetCommunityCardsContainer, cardPicker, gtoFilterPlayersContainer;
 
+// ========== 工具函数 ==========
+/**
+ * 统一的安全事件绑定函数
+ * @param {string} id 元素ID
+ * @param {Function} handler 事件处理函数
+ * @param {string} errorMsg 错误信息（可选）
+ */
+function safeBindEvent(id, handler, errorMsg) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.addEventListener('click', handler);
+    } else {
+        console.warn(errorMsg || `未找到元素: ${id}`);
+    }
+}
 
-// ========== 初始化 ========== 
+// ========== 初始化 ==========
 function init() {
   try {
-    // --- DOM 元素获取 ---
-    modeSelect = document.getElementById('mode-select');
-    playerCountInput = document.getElementById('player-count-input');
-    minStackInput = document.getElementById('min-stack-input');
-    maxStackInput = document.getElementById('max-stack-input');
-    potTypeSelect = document.getElementById('pot-type-select');
-    p1RoleSelect = document.getElementById('p1-role-select');
-    sbInput = document.getElementById('sb-input');
-    bbInput = document.getElementById('bb-input');
-    autoDelayInput = document.getElementById('auto-delay');
-    suggestPreflopCheckbox = document.getElementById('suggest-preflop');
-    suggestFlopCheckbox = document.getElementById('suggest-flop');
-    suggestTurnCheckbox = document.getElementById('suggest-turn');
-    suggestRiverCheckbox = document.getElementById('suggest-river');
-    startBtn = document.getElementById('start-btn');
-    pauseBtn = document.getElementById('pause-btn');
-    consoleLog = document.getElementById('console-log');
-    usePresetHandsCheckbox = document.getElementById('use-preset-hands-checkbox');
-    usePresetCommunityCheckbox = document.getElementById('use-preset-community-checkbox');
-    presetControls = document.getElementById('preset-controls');
-    presetPlayerHandsContainer = document.getElementById('preset-player-hands-container');
-    presetCommunityCardsContainer = document.getElementById('preset-community-cards-container');
-    cardPicker = document.getElementById('card-picker');
-    gtoFilterPlayersContainer = document.getElementById('gto-filter-players');
+
+    // 验证关键DOM元素是否存在
+    const criticalElements = [
+      'mode-select', 'player-count-input', 'min-stack-input', 'max-stack-input',
+      'pot-type-select', 'p1-role-select', 'sb-input', 'bb-input', 'auto-delay',
+      'suggest-preflop', 'suggest-flop', 'suggest-turn', 'suggest-river',
+      'start-btn', 'pause-btn', 'console-log', 'use-preset-hands-checkbox',
+      'use-preset-community-checkbox', 'preset-controls', 'preset-player-hands-container',
+      'preset-community-cards-container', 'card-picker', 'gto-filter-players'
+    ];
+
+    const missingElements = criticalElements.filter(id => !document.getElementById(id));
+    if (missingElements.length > 0) {
+      throw new Error(`缺少关键DOM元素: ${missingElements.join(', ')}`);
+    }
+
+    // --- DOM 元素获取（添加安全检查）---
+    const safeGetElement = (id, name) => {
+      const element = document.getElementById(id);
+      if (!element) {
+        throw new Error(`无法找到必需的DOM元素: ${name} (id: ${id})`);
+      }
+      return element;
+    };
+
+    modeSelect = safeGetElement('mode-select', '模式选择器');
+    playerCountInput = safeGetElement('player-count-input', '玩家数量输入');
+    minStackInput = safeGetElement('min-stack-input', '最小筹码输入');
+    maxStackInput = safeGetElement('max-stack-input', '最大筹码输入');
+    potTypeSelect = safeGetElement('pot-type-select', '底池类型选择');
+    p1RoleSelect = safeGetElement('p1-role-select', 'P1角色选择');
+    sbInput = safeGetElement('sb-input', '小盲注输入');
+    bbInput = safeGetElement('bb-input', '大盲注输入');
+    autoDelayInput = safeGetElement('auto-delay', '自动延迟输入');
+    suggestPreflopCheckbox = safeGetElement('suggest-preflop', '翻前建议复选框');
+    suggestFlopCheckbox = safeGetElement('suggest-flop', '翻牌建议复选框');
+    suggestTurnCheckbox = safeGetElement('suggest-turn', '转牌建议复选框');
+    suggestRiverCheckbox = safeGetElement('suggest-river', '河牌建议复选框');
+    startBtn = safeGetElement('start-btn', '开始按钮');
+    pauseBtn = safeGetElement('pause-btn', '暂停按钮');
+    consoleLog = safeGetElement('console-log', '控制台日志');
+    usePresetHandsCheckbox = safeGetElement('use-preset-hands-checkbox', '预设手牌复选框');
+    usePresetCommunityCheckbox = safeGetElement('use-preset-community-checkbox', '预设公共牌复选框');
+    presetControls = safeGetElement('preset-controls', '预设控制器');
+    presetPlayerHandsContainer = safeGetElement('preset-player-hands-container', '预设玩家手牌容器');
+    presetCommunityCardsContainer = safeGetElement('preset-community-cards-container', '预设公共牌容器');
+    cardPicker = safeGetElement('card-picker', '卡牌选择器');
+    gtoFilterPlayersContainer = safeGetElement('gto-filter-players', 'GTO筛选玩家容器');
 
     // On initial load, populate UI controls with values from the Settings object.
     modeSelect.value = Settings.mode;
@@ -152,61 +191,101 @@ function init() {
     usePresetHandsCheckbox.addEventListener('change', updatePresetVisibility);
     usePresetCommunityCheckbox.addEventListener('change', updatePresetVisibility);
 
-    document.querySelectorAll('.player').forEach(playerElement => {
+    const playerElements = document.querySelectorAll('.player');
+    if (playerElements.length === 0) {
+      console.warn('未找到任何玩家元素，跳过玩家事件绑定');
+    }
+
+    playerElements.forEach(playerElement => {
       const playerId = playerElement.dataset.player;
       const popup = playerElement.querySelector('.player-action-popup');
-      if (!popup) return;
+      if (!popup) {
+        console.warn(`玩家 ${playerId} 缺少操作弹窗，跳过事件绑定`);
+        return;
+      }
       const sliderOverlay = popup.querySelector('.amount-slider-overlay');
-      const sliderInput = sliderOverlay.querySelector('.bet-slider-input');
+      const sliderInput = sliderOverlay ? sliderOverlay.querySelector('.bet-slider-input') : null;
       const foldBtn = popup.querySelector('.main-action-btn.fold');
       const betRaiseBtn = popup.querySelector('.main-action-btn.bet-raise');
       const checkCallBtn = popup.querySelector('.main-action-btn.check-call');
-      foldBtn.addEventListener('click', () => submitManualAction(playerId, 'FOLD'));
-      checkCallBtn.addEventListener('click', () => {
-          const action = checkCallBtn.dataset.action;
-          submitManualAction(playerId, action);
-      });
-      betRaiseBtn.addEventListener('click', () => {
-          const action = betRaiseBtn.dataset.action;
-          if (action === 'ALLIN') {
-              const player = game.players.find(p => p.id === playerId);
-              if (player) {
-                  const amount = player.stack + player.bet;
-                  submitManualAction(playerId, 'ALLIN', amount);
-              }
-          } else {
-              showVerticalSlider(playerId, action);
-          }
-      });
-      popup.querySelectorAll('.quick-bet-sizes button').forEach(btn => {
-          btn.addEventListener('click', () => {
-              const amount = parseInt(btn.dataset.amount);
-              if (amount > 0) {
-                  const action = betRaiseBtn.dataset.action;
-                  submitManualAction(playerId, action, amount);
-              }
+      // 安全地绑定事件
+      if (foldBtn) {
+        foldBtn.addEventListener('click', () => submitManualAction(playerId, 'FOLD'));
+      } else {
+        console.warn(`玩家 ${playerId} 缺少弃牌按钮`);
+      }
+
+      if (checkCallBtn) {
+        checkCallBtn.addEventListener('click', () => {
+            const action = checkCallBtn.dataset.action;
+            submitManualAction(playerId, action);
+        });
+      } else {
+        console.warn(`玩家 ${playerId} 缺少让牌/跟注按钮`);
+      }
+
+      if (betRaiseBtn) {
+        betRaiseBtn.addEventListener('click', () => {
+            const action = betRaiseBtn.dataset.action;
+            if (action === 'ALLIN') {
+                const player = game.players.find(p => p.id === playerId);
+                if (player) {
+                    const amount = player.stack + player.bet;
+                    submitManualAction(playerId, 'ALLIN', amount);
+                }
+            } else {
+                showVerticalSlider(playerId, action);
+            }
+        });
+      } else {
+        console.warn(`玩家 ${playerId} 缺少下注/加注按钮`);
+      }
+
+      if (popup) {
+        popup.querySelectorAll('.quick-bet-sizes button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const amount = parseInt(btn.dataset.amount);
+                if (amount > 0) {
+                    const action = betRaiseBtn ? betRaiseBtn.dataset.action : null;
+                    if (action) {
+                        submitManualAction(playerId, action, amount);
+                    }
+                }
+            });
+        });
+
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                hideAllActionPopups();
+            }
+        });
+      }
+
+      if (sliderOverlay && sliderInput) {
+        const confirmBtn = sliderOverlay.querySelector('.confirm-bet');
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', () => {
+              const amount = parseInt(sliderInput.dataset.finalAmount);
+              const action = sliderInput.dataset.action;
+              submitManualAction(playerId, action, amount);
           });
-      });
-      const confirmBtn = sliderOverlay.querySelector('.confirm-bet');
-      confirmBtn.addEventListener('click', () => {
-          const amount = parseInt(sliderInput.dataset.finalAmount);
-          const action = sliderInput.dataset.action;
-          submitManualAction(playerId, action, amount);
-      });
-      sliderInput.addEventListener('input', () => updateSliderAmount(playerId, sliderInput));
-      popup.addEventListener('click', (e) => {
-          if (e.target === popup) {
-              hideAllActionPopups();
-          }
-      });
-      sliderOverlay.addEventListener('click', (e) => {
-          if (e.target === sliderOverlay) {
-              e.stopPropagation();
-              const actionPanel = popup.querySelector('.action-panel');
-              sliderOverlay.style.display = 'none';
-              actionPanel.style.display = 'flex';
-          }
-      });
+        }
+
+        sliderInput.addEventListener('input', () => updateSliderAmount(playerId, sliderInput));
+
+        sliderOverlay.addEventListener('click', (e) => {
+            if (e.target === sliderOverlay) {
+                e.stopPropagation();
+                const actionPanel = popup.querySelector('.action-panel');
+                if (actionPanel) {
+                  sliderOverlay.style.display = 'none';
+                  actionPanel.style.display = 'flex';
+                }
+            }
+        });
+      } else {
+        console.warn(`玩家 ${playerId} 缺少滑块控件`);
+      }
     });
 
     updatePlayerDisplay();
@@ -219,15 +298,20 @@ function init() {
     const configToggleBtn = document.getElementById('config-toggle-btn');
     const drawerCloseBtn = document.querySelector('.drawer-close-btn');
     const drawerOverlay = document.querySelector('.drawer-overlay');
-    function openDrawer() {
-      if (configDrawer) configDrawer.classList.add('is-open');
+
+    if (configDrawer && configToggleBtn) {
+      function openDrawer() {
+        if (configDrawer) configDrawer.classList.add('is-open');
+      }
+      function closeDrawer() {
+        if (configDrawer) configDrawer.classList.remove('is-open');
+      }
+      configToggleBtn.addEventListener('click', openDrawer);
+      if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
+      if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+    } else {
+      console.warn('配置抽屉相关元素未找到，抽屉功能将不可用');
     }
-    function closeDrawer() {
-      if (configDrawer) configDrawer.classList.remove('is-open');
-    }
-    if (configToggleBtn) configToggleBtn.addEventListener('click', openDrawer);
-    if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeDrawer);
-    if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
 
     const table = document.querySelector('.poker-table');
     if (table) {
@@ -235,20 +319,27 @@ function init() {
         updatePlayerLayout();
       });
       resizeObserver.observe(table);
+    } else {
+      console.warn('未找到扑克桌元素，布局自适应功能将不可用');
     }
 
     initSnapshotModalListeners();
     renderSnapshotList();
     updatePresetVisibility();
 
-    document.getElementById('snapshot-list').addEventListener('click', (e) => {
-      if (e.target && e.target.classList.contains('snapshot-name-display')) {
-          if (document.querySelector('.snapshot-name-edit')) {
-              document.querySelector('.snapshot-name-edit').blur();
+    const snapshotList = document.getElementById('snapshot-list');
+    if (snapshotList) {
+      snapshotList.addEventListener('click', (e) => {
+          if (e.target && e.target.classList.contains('snapshot-name-display')) {
+              if (document.querySelector('.snapshot-name-edit')) {
+                  document.querySelector('.snapshot-name-edit').blur();
+              }
+              makeSnapshotNameEditable(e.target);
           }
-          makeSnapshotNameEditable(e.target);
-      }
-    });
+      });
+    } else {
+      console.warn('未找到快照列表元素');
+    }
 
     setupReplayControls(); // 绑定回放按钮事件
 
@@ -1191,42 +1282,43 @@ function hideSnapshotModal() {
  * 初始化所有快照相关的事件监听器
  */
 function initSnapshotModalListeners() {
-    document.getElementById('save-snapshot-btn').addEventListener('click', handleSnapshotButtonClick);
-    document.getElementById('save-snapshot-confirm-btn').addEventListener('click', savePendingSnapshot);
-    
-    // 修改：为“取消”按钮绑定回调逻辑
-    document.getElementById('cancel-snapshot-btn').addEventListener('click', () => {
+    // 使用统一的安全绑定函数
+    safeBindEvent('save-snapshot-btn', handleSnapshotButtonClick, '未找到保存快照按钮');
+    safeBindEvent('save-snapshot-confirm-btn', savePendingSnapshot, '未找到保存快照确认按钮');
+    safeBindEvent('close-view-snapshot-modal-btn', () => {
+        const modal = document.getElementById('view-snapshot-modal');
+        if(modal) modal.classList.remove('is-visible');
+    }, '未找到关闭查看快照模态框按钮');
+    safeBindEvent('save-snapshot-remarks-btn', saveSnapshotRemarks, '未找到保存快照批注按钮');
+
+    // 特殊绑定的按钮（带复杂逻辑）
+    safeBindEvent('cancel-snapshot-btn', () => {
         hideSnapshotModal();
         if (postSnapshotAction) {
             postSnapshotAction();
             postSnapshotAction = null;
         }
-    });
+    }, '未找到取消快照按钮');
 
-    // 新增：为“重新截取”按钮绑定事件
-    document.getElementById('recapture-snapshot-btn').addEventListener('click', () => {
+    safeBindEvent('recapture-snapshot-btn', () => {
         hideSnapshotModal();
         setTimeout(initiateSnapshotProcess, 100); // 延迟以确保弹窗消失
-    });
+    }, '未找到重新截取按钮');
 
-    document.getElementById('close-view-snapshot-modal-btn').addEventListener('click', () => {
-        const modal = document.getElementById('view-snapshot-modal');
-        if(modal) modal.classList.remove('is-visible');
-    });
-    document.getElementById('save-snapshot-remarks-btn').addEventListener('click', saveSnapshotRemarks);
-
-    // 新增：为牌局结束弹窗绑定事件
-    document.getElementById('eoh-confirm-save').addEventListener('click', () => {
+    // 为牌局结束弹窗绑定事件
+    safeBindEvent('eoh-confirm-save', () => {
         hideEndOfHandModal();
         postSnapshotAction = stopGame; // 设置快照结束后的回调
         initiateSnapshotProcess(); // 启动快照流程
-    });
-    document.getElementById('eoh-cancel-save').addEventListener('click', () => {
+    }, '未找到牌局结束确认保存按钮');
+
+    safeBindEvent('eoh-cancel-save', () => {
         hideEndOfHandModal();
         stopGame(); // 直接重置游戏
-    });
+    }, '未找到牌局结束取消保存按钮');
 
-    document.getElementById('delete-confirm-yes').addEventListener('click', () => {
+    // 为删除确认按钮绑定事件
+    safeBindEvent('delete-confirm-yes', () => {
         const popover = document.getElementById('delete-confirm-popover');
         if (popover) {
             const snapshotId = popover.dataset.snapshotId;
@@ -1235,13 +1327,16 @@ function initSnapshotModalListeners() {
             }
             popover.style.display = 'none';
         }
-    });
-    document.getElementById('delete-confirm-no').addEventListener('click', () => {
+    }, '未找到删除确认是按钮');
+
+    safeBindEvent('delete-confirm-no', () => {
         const popover = document.getElementById('delete-confirm-popover');
         if (popover) {
             popover.style.display = 'none';
         }
-    });
+    }, '未找到删除确认否按钮');
+
+    // 全局点击事件（关闭删除确认框）
     document.addEventListener('click', (e) => {
         const popover = document.getElementById('delete-confirm-popover');
         if (popover && popover.style.display === 'block' && !popover.contains(e.target) && !e.target.classList.contains('delete-btn')) {
@@ -2483,8 +2578,38 @@ function injectStyles() {
 }
 
 
-// ========== Main Execution ========== 
-init();
+// ========== Main Execution ==========
+// 统一的初始化入口，确保只执行一次
+(function() {
+    let isInitialized = false;
+
+    function initWhenReady() {
+        if (isInitialized) {
+            console.warn('初始化已执行，跳过重复调用');
+            return;
+        }
+
+        isInitialized = true;
+
+        // 调试信息
+        console.log('Init started at:', new Date().toISOString());
+        console.log('Document ready state:', document.readyState);
+        console.log('Body children count:', document.body.children.length);
+
+        init();
+    }
+
+    // 针对QQ浏览器的延迟优化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            // 给QQ浏览器额外时间渲染DOM，增加到150ms
+            setTimeout(initWhenReady, 150);
+        });
+    } else {
+        // DOM 已经加载完成，延迟100ms确保稳定性
+        setTimeout(initWhenReady, 100);
+    }
+})();
 
 // ========== 回放功能 (Replay V1) ==========
 
@@ -2492,11 +2617,18 @@ init();
  * 初始化回放功能的事件监听
  */
 function setupReplayControls() {
-    document.getElementById('replay-play-pause-btn').addEventListener('click', playPauseReplay);
-    document.getElementById('replay-next-btn').addEventListener('click', nextReplayStep);
-    document.getElementById('replay-prev-btn').addEventListener('click', prevReplayStep);
-    document.getElementById('replay-reset-btn').addEventListener('click', resetReplay);
-    document.getElementById('replay-exit-btn').addEventListener('click', exitReplay);
+    // 使用统一的安全绑定函数绑定回放控制按钮事件
+    const replayButtons = {
+        'replay-play-pause-btn': playPauseReplay,
+        'replay-next-btn': nextReplayStep,
+        'replay-prev-btn': prevReplayStep,
+        'replay-reset-btn': resetReplay,
+        'replay-exit-btn': exitReplay
+    };
+
+    Object.entries(replayButtons).forEach(([id, handler]) => {
+        safeBindEvent(id, handler, `未找到回放按钮: ${id}`);
+    });
 }
 
 /**
