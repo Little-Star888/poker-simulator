@@ -1767,10 +1767,12 @@ async function saveSnapshotRemarks() {
             // 清除点点动画
             clearInterval(dotsInterval);
 
-            // 显示成功动画
-            saveBtn.innerHTML = '✅ 保存成功';
+            // 清除保存中状态，显示成功动画
+            saveBtn.classList.remove('saving');
             saveBtn.style.backgroundColor = '#28a745';
+            saveBtn.style.color = 'white';
             saveBtn.style.animation = 'success-bounce 1s ease';
+            saveBtn.innerHTML = '✅ 保存成功';
 
             log(`✅ 快照 (ID: ${snapshotId}) 的批注已保存。`);
             showToast('批注保存成功！');
@@ -1781,8 +1783,10 @@ async function saveSnapshotRemarks() {
             }, 1500);
         } else {
             log('ℹ️ 批注没有变化。');
+            saveBtn.classList.remove('saving');
             saveBtn.innerHTML = 'ℹ️ 无变化';
             saveBtn.style.backgroundColor = '#ffc107';
+            saveBtn.style.color = 'black';
             showToast('批注没有变化', 1500);
 
             // 1秒后恢复按钮状态
@@ -1794,8 +1798,10 @@ async function saveSnapshotRemarks() {
         log(`❌ 保存批注失败: ${error.message}`);
 
         // 显示错误动画
+        saveBtn.classList.remove('saving');
         saveBtn.innerHTML = '❌ 保存失败';
         saveBtn.style.backgroundColor = '#dc3545';
+        saveBtn.style.color = 'white';
         showToast(`保存失败: ${error.message}`, 3000, true);
 
         // 2秒后恢复按钮状态
@@ -1809,6 +1815,7 @@ async function saveSnapshotRemarks() {
         saveBtn.disabled = originalDisabled;
         saveBtn.textContent = originalText;
         saveBtn.style.backgroundColor = '';
+        saveBtn.style.color = '';
         saveBtn.style.animation = '';
         saveBtn.classList.remove('saving');
 
