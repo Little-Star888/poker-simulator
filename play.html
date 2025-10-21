@@ -988,12 +988,46 @@
     #snapshot-list li .snapshot-actions .replay-btn:hover { background-color: #218838; }
 
     /* 新增：回放控制面板按钮颜色 */
-    #replay-play-pause-btn { background-color: #28a745; } /* 绿色 */
+    #replay-play-pause-btn { background-color: #28a745; color: white; } /* 绿色 */
     #replay-play-pause-btn:hover:not(:disabled) { background-color: #218838; }
-    #replay-next-btn, #replay-prev-btn { background-color: #17a2b8; } /* 信息蓝 */
+    #replay-play-pause-btn:disabled { background-color: #6c757d; color: white; } /* 禁用时灰色背景，白色文字 */
+    #replay-play-pause-btn:disabled:hover { background-color: #6c757d; } /* 禁用时悬停不变色 */
+
+    #replay-next-btn, #replay-prev-btn { background-color: #17a2b8; color: white; } /* 信息蓝 */
     #replay-next-btn:hover:not(:disabled), #replay-prev-btn:hover:not(:disabled) { background-color: #138496; }
-    #replay-reset-btn { background-color: #ffc107; } /* 警告黄 */
+    #replay-next-btn:disabled, #replay-prev-btn:disabled { background-color: #6c757d; color: white; } /* 禁用时灰色背景，白色文字 */
+    #replay-next-btn:disabled:hover, #replay-prev-btn:disabled:hover { background-color: #6c757d; } /* 禁用时悬停不变色 */
+
+    #replay-reset-btn { background-color: #ffc107; color: #212529; } /* 警告黄 */
     #replay-reset-btn:hover:not(:disabled) { background-color: #e0a800; }
+    #replay-reset-btn:disabled { background-color: #6c757d; color: white; } /* 禁用时灰色背景，白色文字 */
+    #replay-reset-btn:disabled:hover { background-color: #6c757d; } /* 禁用时悬停不变色 */
+
+    #replay-exit-btn { background-color: #dc3545; color: white; } /* 危险红色 */
+    #replay-exit-btn:hover:not(:disabled) { background-color: #c82333; }
+    #replay-exit-btn:disabled { background-color: #6c757d; color: white; } /* 禁用时灰色背景，白色文字 */
+    #replay-exit-btn:disabled:hover { background-color: #6c757d; } /* 禁用时悬停不变色 */
+
+    /* 危险按钮特殊样式 */
+    .game-control-btn.danger-btn {
+      border: 2px solid #dc3545;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+    }
+    .game-control-btn.danger-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    .game-control-btn.danger-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(220, 53, 69, 0.2);
+    }
+    .game-control-btn.danger-btn:disabled {
+      border: 2px solid #6c757d;
+      box-shadow: none;
+      transform: none;
+    }
 
 
 
@@ -1618,7 +1652,7 @@
             <button id="replay-next-btn" class="game-control-btn">⏭️ 下一步</button>
             <button id="replay-prev-btn" class="game-control-btn">⏮️ 上一步</button>
             <button id="replay-reset-btn" class="game-control-btn">🔄 重置</button>
-            <button id="replay-exit-btn" class="game-control-btn secondary-btn">⏹️ 退出</button>
+            <button id="replay-exit-btn" class="game-control-btn danger-btn">⏹️ 退出</button>
           </div>
           <button id="config-toggle-btn" class="game-control-btn">
             <i class="material-icons">settings</i>

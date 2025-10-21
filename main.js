@@ -2770,8 +2770,14 @@ function updateReplayButtonStates(options = {}) {
         isPlaying: options.isPlaying,
         disableNext: nextBtn.disabled,
         disablePrev: prevBtn.disabled,
+        disableReset: resetBtn.disabled,
+        disableExit: exitBtn.disabled,
         atBeginning: options.atBeginning,
-        atEnd: options.atEnd
+        atEnd: options.atEnd,
+        nextBtnClass: nextBtn.className,
+        prevBtnClass: prevBtn.className,
+        resetBtnClass: resetBtn.className,
+        exitBtnClass: exitBtn.className
     });
 }
 
