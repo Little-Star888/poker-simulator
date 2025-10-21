@@ -1678,11 +1678,52 @@ function showToast(message, duration = 2000, isError = false) {
 async function saveSnapshotRemarks() {
     const modal = document.getElementById('view-snapshot-modal');
     const snapshotId = modal.dataset.snapshotId;
+    const saveBtn = document.getElementById('save-snapshot-remarks-btn');
+
     if (!snapshotId) {
         log('❌ 保存批注失败：无法识别快照ID。');
         showToast('保存失败：无快照ID', 3000, true);
         return;
     }
+
+    // 创建保存动画的函数
+    const createSavingAnimation = () => {
+        const spinner = document.createElement('span');
+        spinner.className = 'saving-spinner';
+        spinner.style.cssText = `
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        `;
+        return spinner;
+    };
+
+    // 保存原始按钮状态
+    const originalText = saveBtn.textContent;
+    const originalDisabled = saveBtn.disabled;
+
+    // 设置保存中的按钮状态
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `${originalText.split('保存')[0]}保存中...`;
+    saveBtn.appendChild(createSavingAnimation());
+
+    // 添加保存中样式类
+    saveBtn.classList.add('saving');
+
+    // 获取所有文本区域并添加保存中的视觉效果
+    const textareas = modal.querySelectorAll('#view-snapshot-suggestions-list textarea');
+    textareas.forEach(textarea => {
+        textarea.style.backgroundColor = '#f0f8ff'; // 淡蓝色背景
+        textarea.style.border = '1px solid #007bff'; // 蓝色边框
+        textarea.style.cursor = 'not-allowed';
+        textarea.disabled = true; // 禁用编辑
+    });
 
     try {
         // 1. 获取最新的快照数据
@@ -1690,7 +1731,6 @@ async function saveSnapshotRemarks() {
         const allGtoSuggestions = JSON.parse(snapshot.gtoSuggestions || '[]');
 
         // 2. 根据索引更新批注
-        const textareas = modal.querySelectorAll('#view-snapshot-suggestions-list textarea');
         let remarksChanged = false;
         textareas.forEach(textarea => {
             const index = parseInt(textarea.dataset.suggestionIndex, 10);
@@ -1705,17 +1745,80 @@ async function saveSnapshotRemarks() {
         // 3. 如果有变动，则调用API更新
         if (remarksChanged) {
             log(`💾 正在更新批注 (ID: ${snapshotId})...`);
+
+            // 显示进度动画
+            saveBtn.innerHTML = `保存中<span class="saving-dots"></span>`;
+            const dotsContainer = saveBtn.querySelector('.saving-dots');
+            dotsContainer.style.cssText = `
+                display: inline-block;
+                margin-left: 4px;
+            `;
+
+            // 创建点点动画
+            let dotCount = 0;
+            const dotsInterval = setInterval(() => {
+                dotCount = (dotCount + 1) % 4;
+                dotsContainer.textContent = '.'.repeat(dotCount);
+            }, 500);
+
             const updateData = { gtoSuggestions: JSON.stringify(allGtoSuggestions) };
             await snapshotService.updateSnapshot(snapshotId, updateData);
+
+            // 清除点点动画
+            clearInterval(dotsInterval);
+
+            // 显示成功动画
+            saveBtn.innerHTML = '✅ 保存成功';
+            saveBtn.style.backgroundColor = '#28a745';
+            saveBtn.style.animation = 'success-bounce 1s ease';
+
             log(`✅ 快照 (ID: ${snapshotId}) 的批注已保存。`);
             showToast('批注保存成功！');
+
+            // 1.5秒后恢复按钮状态
+            setTimeout(() => {
+                restoreButtonState();
+            }, 1500);
         } else {
             log('ℹ️ 批注没有变化。');
+            saveBtn.innerHTML = 'ℹ️ 无变化';
+            saveBtn.style.backgroundColor = '#ffc107';
             showToast('批注没有变化', 1500);
+
+            // 1秒后恢复按钮状态
+            setTimeout(() => {
+                restoreButtonState();
+            }, 1000);
         }
     } catch (error) {
         log(`❌ 保存批注失败: ${error.message}`);
+
+        // 显示错误动画
+        saveBtn.innerHTML = '❌ 保存失败';
+        saveBtn.style.backgroundColor = '#dc3545';
         showToast(`保存失败: ${error.message}`, 3000, true);
+
+        // 2秒后恢复按钮状态
+        setTimeout(() => {
+            restoreButtonState();
+        }, 2000);
+    }
+
+    // 恢复按钮状态的函数
+    function restoreButtonState() {
+        saveBtn.disabled = originalDisabled;
+        saveBtn.textContent = originalText;
+        saveBtn.style.backgroundColor = '';
+        saveBtn.style.animation = '';
+        saveBtn.classList.remove('saving');
+
+        // 恢复文本区域的状态
+        textareas.forEach(textarea => {
+            textarea.style.backgroundColor = '';
+            textarea.style.border = '';
+            textarea.style.cursor = '';
+            textarea.disabled = false;
+        });
     }
 }
 
