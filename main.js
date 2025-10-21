@@ -1344,23 +1344,30 @@ function initSnapshotModalListeners() {
         }
     });
 
-    // 新增：图片灯箱功能
+    // 新增：图片灯箱功能 - 添加安全检查
     const snapshotImage = document.getElementById('view-snapshot-image');
     const lightboxOverlay = document.getElementById('image-lightbox-overlay');
     const lightboxImage = document.getElementById('lightbox-image');
 
-    snapshotImage.addEventListener('click', () => {
-        // 确保图片src有效再打开灯箱
-        if (snapshotImage.src && snapshotImage.src !== window.location.href) { 
-            lightboxImage.src = snapshotImage.src;
-            lightboxOverlay.style.display = 'flex';
-        }
-    });
+    if (snapshotImage && lightboxOverlay && lightboxImage) {
+        snapshotImage.addEventListener('click', () => {
+            // 确保图片src有效再打开灯箱
+            if (snapshotImage.src && snapshotImage.src !== window.location.href) {
+                lightboxImage.src = snapshotImage.src;
+                lightboxOverlay.style.display = 'flex';
+            }
+        });
 
-    lightboxOverlay.addEventListener('click', () => {
-        lightboxOverlay.style.display = 'none';
-        lightboxImage.src = ''; // 清空src，避免闪现旧图
-    });
+        lightboxOverlay.addEventListener('click', () => {
+            lightboxOverlay.style.display = 'none';
+            lightboxImage.src = ''; // 清空src，避免闪现旧图
+        });
+    } else {
+        console.warn('图片灯箱相关元素缺失，灯箱功能将不可用');
+        if (!snapshotImage) console.warn('- 缺少: view-snapshot-image');
+        if (!lightboxOverlay) console.warn('- 缺少: image-lightbox-overlay');
+        if (!lightboxImage) console.warn('- 缺少: lightbox-image');
+    }
 }
 
 /**
