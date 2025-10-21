@@ -5,11 +5,12 @@ import { PokerGame } from './poker.js';
 import { getDecision } from './ai.js';
 import { getSuggestion } from './api_service.js';
 
-// ========== 全局状态 ========== 
+// ========== 全局状态 ==========
 let game = new PokerGame();
 let isGameRunning = false;
 let isWaitingForManualInput = false;
 let isGamePaused = false;
+let isProcessingGameControl = false; // 游戏控制按钮防抖标记
 
 let gtoSuggestionFilter = new Set();
 let currentSuggestionsCache = {}; // 用于缓存当前牌局的GTO建议
@@ -66,9 +67,30 @@ function safeBindEvent(id, handler, errorMsg) {
     }
 }
 
+/**
+ * 统一的防抖重置函数
+ * @param {number} delay 延迟时间，默认300ms
+ */
+function resetGameControlDebounce(delay = 300) {
+    setTimeout(() => {
+        isProcessingGameControl = false;
+        console.log('[DEBUG] Game control debounce reset after delay');
+    }, delay);
+}
+
+/**
+ * 立即重置所有防抖状态（用于重置场景）
+ */
+function resetAllDebounceStates() {
+    isProcessingGameControl = false;
+    isProcessingCardSelection = false;
+}
+
 // ========== 初始化 ==========
 function init() {
   try {
+    // 重置所有防抖状态，确保页面刷新后状态正确
+    resetAllDebounceStates();
 
     // 验证关键DOM元素是否存在
     const criticalElements = [
@@ -520,6 +542,7 @@ function resetPresetData() {
     activeSelectionSlot = null;
     // 重置防抖状态
     isProcessingCardSelection = false;
+    isProcessingGameControl = false; // 重置游戏控制防抖状态
 }
 
 function handleSlotClick(event) {
@@ -713,6 +736,16 @@ function validatePresetCards() {
 // ========== 游戏控制 ========== 
 
 function handleStartStopClick() {
+    // 添加调试日志
+    console.log(`[DEBUG] handleStartStopClick called - isProcessingGameControl: ${isProcessingGameControl}, btnText: ${startBtn.textContent}`);
+
+    // 统一的防抖检查：在函数开始就检查
+    if (isProcessingGameControl) {
+        log('正在处理游戏控制操作，请稍候...');
+        console.log('[DEBUG] Start/Stop action blocked by debounce');
+        return;
+    }
+
     if (startBtn.textContent.includes('开始牌局')) {
         startNewGame();
     } else {
@@ -721,7 +754,25 @@ function handleStartStopClick() {
 }
 
 function handlePauseResumeClick() {
-    if (!isGameRunning) return;
+    // 添加调试日志
+    console.log(`[DEBUG] handlePauseResumeClick called - isGameRunning: ${isGameRunning}, isProcessingGameControl: ${isProcessingGameControl}, isGamePaused: ${isGamePaused}`);
+
+    if (!isGameRunning) {
+        console.log('[DEBUG] Pause/Resume ignored - game not running');
+        return;
+    }
+
+    // 统一的防抖检查：在函数开始就检查
+    if (isProcessingGameControl) {
+        log('正在处理游戏控制操作，请稍候...');
+        console.log('[DEBUG] Pause/Resume action blocked by debounce');
+        return;
+    }
+
+    // 立即设置防抖状态
+    isProcessingGameControl = true;
+    console.log('[DEBUG] Pause/Resume debounce set to true');
+
     if (isGamePaused) {
         isGamePaused = false;
         log('▶️ 牌局继续');
@@ -734,18 +785,27 @@ function handlePauseResumeClick() {
         log('⏸️ 牌局暂停');
         pauseBtn.textContent = '▶️ 继续';
     }
+
+    // 使用统一的延迟重置（300ms后）
+    resetGameControlDebounce(300);
 }
 
 function startNewGame() {
+  // 立即设置防抖状态
+  isProcessingGameControl = true;
+  console.log('[DEBUG] Start new game debounce set to true');
+
   currentSuggestionsCache = []; // 清空GTO建议缓存
   handActionHistory = []; // 重置单局动作历史
   document.getElementById('suggestion-display').innerHTML = '等待玩家行动...';
   if (isGameRunning && !isGamePaused) {
     log('游戏已在运行中');
+    isProcessingGameControl = false; // 立即重置防抖状态
     return;
   }
   if (Settings.usePresetHands || Settings.usePresetCommunity) {
     if (!validatePresetCards()) {
+      isProcessingGameControl = false; // 立即重置防抖状态
       return;
     }
   }
@@ -800,10 +860,15 @@ function startNewGame() {
     } else {
       processNextAction();
     }
+
+    // 使用统一的延迟重置（300ms后）
+    resetGameControlDebounce();
   } catch (e) {
     log('❌ 启动失败: ' + e.message);
     console.error(e);
     isGameRunning = false;
+    // 使用统一的延迟重置（300ms后）
+    resetGameControlDebounce();
   }
 }
 
@@ -925,10 +990,23 @@ function updateP1RoleSelectOptions() {
 }
 
 function stopGame() {
+  // ✅ 统一的防抖检查：在函数开始就检查
+  if (isProcessingGameControl) {
+    log('正在处理游戏控制操作，请稍候...');
+    return;
+  }
+
+  // 立即设置防抖状态
+  isProcessingGameControl = true;
+  console.log('[DEBUG] Stop game debounce set to true');
+
   log('🛑 牌局已手动停止，重置到初始状态。');
   isGameRunning = false;
   isGamePaused = false;
   isWaitingForManualInput = false;
+
+  // 使用统一的延迟重置（300ms后）
+  resetGameControlDebounce(300);
   hideAllActionPopups();
   game.reset(Settings);
   updateUI();
