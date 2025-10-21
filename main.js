@@ -1508,7 +1508,14 @@ async function savePendingSnapshot() {
 async function renderSnapshotList(page = 0) {
     const snapshotListUl = document.getElementById('snapshot-list');
     if (!snapshotListUl) return;
-    snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">加载中...</li>';
+
+    // 使用新的居中加载动画
+    snapshotListUl.innerHTML = `
+        <li class="snapshot-loading">
+            <div class="snapshot-loading-spinner"></div>
+            <div class="snapshot-loading-text">加载中</div>
+        </li>
+    `;
 
     try {
         const pageData = await snapshotService.getSnapshots(page, 5);
@@ -1520,7 +1527,12 @@ async function renderSnapshotList(page = 0) {
         snapshotListUl.innerHTML = '';
 
         if (!savedSnapshots || savedSnapshots.length === 0) {
-            snapshotListUl.innerHTML = '<li style="text-align: center; color: #888; padding: 20px 0;">暂无快照</li>';
+            snapshotListUl.innerHTML = `
+                <li class="snapshot-status empty">
+                    <div class="snapshot-status-icon">📷</div>
+                    <div class="snapshot-status-text">暂无快照<br><small>使用保存快照功能创建第一个快照</small></div>
+                </li>
+            `;
             renderSnapshotPagination(null); // 清空分页
             return;
         }
@@ -1568,7 +1580,12 @@ async function renderSnapshotList(page = 0) {
 
     } catch (error) {
         log(`❌ 加载快照列表失败: ${error.message}`);
-        snapshotListUl.innerHTML = `<li style="text-align: center; color: #ff6b6b; padding: 20px 0;">列表加载失败</li>`;
+        snapshotListUl.innerHTML = `
+            <li class="snapshot-status error">
+                <div class="snapshot-status-icon">⚠️</div>
+                <div class="snapshot-status-text">列表加载失败<br><small>${error.message}</small></div>
+            </li>
+        `;
         renderSnapshotPagination(null); // 清空分页
     }
 }
