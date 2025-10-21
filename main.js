@@ -1342,26 +1342,14 @@ async function renderSnapshotList(page = 0) {
         snapshotListUl.querySelectorAll('.view-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 const snapshotId = e.target.closest('li').dataset.snapshotId;
-                // 从 savedSnapshots 中找到完整的快照对象
-                const fullSnapshot = savedSnapshots.find(s => s.id == snapshotId);
-                if (fullSnapshot) {
-                    showViewSnapshotModal(fullSnapshot); // 传递完整的对象
-                } else {
-                    log(`❌ 无法找到快照 #${snapshotId} 的完整数据。`);
-                }
+                showViewSnapshotModal(snapshotId);
             });
         });
 
         snapshotListUl.querySelectorAll('.replay-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 const snapshotId = e.target.closest('li').dataset.snapshotId;
-                // 从 savedSnapshots 中找到完整的快照对象
-                const fullSnapshot = savedSnapshots.find(s => s.id == snapshotId);
-                if (fullSnapshot) {
-                    startReplay(fullSnapshot); // 传递完整的对象
-                } else {
-                    log(`❌ 无法找到快照 #${snapshotId} 的完整数据。`);
-                }
+                startReplay(snapshotId);
             });
         });
 
@@ -1538,12 +1526,11 @@ function buildSuggestionElement(suggestion, playerId, phase) {
 /**
  * 显示查看快照的模态框，并填充内容
  */
-async function showViewSnapshotModal(snapshot) { // Changed parameter to full snapshot object
-    log(`正在显示快照 (ID: ${snapshot.id})...`); // Log with ID from object
+async function showViewSnapshotModal(snapshotId) {
+    log(`正在从数据库加载快照 (ID: ${snapshotId})...`);
     showLoader(); // 显示加载动画
     try {
-        // No need to fetch from server or cache, as full snapshot is passed directly
-        // const snapshot = await snapshotService.getSnapshotById(snapshotId); // REMOVED
+        const snapshot = await snapshotService.getSnapshotById(snapshotId);
 
         // 后端返回的JSON字段是字符串，需要解析成对象
         snapshot.allGtoSuggestions = JSON.parse(snapshot.gtoSuggestions || '[]');
@@ -1562,7 +1549,7 @@ async function showViewSnapshotModal(snapshot) { // Changed parameter to full sn
         // 清空旧内容
         suggestionsListEl.innerHTML = '';
         filterContainer.innerHTML = '';
-        modal.dataset.snapshotId = snapshot.id;
+        modal.dataset.snapshotId = snapshotId;
         imageEl.src = snapshot.imageData;
 
         if (snapshot.allGtoSuggestions && snapshot.allGtoSuggestions.length > 0) {
@@ -2382,16 +2369,19 @@ function setupReplayControls() {
  * 开始回放
  * @param {number} snapshotId 
  */
-async function startReplay(snapshot) { // Changed parameter to full snapshot object
+async function startReplay(snapshotId) {
     if (isGameRunning) {
         log('⚠️ 请先停止当前牌局，再开始回放。');
         return;
     }
-    log(`[REPLAY] 开始回放快照 (ID: ${snapshot.id})...`); // Log with ID from object
+    log(`[REPLAY] 开始加载快照 #${snapshotId} 用于回放...`);
     showLoader(); // 显示加载动画
     try {
-        // No need to fetch from server or cache, as full snapshot is passed directly
-        // const snapshot = await snapshotService.getSnapshotById(snapshotId); // REMOVED
+        const snapshot = await snapshotService.getSnapshotById(snapshotId);
+        if (!snapshot.settings || !snapshot.actionHistory) {
+            log('❌ 回放失败：此快照缺少回放所需的 settings 或 actionHistory 数据。');
+            return;
+        }
 
         replayData.settings = JSON.parse(snapshot.settings);
         replayData.actions = JSON.parse(snapshot.actionHistory);
