@@ -1164,22 +1164,38 @@ async function showdown() {
 let isSelecting = false;
 let selectionStartX, selectionStartY;
 
+// 新增一个函数来处理ESC键按下事件，以便可以正确地添加和移除监听器
+function handleSnapshotEscape(e) {
+    if (e.key === 'Escape') {
+        // 传递一个特殊标记来表明这是由ESC键触发的取消操作
+        endSelection({ forceCancel: true });
+    }
+}
+
 /**
  * 启动截图选择流程的通用函数
  */
 function initiateSnapshotProcess() {
     log('🖱️ 请在页面上拖拽以选择截图区域...');
     const overlay = document.getElementById('screenshot-selection-overlay');
-    if (!overlay) {
-        log('❌ 错误：无法找到截图覆盖层元素。');
+    const prompt = document.getElementById('screenshot-prompt-overlay'); // 获取提示元素
+
+    if (!overlay || !prompt) {
+        log('❌ 错误：无法找到截图覆盖层或提示元素。');
         return;
     }
+
+    // 显示提示
+    prompt.style.top = '20px';
+    prompt.style.opacity = '1';
+
     overlay.style.display = 'block';
     document.body.style.userSelect = 'none';
 
     overlay.addEventListener('mousedown', startSelection);
     overlay.addEventListener('mousemove', dragSelection);
     window.addEventListener('mouseup', endSelection);
+    document.addEventListener('keydown', handleSnapshotEscape); // 监听ESC键
 }
 
 /**
@@ -1236,18 +1252,40 @@ function dragSelection(e) {
  */
 function endSelection(e) {
     const overlay = document.getElementById('screenshot-selection-overlay');
+    const prompt = document.getElementById('screenshot-prompt-overlay'); // 获取提示元素
+
     if (!overlay || overlay.style.display === 'none') {
+        // 如果覆盖层已经不可见（可能已被ESC取消），确保监听器被移除
         window.removeEventListener('mouseup', endSelection);
+        document.removeEventListener('keydown', handleSnapshotEscape);
         return;
     }
     
     isSelecting = false;
+    
+    // 隐藏覆盖层和提示
     overlay.style.display = 'none';
+    if (prompt) {
+        prompt.style.top = '-100px';
+        prompt.style.opacity = '0';
+    }
     document.body.style.userSelect = 'auto';
 
+    // 移除所有监听器
     overlay.removeEventListener('mousedown', startSelection);
     overlay.removeEventListener('mousemove', dragSelection);
     window.removeEventListener('mouseup', endSelection);
+    document.removeEventListener('keydown', handleSnapshotEscape);
+
+    // 如果是强制取消（例如按了ESC）
+    if (e && e.forceCancel) {
+        log('截图操作已取消。');
+        if (postSnapshotAction) {
+            postSnapshotAction();
+            postSnapshotAction = null;
+        }
+        return;
+    }
 
     const selectionBox = document.getElementById('selection-box');
     if (!selectionBox) return;

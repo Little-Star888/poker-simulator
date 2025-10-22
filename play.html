@@ -1453,9 +1453,31 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    #screenshot-prompt-overlay {
+        position: fixed;
+        top: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(34, 139, 34, 0.9);
+        color: white;
+        padding: 12px 25px;
+        border-radius: 0 0 12px 12px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 9997;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out, top 0.3s ease-in-out;
+        pointer-events: none;
+    }
   </style>
 </head>
-<body>  <div class="app-container">
+<body>
+  <div id="screenshot-prompt-overlay">
+    请在屏幕上拖动以选择截图区域 (按 ESC 取消)
+  </div>
+  <div class="app-container">
     <!-- Slide-out Drawer for Configurations -->
     <aside id="config-drawer" class="config-drawer">
       <button class="drawer-close-btn">&times;</button>
