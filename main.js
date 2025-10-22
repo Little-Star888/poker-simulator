@@ -1086,12 +1086,14 @@ function updatePlayerDisplay() {
 function updateGtoFilterCheckboxes() {
   gtoFilterPlayersContainer.innerHTML = "";
   gtoSuggestionFilter.clear();
-  if (Settings.playerCount > 0) {
-    gtoSuggestionFilter.add("P1");
+  // 清空筛选器，然后添加所有玩家
+  for (let i = 1; i <= Settings.playerCount; i++) {
+    const playerId = `P${i}`;
+    gtoSuggestionFilter.add(playerId);
   }
   for (let i = 1; i <= Settings.playerCount; i++) {
     const playerId = `P${i}`;
-    const isChecked = playerId === "P1";
+    const isChecked = true; // 所有玩家都默认勾选
     const label = document.createElement("label");
     label.style.marginRight = "10px";
     label.style.width = "auto";
@@ -1558,13 +1560,37 @@ function endSelection(e) {
 async function captureAndProceed(cropOptions) {
   log("📸 正在根据选定区域生成快照...");
   try {
+    // 增强的html2canvas配置，解决SVG渲染问题
     const canvas = await html2canvas(document.body, {
       useCORS: true,
       backgroundColor: null,
       scale: 2,
-      allowTaint: true, // 添加此参数以解决跨域问题
-      foreignObjectRendering: true, // 改善Mac上foreignObject渲染
-      imageTimeout: 15000, // 增加超时时间
+      allowTaint: true,
+      foreignObjectRendering: true,
+      imageTimeout: 15000,
+      // SVG相关配置
+      removeContainer: false,
+      ignoreElements: (element) => {
+        // 忽略可能导致问题的SVG元素
+        if (element.tagName === "svg" || element.tagName === "path") {
+          const hasInvalidPath =
+            element.getAttribute &&
+            element.getAttribute("d") &&
+            element.getAttribute("d").includes("tc");
+          return hasInvalidPath;
+        }
+        return false;
+      },
+      // 处理SVG的选项
+      onclone: (clonedDoc) => {
+        // 在克隆的文档中处理SVG元素
+        const svgs = clonedDoc.querySelectorAll("svg");
+        svgs.forEach((svg) => {
+          // 移除可能导致问题的path元素
+          const paths = svg.querySelectorAll('path[d*="tc"]');
+          paths.forEach((path) => path.remove());
+        });
+      },
       ...cropOptions,
     });
     const imageData = canvas.toDataURL("image/png");
@@ -1596,11 +1622,25 @@ async function captureAndProceed(cropOptions) {
     log("❌ 截图失败: " + error.message);
     console.error("截图失败:", error);
 
+    // 详细的错误诊断
+    console.error("🔍 错误详情分析:");
+    console.error("- 错误类型:", error.constructor.name);
+    console.error("- 错误消息:", error.message);
+    console.error("- 错误堆栈:", error.stack);
+
+    // SVG相关错误的特殊处理
+    if (error.message && error.message.includes("Expected number")) {
+      console.error("🎨 检测到SVG渲染错误，尝试备用方案...");
+      alert(
+        "检测到SVG渲染错误，这通常是由页面中的图标或图形元素引起的。\n请尝试刷新页面或移除可能包含SVG元素的内容后再截图。",
+      );
+    }
+
     // Mac特定错误处理
     if (navigator.platform.indexOf("Mac") !== -1) {
       console.error("🖥️ Mac截图失败详情:", error);
       alert(
-        "Mac上截图功能遇到问题，请尝试：\n1. 刷新页面重试\n2. 检查浏览器设置\n3. 使用其他浏览器\n\n详细错误: " +
+        "Mac上截图功能遇到问题，请尝试：\n1. 刷新页面重试\n2. 检查浏览器设置\n3. 使用Chrome或Firefox浏览器\n4. 暂时禁用浏览器扩展程序\n\n详细错误: " +
           error.message,
       );
     }
