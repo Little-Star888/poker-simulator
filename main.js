@@ -1654,6 +1654,55 @@ async function captureAndProceed(cropOptions) {
           console.warn("🖼️ 忽略加载失败的图片:", element.src);
           return true;
         }
+
+        // 忽略浏览器扩展程序生成的元素
+        if (element.hasAttribute && element.hasAttribute("monica-id")) {
+          console.warn("🔌 忽略Monica扩展元素:", element);
+          return true;
+        }
+
+        // 忽略包含扩展程序特征的外部SVG
+        if (
+          element.tagName === "img" &&
+          element.src &&
+          element.src.includes("data:image/svg+xml")
+        ) {
+          try {
+            const decodedSrc = decodeURIComponent(element.src);
+            if (
+              decodedSrc.includes("monica-id") ||
+              decodedSrc.includes("externalResourcesRequired")
+            ) {
+              console.warn(
+                "🔌 忽略扩展程序生成的SVG图片:",
+                element.src.substring(0, 100) + "...",
+              );
+              return true;
+            }
+          } catch (e) {
+            console.warn("🔍 解码SVG URL失败:", e);
+          }
+        }
+
+        // 忽略所有data URL的SVG（可能是扩展程序生成的）
+        if (
+          element.tagName === "img" &&
+          element.src &&
+          element.src.startsWith("data:image/svg+xml")
+        ) {
+          const decodedSrc = decodeURIComponent(element.src);
+          if (
+            decodedSrc.includes("foreignObject") ||
+            decodedSrc.includes("monica")
+          ) {
+            console.warn(
+              "🔌 忽略复杂的data URL SVG:",
+              element.src.substring(0, 100) + "...",
+            );
+            return true;
+          }
+        }
+
         // 忽略可能导致问题的SVG元素
         if (element.tagName === "svg" || element.tagName === "path") {
           const hasInvalidPath =
@@ -1662,13 +1711,54 @@ async function captureAndProceed(cropOptions) {
             element.getAttribute("d").includes("tc");
           return hasInvalidPath;
         }
+
         return false;
       },
       // 处理克隆文档中的元素
       onclone: (clonedDoc) => {
+        // 处理浏览器扩展程序元素
+        const monicaElements = clonedDoc.querySelectorAll("[monica-id]");
+        monicaElements.forEach((element) => {
+          console.warn("🔌 移除克隆文档中的Monica元素:", element);
+          element.remove();
+        });
+
+        // 处理包含扩展程序特征的data URL SVG图片
+        const dataSvgImages = clonedDoc.querySelectorAll(
+          'img[src^="data:image/svg+xml"]',
+        );
+        dataSvgImages.forEach((img) => {
+          try {
+            const decodedSrc = decodeURIComponent(img.src);
+            if (
+              decodedSrc.includes("monica-id") ||
+              decodedSrc.includes("foreignObject")
+            ) {
+              console.warn(
+                "🔌 移除克隆文档中的扩展SVG图片:",
+                img.src.substring(0, 100) + "...",
+              );
+              img.remove();
+            }
+          } catch (e) {
+            console.warn("🔍 处理克隆SVG时解码失败:", e);
+            // 对于解码失败的复杂SVG，直接移除
+            img.remove();
+          }
+        });
+
         // 处理SVG元素
         const svgs = clonedDoc.querySelectorAll("svg");
         svgs.forEach((svg) => {
+          // 移除包含复杂foreignObject的SVG
+          if (
+            svg.querySelector('foreignObject[externalResourcesRequired="true"]')
+          ) {
+            console.warn("🔌 移除包含复杂foreignObject的SVG:", svg);
+            svg.remove();
+            return;
+          }
+
           const paths = svg.querySelectorAll('path[d*="tc"]');
           paths.forEach((path) => path.remove());
         });
@@ -1729,6 +1819,29 @@ async function captureAndProceed(cropOptions) {
       error.target.tagName === "img"
     ) {
       console.error("🖼️ 检测到图片加载错误:", error.target.src);
+
+      // 检查是否是扩展程序生成的SVG错误
+      if (
+        error.target.src &&
+        error.target.src.startsWith("data:image/svg+xml")
+      ) {
+        try {
+          const decodedSrc = decodeURIComponent(error.target.src);
+          if (
+            decodedSrc.includes("monica-id") ||
+            decodedSrc.includes("foreignObject")
+          ) {
+            console.error("🔌 检测到Monica扩展程序SVG错误");
+            alert(
+              "检测到浏览器扩展程序（Monica）生成的复杂SVG元素导致截图失败。\n请尝试：\n1. 暂时禁用Monica扩展程序\n2. 刷新页面重试\n3. 使用无痕模式截图",
+            );
+            return;
+          }
+        } catch (e) {
+          console.warn("解码SVG错误URL失败:", e);
+        }
+      }
+
       alert(
         "检测到图片加载错误，这通常是由于网络问题或图片链接失效导致的。\n请尝试：\n1. 刷新页面重试\n2. 检查网络连接\n3. 稍后再试",
       );
