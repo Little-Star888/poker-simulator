@@ -1555,22 +1555,105 @@ function endSelection(e) {
 }
 
 /**
+ * 预处理图片元素，为截图做准备
+ */
+async function preprocessImagesForCapture() {
+  return new Promise((resolve) => {
+    const images = document.querySelectorAll("img");
+    let loadedCount = 0;
+    let failedCount = 0;
+
+    if (images.length === 0) {
+      resolve();
+      return;
+    }
+
+    console.log(`🖼️ 预处理 ${images.length} 个图片元素...`);
+
+    images.forEach((img, index) => {
+      // 检查图片是否已经加载完成
+      if (img.complete && img.naturalWidth > 0) {
+        loadedCount++;
+        console.log(`✅ 图片 ${index + 1} 已加载:`, img.src);
+        checkAllImages();
+        return;
+      }
+
+      // 为未加载的图片添加事件监听器
+      const onLoad = () => {
+        loadedCount++;
+        console.log(`✅ 图片 ${index + 1} 加载成功:`, img.src);
+        cleanup();
+        checkAllImages();
+      };
+
+      const onError = (error) => {
+        failedCount++;
+        console.warn(`❌ 图片 ${index + 1} 加载失败:`, img.src, error);
+        // 对失败的图片进行隐藏处理
+        img.style.visibility = "hidden";
+        cleanup();
+        checkAllImages();
+      };
+
+      const cleanup = () => {
+        img.removeEventListener("load", onLoad);
+        img.removeEventListener("error", onError);
+      };
+
+      img.addEventListener("load", onLoad);
+      img.addEventListener("error", onError);
+
+      // 如果图片还没有src，触发加载
+      if (!img.src || img.src === window.location.href) {
+        console.warn(`⚠️ 图片 ${index + 1} 无有效src:`, img);
+        failedCount++;
+        checkAllImages();
+      }
+    });
+
+    function checkAllImages() {
+      if (loadedCount + failedCount === images.length) {
+        console.log(
+          `🖼️ 图片预处理完成: 成功 ${loadedCount}, 失败 ${failedCount}`,
+        );
+        // 给失败的图片一些时间隐藏
+        setTimeout(resolve, 100);
+      }
+    }
+
+    // 设置超时，避免无限等待
+    setTimeout(() => {
+      console.log("⏰ 图片预处理超时，继续截图流程");
+      resolve();
+    }, 5000);
+  });
+}
+
+/**
  * 根据选定区域截图，并执行后续流程（获取GTO、显示确认框）
  */
 async function captureAndProceed(cropOptions) {
   log("📸 正在根据选定区域生成快照...");
   try {
-    // 增强的html2canvas配置，解决SVG渲染问题
+    // 预处理：处理页面中可能失败的图片元素
+    await preprocessImagesForCapture();
+
+    // 增强的html2canvas配置，解决图片加载和SVG渲染问题
     const canvas = await html2canvas(document.body, {
       useCORS: true,
       backgroundColor: null,
       scale: 2,
       allowTaint: true,
       foreignObjectRendering: true,
-      imageTimeout: 15000,
-      // SVG相关配置
-      removeContainer: false,
+      imageTimeout: 20000, // 增加图片加载超时时间
+      // 处理可能导致问题的元素
       ignoreElements: (element) => {
+        // 忽略加载失败的图片
+        if (element.tagName === "img" && element.naturalWidth === 0) {
+          console.warn("🖼️ 忽略加载失败的图片:", element.src);
+          return true;
+        }
         // 忽略可能导致问题的SVG元素
         if (element.tagName === "svg" || element.tagName === "path") {
           const hasInvalidPath =
@@ -1581,14 +1664,23 @@ async function captureAndProceed(cropOptions) {
         }
         return false;
       },
-      // 处理SVG的选项
+      // 处理克隆文档中的元素
       onclone: (clonedDoc) => {
-        // 在克隆的文档中处理SVG元素
+        // 处理SVG元素
         const svgs = clonedDoc.querySelectorAll("svg");
         svgs.forEach((svg) => {
-          // 移除可能导致问题的path元素
           const paths = svg.querySelectorAll('path[d*="tc"]');
           paths.forEach((path) => path.remove());
+        });
+
+        // 处理图片元素，添加错误处理
+        const images = clonedDoc.querySelectorAll("img");
+        images.forEach((img) => {
+          img.onerror = function () {
+            console.warn("🖼️ 克隆文档中图片加载失败:", this.src);
+            // 可以选择隐藏失败的图片或使用占位符
+            this.style.display = "none";
+          };
         });
       },
       ...cropOptions,
@@ -1619,14 +1711,29 @@ async function captureAndProceed(cropOptions) {
 
     showSnapshotModal();
   } catch (error) {
-    log("❌ 截图失败: " + error.message);
+    log("❌ 截图失败: " + (error.message || error.type || "未知错误"));
     console.error("截图失败:", error);
 
     // 详细的错误诊断
     console.error("🔍 错误详情分析:");
     console.error("- 错误类型:", error.constructor.name);
-    console.error("- 错误消息:", error.message);
-    console.error("- 错误堆栈:", error.stack);
+    console.error("- 错误消息:", error.message || "无消息");
+    console.error("- 错误类型属性:", error.type);
+    console.error("- 错误目标:", error.target);
+    console.error("- 错误堆栈:", error.stack || "无堆栈");
+
+    // Event类型错误的特殊处理（通常是图片加载错误）
+    if (
+      error instanceof Event &&
+      error.target &&
+      error.target.tagName === "img"
+    ) {
+      console.error("🖼️ 检测到图片加载错误:", error.target.src);
+      alert(
+        "检测到图片加载错误，这通常是由于网络问题或图片链接失效导致的。\n请尝试：\n1. 刷新页面重试\n2. 检查网络连接\n3. 稍后再试",
+      );
+      return;
+    }
 
     // SVG相关错误的特殊处理
     if (error.message && error.message.includes("Expected number")) {
@@ -1634,14 +1741,31 @@ async function captureAndProceed(cropOptions) {
       alert(
         "检测到SVG渲染错误，这通常是由页面中的图标或图形元素引起的。\n请尝试刷新页面或移除可能包含SVG元素的内容后再截图。",
       );
+      return;
+    }
+
+    // 网络相关错误处理
+    if (
+      error.message &&
+      (error.message.includes("network") || error.message.includes("fetch"))
+    ) {
+      console.error("🌐 检测到网络相关错误");
+      alert("检测到网络问题，请检查网络连接后重试。");
+      return;
     }
 
     // Mac特定错误处理
     if (navigator.platform.indexOf("Mac") !== -1) {
       console.error("🖥️ Mac截图失败详情:", error);
       alert(
-        "Mac上截图功能遇到问题，请尝试：\n1. 刷新页面重试\n2. 检查浏览器设置\n3. 使用Chrome或Firefox浏览器\n4. 暂时禁用浏览器扩展程序\n\n详细错误: " +
-          error.message,
+        "Mac上截图功能遇到问题，请尝试：\n1. 刷新页面重试\n2. 检查网络连接\n3. 使用Chrome或Firefox浏览器\n4. 暂时禁用浏览器扩展程序\n5. 确保页面完全加载后再截图\n\n详细错误: " +
+          (error.message || error.type || "未知错误"),
+      );
+    } else {
+      // 通用错误提示
+      alert(
+        "截图失败，请尝试刷新页面重试。\n\n错误信息: " +
+          (error.message || error.type || "未知错误"),
       );
     }
 
