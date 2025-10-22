@@ -1639,14 +1639,15 @@ async function captureAndProceed(cropOptions) {
     // 预处理：处理页面中可能失败的图片元素
     await preprocessImagesForCapture();
 
-    // 增强的html2canvas配置，解决图片加载和SVG渲染问题
+    // 简化的html2canvas配置，提高兼容性
     const canvas = await html2canvas(document.body, {
       useCORS: true,
       backgroundColor: null,
       scale: 2,
       allowTaint: true,
-      foreignObjectRendering: true,
+      foreignObjectRendering: false, // 禁用foreignObject渲染，避免扩展程序干扰
       imageTimeout: 20000, // 增加图片加载超时时间
+      removeContainer: false, // 保留容器以避免引用错误
       // 处理可能导致问题的元素
       ignoreElements: (element) => {
         // 忽略加载失败的图片
@@ -1681,21 +1682,47 @@ async function captureAndProceed(cropOptions) {
           }
         }
 
-        // 忽略所有data URL的SVG（可能是扩展程序生成的）
+        // 更严格地过滤所有data URL的SVG，特别是包含扩展程序特征的
         if (
           element.tagName === "img" &&
           element.src &&
           element.src.startsWith("data:image/svg+xml")
         ) {
-          const decodedSrc = decodeURIComponent(element.src);
-          if (
-            decodedSrc.includes("foreignObject") ||
-            decodedSrc.includes("monica")
-          ) {
+          try {
+            const decodedSrc = decodeURIComponent(element.src);
+            // 检查多种扩展程序特征
+            if (
+              decodedSrc.includes("foreignObject") ||
+              decodedSrc.includes("monica") ||
+              decodedSrc.includes("externalResourcesRequired") ||
+              decodedSrc.includes("-webkit-") ||
+              decodedSrc.length > 10000 // 过长的SVG可能包含复杂内容
+            ) {
+              console.warn(
+                "🔌 忽略复杂的data URL SVG:",
+                element.src.substring(0, 100) + "...",
+              );
+              return true;
+            }
+          } catch (e) {
+            // 对于无法解码的SVG，直接忽略
             console.warn(
-              "🔌 忽略复杂的data URL SVG:",
+              "🔌 无法解码的SVG，直接忽略:",
               element.src.substring(0, 100) + "...",
             );
+            return true;
+          }
+        }
+
+        // 过滤包含复杂样式的SVG元素
+        if (element.tagName === "svg") {
+          const svgContent = element.outerHTML;
+          if (
+            svgContent.includes("externalResourcesRequired") ||
+            svgContent.includes("foreignObject") ||
+            svgContent.includes("monica")
+          ) {
+            console.warn("🔌 忽略复杂SVG元素:", element);
             return true;
           }
         }
