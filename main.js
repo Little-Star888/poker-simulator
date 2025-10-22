@@ -1655,11 +1655,8 @@ async function captureAndProceed(cropOptions) {
           return true;
         }
 
-        // 忽略浏览器扩展程序生成的元素
-        if (element.hasAttribute && element.hasAttribute("monica-id")) {
-          console.warn("🔌 忽略Monica扩展元素:", element);
-          return true;
-        }
+        // 不再完全忽略包含monica-id的元素，而是在onclone中清理属性
+        // 这样可以避免"Unable to find element in cloned iframe"错误
 
         // 忽略包含扩展程序特征的外部SVG
         if (
@@ -1716,11 +1713,17 @@ async function captureAndProceed(cropOptions) {
       },
       // 处理克隆文档中的元素
       onclone: (clonedDoc) => {
-        // 处理浏览器扩展程序元素
+        // 清理浏览器扩展程序属性而不是移除元素
         const monicaElements = clonedDoc.querySelectorAll("[monica-id]");
         monicaElements.forEach((element) => {
-          console.warn("🔌 移除克隆文档中的Monica元素:", element);
-          element.remove();
+          console.warn("🔌 清理Monica扩展属性:", element);
+          // 移除Monica相关属性，但保留元素本身
+          element.removeAttribute("monica-id");
+          element.removeAttribute("monica-version");
+          // 移除可能的相关样式
+          if (element.style && element.style.userSelect) {
+            element.style.userSelect = "auto";
+          }
         });
 
         // 处理包含扩展程序特征的data URL SVG图片
