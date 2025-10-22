@@ -1398,6 +1398,13 @@ function handleSnapshotEscape(e) {
  * 启动截图选择流程的通用函数
  */
 function initiateSnapshotProcess() {
+  // Mac兼容性调试
+  if (navigator.platform.indexOf("Mac") !== -1) {
+    console.log("🖥️ Mac系统检测 - 开始截图流程");
+    console.log("浏览器信息:", navigator.userAgent);
+    console.log("html2canvas可用性:", typeof html2canvas !== "undefined");
+  }
+
   log("🖱️ 请在页面上拖拽以选择截图区域...");
   const overlay = document.getElementById("screenshot-selection-overlay");
   const prompt = document.getElementById("screenshot-prompt-overlay"); // 获取提示元素
@@ -1436,6 +1443,13 @@ function handleSnapshotButtonClick() {
  */
 function startSelection(e) {
   if (e.button !== 0) return;
+
+  // Mac兼容性检查
+  if (navigator.platform.indexOf("Mac") !== -1 && !e.isTrusted) {
+    log("⚠️ Mac安全策略阻止了事件");
+    return;
+  }
+
   isSelecting = true;
   selectionStartX = e.clientX;
   selectionStartY = e.clientY;
@@ -1548,6 +1562,9 @@ async function captureAndProceed(cropOptions) {
       useCORS: true,
       backgroundColor: null,
       scale: 2,
+      allowTaint: true, // 添加此参数以解决跨域问题
+      foreignObjectRendering: true, // 改善Mac上foreignObject渲染
+      imageTimeout: 15000, // 增加超时时间
       ...cropOptions,
     });
     const imageData = canvas.toDataURL("image/png");
@@ -1578,6 +1595,16 @@ async function captureAndProceed(cropOptions) {
   } catch (error) {
     log("❌ 截图失败: " + error.message);
     console.error("截图失败:", error);
+
+    // Mac特定错误处理
+    if (navigator.platform.indexOf("Mac") !== -1) {
+      console.error("🖥️ Mac截图失败详情:", error);
+      alert(
+        "Mac上截图功能遇到问题，请尝试：\n1. 刷新页面重试\n2. 检查浏览器设置\n3. 使用其他浏览器\n\n详细错误: " +
+          error.message,
+      );
+    }
+
     window.pendingSnapshotData = null;
   }
 }
