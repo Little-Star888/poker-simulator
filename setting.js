@@ -8,12 +8,12 @@
 export const Settings = {
   // ===== 默认配置值 =====
   mode: 'manual',           // 游戏模式: 'auto' | 'manual'
-  sb: 50,                 // 小盲注 (Small Blind)
-  bb: 100,                // 大盲注 (Big Blind)
+  sb: 10,                 // 小盲注 (Small Blind)
+  bb: 20,                // 大盲注 (Big Blind)
   autoDelay: 1500,        // 自动模式下每步延时（毫秒）
   playerCount: 8,         // 玩家数量
-  minStack: 10000,         // 最小初始筹码
-  maxStack: 20000,         // 最大初始筹码
+  minStack: 1000,         // 最小初始筹码
+  maxStack: 2000,         // 最大初始筹码
   potType: 'single_raised', // 底池类型: unrestricted, single_raised, 3bet, 4bet
   p1Role: 'random',           // P1开局角色: random, BTN, SB, BB, etc.
 
@@ -24,8 +24,8 @@ export const Settings = {
   suggestOnRiver: false,
 
   // 新增：牌局预设
-  usePresetHands: true,
-  usePresetCommunity: true,
+  usePresetHands: false,
+  usePresetCommunity: false,
   presetCards: { 
     players: {}, 
     flop: new Array(3).fill(null), 
