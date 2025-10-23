@@ -1634,46 +1634,10 @@ async function preprocessImagesForCapture() {
  * 根据选定区域截图，并执行后续流程（获取GTO、显示确认框）
  */
 async function captureAndProceed(cropOptions) {
-  log("📸 正在根据选定区域生成快照 (最终修复方案)...");
+  log("📸 正在根据选定区域生成快照 (恢复到 2.html 的简洁方案)...");
   try {
-    // 步骤 1: 使用 snapdom 截取整个文档，并加入严格的过滤器
-    const fullPageCanvas = await snapdom.toCanvas(document.documentElement, {
-        // 强化版 exclude 函数，用于彻底排除浏览器插件注入的干扰元素
-        exclude: (element) => {
-            try {
-                // 规则1：排除所有 src 或 href 指向浏览器插件的元素
-                const src = element.getAttribute('src');
-                const href = element.getAttribute('href');
-                if ((src && src.startsWith('chrome-extension://')) || (href && href.startsWith('chrome-extension://'))) {
-                    return true;
-                }
-
-                // 规则2：排除已知由插件注入的元素 (例如 monica-id)
-                if (element.hasAttribute && element.hasAttribute('monica-id')) {
-                    return true;
-                }
-
-                // 规则3：排除路径格式错误的SVG元素
-                if (element.tagName === "svg" || element.tagName === "path") {
-                    const dAttribute = element.getAttribute("d");
-                    if (dAttribute && dAttribute.includes("tc")) {
-                        return true;
-                    }
-                }
-
-                // 规则4：排除加载失败的图片 (仅当它确实有src时)
-                if (element.tagName === "IMG" && element.naturalWidth === 0 && element.src) {
-                  return true;
-                }
-
-            } catch (e) {
-                // 如果检查出错，安全起见，排除该元素
-                return true;
-            }
-
-            return false; // 保留其他所有元素
-        }
-    });
+    // 步骤 1: 使用 snapdom 截取整个文档，不带任何多余选项
+    const fullPageCanvas = await snapdom.toCanvas(document.documentElement);
 
     // 步骤 2: 创建一个新的、尺寸为裁剪区域的空白 canvas
     const croppedCanvas = document.createElement('canvas');
