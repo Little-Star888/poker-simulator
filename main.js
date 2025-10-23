@@ -1230,6 +1230,14 @@ function stopGame() {
         .querySelectorAll("input, select")
         .forEach((el) => (el.disabled = false));
     });
+    // 重新根据模式设置底池类型选择框的状态
+    const isManualMode = modeSelect.value === "manual";
+    potTypeSelect.disabled = isManualMode;
+    if (isManualMode) {
+      potTypeSelect.style.backgroundColor = "#eee";
+    } else {
+      potTypeSelect.style.backgroundColor = "";
+    }
   }
 }
 
