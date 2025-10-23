@@ -67,6 +67,21 @@ let usePresetHandsCheckbox,
 
 // ========== 工具函数 ==========
 /**
+ * 统一的时间格式化函数 - 使用中国时区（GMT+8）
+ * @param {string|Date} dateInput 日期输入（字符串或Date对象）
+ * @returns {string} 格式化后的时间字符串 "YYYY/MM/DD HH:mm:ss"
+ */
+function formatTimeChina(dateInput) {
+  const date = new Date(dateInput);
+  const chinaTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  return chinaTime
+    .toISOString()
+    .replace("T", " ")
+    .slice(0, 19)
+    .replace(/-/g, "/");
+}
+
+/**
  * 统一的安全事件绑定函数
  * @param {string} id 元素ID
  * @param {Function} handler 事件处理函数
@@ -1834,8 +1849,11 @@ async function captureAndProceed(cropOptions) {
 
     log("✅ 所有当前GTO建议已整理。请在弹窗中确认保存。");
 
+    // 统一使用中国时区显示时间
+    const timestamp = formatTimeChina(new Date());
+
     window.pendingSnapshotData = {
-      timestamp: new Date().toLocaleString(),
+      timestamp: timestamp,
       gameState: gameState,
       imageData: imageData,
       allGtoSuggestions: allGtoSuggestions,
@@ -2116,10 +2134,13 @@ async function renderSnapshotList(page = 0) {
     savedSnapshots.forEach((snapshot) => {
       const li = document.createElement("li");
       li.dataset.snapshotId = snapshot.id;
+      // 统一使用中国时区显示快照时间
+      const formattedTime = formatTimeChina(snapshot.timestamp);
+
       li.innerHTML = `
                 <div class="snapshot-info">
                     <strong class="snapshot-name-display" data-snapshot-id="${snapshot.id}" title="${snapshot.name}">${snapshot.name}</strong><br>
-                    <small>${new Date(snapshot.timestamp).toLocaleString()}</small>
+                    <small>${formattedTime}</small>
                 </div>
                 <div class="snapshot-actions">
                     <button class="view-btn">查看快照</button>
