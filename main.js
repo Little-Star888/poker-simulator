@@ -1631,42 +1631,185 @@ async function preprocessImagesForCapture() {
 }
 
 /**
+ * 创建配置区域的克隆版本，确保在截图时完全可见
+ * @param {HTMLElement} originalElement - 要克隆的原始元素
+ * @returns {Promise<HTMLElement>} 克隆后的元素
+ */
+async function createVisibleClone(originalElement) {
+  const clone = originalElement.cloneNode(true);
+
+  // 创建临时容器来放置克隆元素
+  const tempContainer = document.createElement("div");
+  tempContainer.id = "temp-screenshot-container";
+  tempContainer.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    width: ${originalElement.offsetWidth}px;
+    height: ${originalElement.offsetHeight}px;
+    pointer-events: none;
+    background: white;
+    overflow: hidden;
+  `;
+
+  // 确保克隆元素完全可见
+  clone.style.cssText = `
+    position: relative;
+    top: 0;
+    left: 0;
+    transform: none;
+    visibility: visible;
+    opacity: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  `;
+
+  // 复制所有计算样式到克隆元素
+  const computedStyles = window.getComputedStyle(originalElement);
+  const importantStyles = [
+    "font-family",
+    "font-size",
+    "font-weight",
+    "color",
+    "background-color",
+    "border",
+    "padding",
+    "margin",
+    "width",
+    "height",
+    "display",
+    "position",
+  ];
+
+  importantStyles.forEach((style) => {
+    clone.style.setProperty(
+      style,
+      computedStyles.getPropertyValue(style),
+      "important",
+    );
+  });
+
+  tempContainer.appendChild(clone);
+  document.body.appendChild(tempContainer);
+
+  // 等待克隆元素完全渲染
+  await new Promise((resolve) => {
+    // 强制重排
+    tempContainer.offsetHeight;
+    setTimeout(resolve, 200);
+  });
+
+  return { clone, tempContainer };
+}
+
+/**
+ * 清理克隆元素和临时容器
+ * @param {HTMLElement} tempContainer - 临时容器
+ */
+function cleanupClone(tempContainer) {
+  if (tempContainer && tempContainer.parentNode) {
+    tempContainer.parentNode.removeChild(tempContainer);
+  }
+}
+
+/**
+ * 使用DOM克隆方法进行智能截图
+ * @param {Object} cropOptions - 裁剪选项
+ * @returns {Promise<HTMLCanvasElement>} 截图画布
+ */
+async function smartCloneCapture(cropOptions) {
+  const configDrawer = document.getElementById("config-drawer");
+  const configRect = configDrawer.getBoundingClientRect();
+
+  // 判断截图区域是否包含配置区域
+  const includesConfigArea =
+    cropOptions.x < configRect.right &&
+    cropOptions.x + cropOptions.width > configRect.left &&
+    cropOptions.y < configRect.bottom &&
+    cropOptions.y + cropOptions.height > configRect.top;
+
+  if (!includesConfigArea) {
+    // 如果截图区域不包含配置区域，使用原来的方法
+    log("📸 截图区域不包含配置区域，使用标准截图方法...");
+    const fullPageCanvas = await snapdom.toCanvas(document.documentElement);
+    return cropCanvas(fullPageCanvas, cropOptions);
+  }
+
+  log("📸 截图区域包含配置区域，使用DOM克隆方法...");
+
+  // 创建配置区域的克隆
+  const { clone, tempContainer } = await createVisibleClone(configDrawer);
+
+  try {
+    // 等待克隆完全渲染
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // 截图整个页面（现在配置区域已经是可见的克隆版本）
+    const fullPageCanvas = await snapdom.toCanvas(document.documentElement);
+
+    // 裁剪到指定区域
+    const resultCanvas = cropCanvas(fullPageCanvas, cropOptions);
+
+    return resultCanvas;
+  } finally {
+    // 清理克隆元素
+    cleanupClone(tempContainer);
+  }
+}
+
+/**
+ * 裁剪画布到指定区域
+ * @param {HTMLCanvasElement} sourceCanvas - 源画布
+ * @param {Object} cropOptions - 裁剪选项
+ * @returns {HTMLCanvasElement} 裁剪后的画布
+ */
+function cropCanvas(sourceCanvas, cropOptions) {
+  const croppedCanvas = document.createElement("canvas");
+  const ctx = croppedCanvas.getContext("2d");
+
+  // 设置新画布的尺寸
+  croppedCanvas.width = cropOptions.width;
+  croppedCanvas.height = cropOptions.height;
+
+  // 计算裁剪区域的绝对坐标（考虑页面滚动）
+  const scrollX = window.scrollX || window.pageXOffset;
+  const scrollY = window.scrollY || window.pageYOffset;
+  const sourceX = cropOptions.x + scrollX;
+  const sourceY = cropOptions.y + scrollY;
+
+  // 使用 drawImage 将完整截图的指定区域绘制到新的小 canvas 上
+  ctx.drawImage(
+    sourceCanvas, // 源 canvas (完整截图)
+    sourceX, // 源 canvas 的裁剪起始点 X
+    sourceY, // 源 canvas 的裁剪起始点 Y
+    cropOptions.width, // 裁剪区域的宽度
+    cropOptions.height, // 裁剪区域的高度
+    0, // 目标 canvas 的绘制起始点 X
+    0, // 目标 canvas 的绘制起始点 Y
+    cropOptions.width, // 绘制到目标 canvas 的宽度
+    cropOptions.height, // 绘制到目标 canvas 的高度
+  );
+
+  return croppedCanvas;
+}
+
+/**
  * 根据选定区域截图，并执行后续流程（获取GTO、显示确认框）
  */
 async function captureAndProceed(cropOptions) {
-  log("📸 正在根据选定区域生成快照 (恢复到 2.html 的简洁方案)...");
+  log("📸 正在根据选定区域生成快照 (使用DOM克隆方案)...");
   try {
-    // 步骤 1: 使用 snapdom 截取整个文档，不带任何多余选项
-    const fullPageCanvas = await snapdom.toCanvas(document.documentElement);
+    // 步骤 1: 使用智能克隆截图方法
+    const croppedCanvas = await smartCloneCapture(cropOptions);
 
-    // 步骤 2: 创建一个新的、尺寸为裁剪区域的空白 canvas
-    const croppedCanvas = document.createElement('canvas');
-    const ctx = croppedCanvas.getContext('2d');
-
-    // 步骤 3: 设置新 canvas 的尺寸
-    croppedCanvas.width = cropOptions.width;
-    croppedCanvas.height = cropOptions.height;
-
-    // 步骤 4: 计算裁剪区域的绝对坐标（考虑页面滚动）
-    const scrollX = window.scrollX || window.pageXOffset;
-    const scrollY = window.scrollY || window.pageYOffset;
-    const sourceX = cropOptions.x + scrollX;
-    const sourceY = cropOptions.y + scrollY;
-
-    // 步骤 5: 使用 drawImage 将完整截图的指定区域绘制到新的小 canvas 上
-    ctx.drawImage(
-      fullPageCanvas, // 源 canvas (完整截图)
-      sourceX, // 源 canvas 的裁剪起始点 X
-      sourceY, // 源 canvas 的裁剪起始点 Y
-      cropOptions.width, // 裁剪区域的宽度
-      cropOptions.height, // 裁剪区域的高度
-      0, // 目标 canvas 的绘制起始点 X
-      0, // 目标 canvas 的绘制起始点 Y
-      cropOptions.width, // 绘制到目标 canvas 的宽度
-      cropOptions.height // 绘制到目标 canvas 的高度
-    );
-
-    // 步骤 6: 从裁剪后的 canvas 获取图像数据
+    // 步骤 2: 从处理完成的画布获取图像数据
     const imageData = croppedCanvas.toDataURL("image/png");
     log("✅ 截图已生成。正在整理当前GTO建议...");
 
@@ -1691,14 +1834,13 @@ async function captureAndProceed(cropOptions) {
     };
 
     showSnapshotModal();
-
   } catch (error) {
     log("❌ 截图失败: " + (error.message || error.type || "未知错误"));
     console.error("截图失败:", error);
     alert(
-        "截图失败，请检查控制台以获取详细错误信息。\n\n错误信息: " +
-          (error.message || error.type || "未知错误"),
-      );
+      "截图失败，请检查控制台以获取详细错误信息。\n\n错误信息: " +
+        (error.message || error.type || "未知错误"),
+    );
     window.pendingSnapshotData = null;
   }
 }
