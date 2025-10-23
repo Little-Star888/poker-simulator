@@ -1634,188 +1634,85 @@ async function preprocessImagesForCapture() {
  * 根据选定区域截图，并执行后续流程（获取GTO、显示确认框）
  */
 async function captureAndProceed(cropOptions) {
-  log("📸 正在根据选定区域生成快照...");
+  log("📸 正在根据选定区域生成快照 (最终修复方案)...");
   try {
-    // 预处理：处理页面中可能失败的图片元素
-    await preprocessImagesForCapture();
+    // 步骤 1: 使用 snapdom 截取整个文档，并加入严格的过滤器
+    const fullPageCanvas = await snapdom.toCanvas(document.documentElement, {
+        // 强化版 exclude 函数，用于彻底排除浏览器插件注入的干扰元素
+        exclude: (element) => {
+            try {
+                // 规则1：排除所有 src 或 href 指向浏览器插件的元素
+                const src = element.getAttribute('src');
+                const href = element.getAttribute('href');
+                if ((src && src.startsWith('chrome-extension://')) || (href && href.startsWith('chrome-extension://'))) {
+                    return true;
+                }
 
-    // 简化的html2canvas配置，提高兼容性
-    const canvas = await html2canvas(document.body, {
-      useCORS: true,
-      backgroundColor: null,
-      scale: 2,
-      allowTaint: true,
-      foreignObjectRendering: false, // 禁用foreignObject渲染，避免扩展程序干扰
-      imageTimeout: 20000, // 增加图片加载超时时间
-      removeContainer: false, // 保留容器以避免引用错误
-      // 处理可能导致问题的元素
-      ignoreElements: (element) => {
-        // 忽略加载失败的图片
-        if (element.tagName === "img" && element.naturalWidth === 0) {
-          console.warn("🖼️ 忽略加载失败的图片:", element.src);
-          return true;
-        }
+                // 规则2：排除已知由插件注入的元素 (例如 monica-id)
+                if (element.hasAttribute && element.hasAttribute('monica-id')) {
+                    return true;
+                }
 
-        // 不再完全忽略包含monica-id的元素，而是在onclone中清理属性
-        // 这样可以避免"Unable to find element in cloned iframe"错误
+                // 规则3：排除路径格式错误的SVG元素
+                if (element.tagName === "svg" || element.tagName === "path") {
+                    const dAttribute = element.getAttribute("d");
+                    if (dAttribute && dAttribute.includes("tc")) {
+                        return true;
+                    }
+                }
 
-        // 忽略包含扩展程序特征的外部SVG
-        if (
-          element.tagName === "img" &&
-          element.src &&
-          element.src.includes("data:image/svg+xml")
-        ) {
-          try {
-            const decodedSrc = decodeURIComponent(element.src);
-            if (
-              decodedSrc.includes("monica-id") ||
-              decodedSrc.includes("externalResourcesRequired")
-            ) {
-              console.warn(
-                "🔌 忽略扩展程序生成的SVG图片:",
-                element.src.substring(0, 100) + "...",
-              );
-              return true;
+                // 规则4：排除加载失败的图片 (仅当它确实有src时)
+                if (element.tagName === "IMG" && element.naturalWidth === 0 && element.src) {
+                  return true;
+                }
+
+            } catch (e) {
+                // 如果检查出错，安全起见，排除该元素
+                return true;
             }
-          } catch (e) {
-            console.warn("🔍 解码SVG URL失败:", e);
-          }
+
+            return false; // 保留其他所有元素
         }
-
-        // 更严格地过滤所有data URL的SVG，特别是包含扩展程序特征的
-        if (
-          element.tagName === "img" &&
-          element.src &&
-          element.src.startsWith("data:image/svg+xml")
-        ) {
-          try {
-            const decodedSrc = decodeURIComponent(element.src);
-            // 检查多种扩展程序特征
-            if (
-              decodedSrc.includes("foreignObject") ||
-              decodedSrc.includes("monica") ||
-              decodedSrc.includes("externalResourcesRequired") ||
-              decodedSrc.includes("-webkit-") ||
-              decodedSrc.length > 10000 // 过长的SVG可能包含复杂内容
-            ) {
-              console.warn(
-                "🔌 忽略复杂的data URL SVG:",
-                element.src.substring(0, 100) + "...",
-              );
-              return true;
-            }
-          } catch (e) {
-            // 对于无法解码的SVG，直接忽略
-            console.warn(
-              "🔌 无法解码的SVG，直接忽略:",
-              element.src.substring(0, 100) + "...",
-            );
-            return true;
-          }
-        }
-
-        // 过滤包含复杂样式的SVG元素
-        if (element.tagName === "svg") {
-          const svgContent = element.outerHTML;
-          if (
-            svgContent.includes("externalResourcesRequired") ||
-            svgContent.includes("foreignObject") ||
-            svgContent.includes("monica")
-          ) {
-            console.warn("🔌 忽略复杂SVG元素:", element);
-            return true;
-          }
-        }
-
-        // 忽略可能导致问题的SVG元素
-        if (element.tagName === "svg" || element.tagName === "path") {
-          const hasInvalidPath =
-            element.getAttribute &&
-            element.getAttribute("d") &&
-            element.getAttribute("d").includes("tc");
-          return hasInvalidPath;
-        }
-
-        return false;
-      },
-      // 处理克隆文档中的元素
-      onclone: (clonedDoc) => {
-        // 清理浏览器扩展程序属性而不是移除元素
-        const monicaElements = clonedDoc.querySelectorAll("[monica-id]");
-        monicaElements.forEach((element) => {
-          console.warn("🔌 清理Monica扩展属性:", element);
-          // 移除Monica相关属性，但保留元素本身
-          element.removeAttribute("monica-id");
-          element.removeAttribute("monica-version");
-          // 移除可能的相关样式
-          if (element.style && element.style.userSelect) {
-            element.style.userSelect = "auto";
-          }
-        });
-
-        // 处理包含扩展程序特征的data URL SVG图片
-        const dataSvgImages = clonedDoc.querySelectorAll(
-          'img[src^="data:image/svg+xml"]',
-        );
-        dataSvgImages.forEach((img) => {
-          try {
-            const decodedSrc = decodeURIComponent(img.src);
-            if (
-              decodedSrc.includes("monica-id") ||
-              decodedSrc.includes("foreignObject")
-            ) {
-              console.warn(
-                "🔌 移除克隆文档中的扩展SVG图片:",
-                img.src.substring(0, 100) + "...",
-              );
-              img.remove();
-            }
-          } catch (e) {
-            console.warn("🔍 处理克隆SVG时解码失败:", e);
-            // 对于解码失败的复杂SVG，直接移除
-            img.remove();
-          }
-        });
-
-        // 处理SVG元素
-        const svgs = clonedDoc.querySelectorAll("svg");
-        svgs.forEach((svg) => {
-          // 移除包含复杂foreignObject的SVG
-          if (
-            svg.querySelector('foreignObject[externalResourcesRequired="true"]')
-          ) {
-            console.warn("🔌 移除包含复杂foreignObject的SVG:", svg);
-            svg.remove();
-            return;
-          }
-
-          const paths = svg.querySelectorAll('path[d*="tc"]');
-          paths.forEach((path) => path.remove());
-        });
-
-        // 处理图片元素，添加错误处理
-        const images = clonedDoc.querySelectorAll("img");
-        images.forEach((img) => {
-          img.onerror = function () {
-            console.warn("🖼️ 克隆文档中图片加载失败:", this.src);
-            // 可以选择隐藏失败的图片或使用占位符
-            this.style.display = "none";
-          };
-        });
-      },
-      ...cropOptions,
     });
-    const imageData = canvas.toDataURL("image/png");
+
+    // 步骤 2: 创建一个新的、尺寸为裁剪区域的空白 canvas
+    const croppedCanvas = document.createElement('canvas');
+    const ctx = croppedCanvas.getContext('2d');
+
+    // 步骤 3: 设置新 canvas 的尺寸
+    croppedCanvas.width = cropOptions.width;
+    croppedCanvas.height = cropOptions.height;
+
+    // 步骤 4: 计算裁剪区域的绝对坐标（考虑页面滚动）
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+    const sourceX = cropOptions.x + scrollX;
+    const sourceY = cropOptions.y + scrollY;
+
+    // 步骤 5: 使用 drawImage 将完整截图的指定区域绘制到新的小 canvas 上
+    ctx.drawImage(
+      fullPageCanvas, // 源 canvas (完整截图)
+      sourceX, // 源 canvas 的裁剪起始点 X
+      sourceY, // 源 canvas 的裁剪起始点 Y
+      cropOptions.width, // 裁剪区域的宽度
+      cropOptions.height, // 裁剪区域的高度
+      0, // 目标 canvas 的绘制起始点 X
+      0, // 目标 canvas 的绘制起始点 Y
+      cropOptions.width, // 绘制到目标 canvas 的宽度
+      cropOptions.height // 绘制到目标 canvas 的高度
+    );
+
+    // 步骤 6: 从裁剪后的 canvas 获取图像数据
+    const imageData = croppedCanvas.toDataURL("image/png");
     log("✅ 截图已生成。正在整理当前GTO建议...");
 
-    const gameState = game.getGameState(); // 重新加入这行来定义gameState
+    const gameState = game.getGameState();
 
-    // 直接从缓存数组映射，该数组包含本局所有已生成的建议
     const allGtoSuggestions = currentSuggestionsCache.map((item) => {
       return {
         playerId: item.playerId,
         suggestion: item.suggestion,
-        request: item.request, // 包含请求DTO
+        request: item.request,
         notes: "",
       };
     });
@@ -1830,88 +1727,14 @@ async function captureAndProceed(cropOptions) {
     };
 
     showSnapshotModal();
+
   } catch (error) {
     log("❌ 截图失败: " + (error.message || error.type || "未知错误"));
     console.error("截图失败:", error);
-
-    // 详细的错误诊断
-    console.error("🔍 错误详情分析:");
-    console.error("- 错误类型:", error.constructor.name);
-    console.error("- 错误消息:", error.message || "无消息");
-    console.error("- 错误类型属性:", error.type);
-    console.error("- 错误目标:", error.target);
-    console.error("- 错误堆栈:", error.stack || "无堆栈");
-
-    // Event类型错误的特殊处理（通常是图片加载错误）
-    if (
-      error instanceof Event &&
-      error.target &&
-      error.target.tagName === "img"
-    ) {
-      console.error("🖼️ 检测到图片加载错误:", error.target.src);
-
-      // 检查是否是扩展程序生成的SVG错误
-      if (
-        error.target.src &&
-        error.target.src.startsWith("data:image/svg+xml")
-      ) {
-        try {
-          const decodedSrc = decodeURIComponent(error.target.src);
-          if (
-            decodedSrc.includes("monica-id") ||
-            decodedSrc.includes("foreignObject")
-          ) {
-            console.error("🔌 检测到Monica扩展程序SVG错误");
-            alert(
-              "检测到浏览器扩展程序（Monica）生成的复杂SVG元素导致截图失败。\n请尝试：\n1. 暂时禁用Monica扩展程序\n2. 刷新页面重试\n3. 使用无痕模式截图",
-            );
-            return;
-          }
-        } catch (e) {
-          console.warn("解码SVG错误URL失败:", e);
-        }
-      }
-
-      alert(
-        "检测到图片加载错误，这通常是由于网络问题或图片链接失效导致的。\n请尝试：\n1. 刷新页面重试\n2. 检查网络连接\n3. 稍后再试",
-      );
-      return;
-    }
-
-    // SVG相关错误的特殊处理
-    if (error.message && error.message.includes("Expected number")) {
-      console.error("🎨 检测到SVG渲染错误，尝试备用方案...");
-      alert(
-        "检测到SVG渲染错误，这通常是由页面中的图标或图形元素引起的。\n请尝试刷新页面或移除可能包含SVG元素的内容后再截图。",
-      );
-      return;
-    }
-
-    // 网络相关错误处理
-    if (
-      error.message &&
-      (error.message.includes("network") || error.message.includes("fetch"))
-    ) {
-      console.error("🌐 检测到网络相关错误");
-      alert("检测到网络问题，请检查网络连接后重试。");
-      return;
-    }
-
-    // Mac特定错误处理
-    if (navigator.platform.indexOf("Mac") !== -1) {
-      console.error("🖥️ Mac截图失败详情:", error);
-      alert(
-        "Mac上截图功能遇到问题，请尝试：\n1. 刷新页面重试\n2. 检查网络连接\n3. 使用Chrome或Firefox浏览器\n4. 暂时禁用浏览器扩展程序\n5. 确保页面完全加载后再截图\n\n详细错误: " +
+    alert(
+        "截图失败，请检查控制台以获取详细错误信息。\n\n错误信息: " +
           (error.message || error.type || "未知错误"),
       );
-    } else {
-      // 通用错误提示
-      alert(
-        "截图失败，请尝试刷新页面重试。\n\n错误信息: " +
-          (error.message || error.type || "未知错误"),
-      );
-    }
-
     window.pendingSnapshotData = null;
   }
 }
