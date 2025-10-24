@@ -1306,6 +1306,7 @@ async function processNextAction() {
           playerId: currentPlayerId,
           suggestion: suggestion,
           request: request,
+          phase: round, // 添加阶段信息，与Vue版本保持一致
         });
         renderSuggestion(suggestion, currentPlayerId, round);
       } catch (apiError) {
@@ -1846,6 +1847,7 @@ async function captureAndProceed(cropOptions) {
         playerId: item.playerId,
         suggestion: item.suggestion,
         request: item.request,
+        phase: item.phase, // 保留阶段信息，与Vue版本保持一致
         notes: "",
       };
     });
@@ -2428,39 +2430,134 @@ async function showViewSnapshotModal(snapshotId) {
         filterContainer.appendChild(label);
       });
 
+      // 按阶段分组建议
+      const phaseSuggestions = new Map();
+
+      // 遍历建议数组，按阶段组织
       snapshot.allGtoSuggestions.forEach((suggestionData, index) => {
         const { playerId, suggestion, notes } = suggestionData;
-        const itemWrapper = document.createElement("div");
-        itemWrapper.className = "snapshot-suggestion-item";
-        itemWrapper.dataset.playerId = playerId;
 
-        const suggestionContent = document.createElement("div");
-        suggestionContent.className = "snapshot-suggestion-content";
-        const phaseStr =
-          suggestion?.localResult?.strategyPhase?.toLowerCase() ||
-          suggestion?.phase?.toLowerCase() ||
-          "unknown";
-        const phase = phaseStr.replace("_", "");
-        const suggestionElement = buildSuggestionElement(
-          suggestion,
+        // 获取阶段信息，优先使用存储的phase信息
+        let phase = "unknown";
+        if (suggestionData.phase) {
+          phase = suggestionData.phase; // 优先使用存储的phase信息
+        } else {
+          const phaseStr =
+            suggestion?.localResult?.strategyPhase?.toLowerCase() ||
+            suggestion?.phase?.toLowerCase() ||
+            suggestion?.response?.gameState?.currentRound?.toLowerCase() ||
+            "unknown";
+          phase = phaseStr.replace("_", "");
+        }
+
+        if (!phaseSuggestions.has(phase)) {
+          phaseSuggestions.set(phase, []);
+        }
+
+        phaseSuggestions.get(phase).push({
           playerId,
-          phase,
-        );
-        suggestionContent.appendChild(suggestionElement);
-
-        const notesContainer = document.createElement("div");
-        notesContainer.className = "snapshot-suggestion-notes";
-        const notesTextarea = document.createElement("textarea");
-        notesTextarea.placeholder = `关于 ${playerId} 建议的批注...`;
-        notesTextarea.value = notes || "";
-        notesTextarea.dataset.playerId = playerId;
-        notesTextarea.dataset.suggestionIndex = index;
-        notesContainer.appendChild(notesTextarea);
-
-        itemWrapper.appendChild(suggestionContent);
-        itemWrapper.appendChild(notesContainer);
-        suggestionsListEl.appendChild(itemWrapper);
+          suggestion,
+          notes,
+          index,
+        });
       });
+
+      // 按阶段顺序创建容器
+      const phaseOrder = ["preflop", "flop", "turn", "river"];
+
+      phaseOrder.forEach((phase) => {
+        if (phaseSuggestions.has(phase)) {
+          const suggestions = phaseSuggestions.get(phase);
+
+          // 创建阶段容器
+          const phaseContainer = document.createElement("div");
+          phaseContainer.className = "snapshot-phase-container";
+          phaseContainer.dataset.phase = phase;
+
+          // 添加阶段标题
+          const phaseTitle = document.createElement("h3");
+          phaseTitle.className = "snapshot-phase-title";
+          phaseTitle.textContent = phase.toUpperCase();
+          phaseContainer.appendChild(phaseTitle);
+
+          // 添加该阶段的所有建议
+          suggestions.forEach((suggestionData) => {
+            const { playerId, suggestion, notes, index } = suggestionData;
+            const itemWrapper = document.createElement("div");
+            itemWrapper.className = "snapshot-suggestion-item";
+            itemWrapper.dataset.playerId = playerId;
+
+            const suggestionContent = document.createElement("div");
+            suggestionContent.className = "snapshot-suggestion-content";
+            const suggestionElement = buildSuggestionElement(
+              suggestion,
+              playerId,
+              phase,
+            );
+            suggestionContent.appendChild(suggestionElement);
+
+            const notesContainer = document.createElement("div");
+            notesContainer.className = "snapshot-suggestion-notes";
+            const notesTextarea = document.createElement("textarea");
+            notesTextarea.placeholder = `关于 ${playerId} 建议的批注...`;
+            notesTextarea.value = notes || "";
+            notesTextarea.dataset.playerId = playerId;
+            notesTextarea.dataset.suggestionIndex = index;
+            notesContainer.appendChild(notesTextarea);
+
+            itemWrapper.appendChild(suggestionContent);
+            itemWrapper.appendChild(notesContainer);
+            phaseContainer.appendChild(itemWrapper);
+          });
+
+          suggestionsListEl.appendChild(phaseContainer);
+        }
+      });
+
+      // 处理其他未知阶段的建议
+      for (const [phase, suggestions] of phaseSuggestions) {
+        if (!phaseOrder.includes(phase)) {
+          const phaseContainer = document.createElement("div");
+          phaseContainer.className = "snapshot-phase-container";
+          phaseContainer.dataset.phase = phase;
+
+          const phaseTitle = document.createElement("h3");
+          phaseTitle.className = "snapshot-phase-title";
+          phaseTitle.textContent = phase.toUpperCase();
+          phaseContainer.appendChild(phaseTitle);
+
+          suggestions.forEach((suggestionData) => {
+            const { playerId, suggestion, notes, index } = suggestionData;
+            const itemWrapper = document.createElement("div");
+            itemWrapper.className = "snapshot-suggestion-item";
+            itemWrapper.dataset.playerId = playerId;
+
+            const suggestionContent = document.createElement("div");
+            suggestionContent.className = "snapshot-suggestion-content";
+            const suggestionElement = buildSuggestionElement(
+              suggestion,
+              playerId,
+              phase,
+            );
+            suggestionContent.appendChild(suggestionElement);
+
+            const notesContainer = document.createElement("div");
+            notesContainer.className = "snapshot-suggestion-notes";
+            const notesTextarea = document.createElement("textarea");
+            notesTextarea.placeholder = `关于 ${playerId} 建议的批注...`;
+            notesTextarea.value = notes || "";
+            notesTextarea.dataset.playerId = playerId;
+            notesTextarea.dataset.suggestionIndex = index;
+            notesContainer.appendChild(notesTextarea);
+
+            itemWrapper.appendChild(suggestionContent);
+            itemWrapper.appendChild(notesContainer);
+            phaseContainer.appendChild(itemWrapper);
+          });
+
+          suggestionsListEl.appendChild(phaseContainer);
+        }
+      }
 
       const updateVisibility = () => {
         suggestionsListEl
@@ -3345,6 +3442,30 @@ function injectStyles() {
         }
         .hidden-by-js {
             display: none !important;
+        }
+
+        /* 快照建议阶段分组样式 */
+        .snapshot-phase-container {
+            margin-bottom: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .snapshot-phase-title {
+            color: #fd971f !important;
+            border-bottom: 1px solid #fd971f !important;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            margin-top: 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            background: #f9f9f9;
+        }
+
+        .snapshot-suggestion-item {
+            margin-left: 10px;
+            margin-bottom: 10px;
         }
     `;
   document.head.appendChild(style);
