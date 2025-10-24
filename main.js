@@ -1315,7 +1315,7 @@ async function processNextAction() {
           display.innerHTML = "";
         }
         display.innerHTML += `<div style="color: #ff6b6b;">获取 ${currentPlayerId} 的建议失败: ${apiError.message}</div>`;
-        display.scrollTop = display.scrollHeight;
+        display.scrollTop = 0; // 滚动到顶部显示最新内容
         log(`获取GTO建议时出错: ${apiError.message}`);
       }
     }
@@ -2463,7 +2463,7 @@ async function showViewSnapshotModal(snapshotId) {
       });
 
       // 按阶段顺序创建容器
-      const phaseOrder = ["preflop", "flop", "turn", "river"];
+      const phaseOrder = ["river", "turn", "flop", "preflop"]; // 最新阶段在前
 
       phaseOrder.forEach((phase) => {
         if (phaseSuggestions.has(phase)) {
@@ -2830,11 +2830,12 @@ function renderSuggestion(suggestion, playerId, phase) {
     phaseTitle.style.paddingBottom = "5px";
     phaseTitle.style.marginBottom = "10px";
     phaseContainer.appendChild(phaseTitle);
-    display.appendChild(phaseContainer);
+    // 将新阶段容器插入到最前面，让最新阶段显示在顶部
+    display.insertBefore(phaseContainer, display.firstChild);
   }
   if (!suggestion) {
     phaseContainer.innerHTML += `<div style="color: #ff6b6b; margin-left: 10px;">为 ${playerId} 获取建议失败或建议为空。</div>`;
-    display.scrollTop = display.scrollHeight;
+    display.scrollTop = 0; // 滚动到顶部显示最新内容
     return;
   }
   const suggestionWrapper = document.createElement("div");
@@ -2960,7 +2961,16 @@ function renderSuggestion(suggestion, playerId, phase) {
     suggestionWrapper.appendChild(pre);
   }
   phaseContainer.appendChild(suggestionWrapper);
-  display.scrollTop = display.scrollHeight;
+
+  // 将新建议插入到阶段容器的最前面，让最新建议显示在顶部
+  const firstSuggestion = phaseContainer.querySelector(
+    ".gto-suggestion-for-player",
+  );
+  if (firstSuggestion && firstSuggestion !== suggestionWrapper) {
+    phaseContainer.insertBefore(suggestionWrapper, firstSuggestion);
+  }
+
+  display.scrollTop = 0; // 滚动到顶部显示最新内容
 }
 
 /**
