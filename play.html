@@ -379,6 +379,23 @@
                 resize: none;
                 min-height: 150px;
             }
+            /* 备用控制台显示样式 - 用于截图 */
+            .console-log-fallback {
+                flex: 1;
+                background: #1e1e1e;
+                color: #0f0;
+                padding: 12px;
+                font-family: "Courier New", monospace;
+                font-size: 13px;
+                border: 1px solid #333;
+                border-radius: 4px;
+                min-height: 150px;
+                width: 100%;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                line-height: 1.4;
+            }
             #action-sheet-container {
                 overflow-x: auto;
             }
@@ -2903,6 +2920,12 @@
                     >
                         <h3>📜 Console 日志</h3>
                         <textarea id="console-log" readonly></textarea>
+                        <!-- 备用 div 用于截图时显示控制台内容 -->
+                        <div
+                            id="console-log-fallback"
+                            class="console-log-fallback"
+                            style="display: none"
+                        ></div>
                     </div>
                 </div>
             </main>

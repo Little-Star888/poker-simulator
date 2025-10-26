@@ -1753,6 +1753,28 @@ function cleanupClone(tempContainer) {
  */
 async function smartCloneCapture(cropOptions) {
   const configDrawer = document.getElementById("config-drawer");
+
+  // 统一配置：强制使用 DPR=1 确保坐标一致性
+  const snapdomOptions = {
+    dpr: 1, // 强制使用设备像素比为1，与CSS像素坐标保持一致
+    scale: 1, // 强制缩放为1
+    backgroundColor: null, // 保持透明背景
+    fast: true
+  };
+
+  // 添加调试信息
+  console.log("[DEBUG] cropOptions:", cropOptions);
+  console.log("[DEBUG] devicePixelRatio:", window.devicePixelRatio);
+
+  if (!configDrawer) {
+    // 如果配置抽屉不存在，使用原来的方法
+    log("📸 未找到配置区域，使用标准截图方法...");
+    const result = await snapdom(document.documentElement, snapdomOptions);
+    const fullPageCanvas = await result.toCanvas();
+    console.log("[DEBUG] fullPageCanvas size:", fullPageCanvas.width, "x", fullPageCanvas.height);
+    return cropCanvas(fullPageCanvas, cropOptions);
+  }
+
   const configRect = configDrawer.getBoundingClientRect();
 
   // 判断截图区域是否包含配置区域
@@ -1765,21 +1787,23 @@ async function smartCloneCapture(cropOptions) {
   if (!includesConfigArea) {
     // 如果截图区域不包含配置区域，使用原来的方法
     log("📸 截图区域不包含配置区域，使用标准截图方法...");
-    const fullPageCanvas = await snapdom.toCanvas(document.documentElement);
+    const result = await snapdom(document.documentElement, snapdomOptions);
+    const fullPageCanvas = await result.toCanvas();
     return cropCanvas(fullPageCanvas, cropOptions);
   }
 
   log("📸 截图区域包含配置区域，使用DOM克隆方法...");
 
   // 创建配置区域的克隆
-  const { clone, tempContainer } = await createVisibleClone(configDrawer);
+  const { tempContainer } = await createVisibleClone(configDrawer);
 
   try {
     // 等待克隆完全渲染
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // 截图整个页面（现在配置区域已经是可见的克隆版本）
-    const fullPageCanvas = await snapdom.toCanvas(document.documentElement);
+    const result = await snapdom(document.documentElement, snapdomOptions);
+    const fullPageCanvas = await result.toCanvas();
 
     // 裁剪到指定区域
     const resultCanvas = cropCanvas(fullPageCanvas, cropOptions);
@@ -1798,6 +1822,10 @@ async function smartCloneCapture(cropOptions) {
  * @returns {HTMLCanvasElement} 裁剪后的画布
  */
 function cropCanvas(sourceCanvas, cropOptions) {
+  console.log("[DEBUG] cropCanvas called with:", cropOptions);
+  console.log("[DEBUG] sourceCanvas size:", sourceCanvas.width, "x", sourceCanvas.height);
+  console.log("[DEBUG] scroll position:", window.scrollX || window.pageXOffset, window.scrollY || window.pageYOffset);
+
   const croppedCanvas = document.createElement("canvas");
   const ctx = croppedCanvas.getContext("2d");
 
@@ -1805,11 +1833,15 @@ function cropCanvas(sourceCanvas, cropOptions) {
   croppedCanvas.width = cropOptions.width;
   croppedCanvas.height = cropOptions.height;
 
+  console.log("[DEBUG] croppedCanvas size:", croppedCanvas.width, "x", croppedCanvas.height);
+
   // 计算裁剪区域的绝对坐标（考虑页面滚动）
   const scrollX = window.scrollX || window.pageXOffset;
   const scrollY = window.scrollY || window.pageYOffset;
   const sourceX = cropOptions.x + scrollX;
   const sourceY = cropOptions.y + scrollY;
+
+  console.log("[DEBUG] calculated sourceX/Y:", sourceX, sourceY);
 
   // 使用 drawImage 将完整截图的指定区域绘制到新的小 canvas 上
   ctx.drawImage(
@@ -1821,7 +1853,7 @@ function cropCanvas(sourceCanvas, cropOptions) {
     0, // 目标 canvas 的绘制起始点 X
     0, // 目标 canvas 的绘制起始点 Y
     cropOptions.width, // 绘制到目标 canvas 的宽度
-    cropOptions.height, // 绘制到目标 canvas 的高度
+    cropOptions.height // 绘制到目标 canvas 的高度
   );
 
   return croppedCanvas;
@@ -1832,11 +1864,28 @@ function cropCanvas(sourceCanvas, cropOptions) {
  */
 async function captureAndProceed(cropOptions) {
   log("📸 正在根据选定区域生成快照 (使用DOM克隆方案)...");
+
+  // 在截图前：隐藏 textarea，显示备用 div
+  const consoleTextarea = document.getElementById("console-log");
+  const consoleFallback = document.getElementById("console-log-fallback");
+
+  if (consoleTextarea && consoleFallback) {
+    consoleFallback.innerHTML = consoleTextarea.value.replace(/\n/g, '<br>'); // Copy content
+    consoleTextarea.style.display = "none";
+    consoleFallback.style.display = "block";
+  }
+
+  // 给控制台一些时间完成渲染
+  await new Promise(resolve => setTimeout(resolve, 200));
+
   try {
-    // 步骤 1: 使用智能克隆截图方法
+    // 步骤 1: 预处理图片
+    await preprocessImagesForCapture();
+
+    // 步骤 2: 使用智能克隆截图方法
     const croppedCanvas = await smartCloneCapture(cropOptions);
 
-    // 步骤 2: 从处理完成的画布获取图像数据
+    // 步骤 3: 从处理完成的画布获取图像数据
     const imageData = croppedCanvas.toDataURL("image/png");
     log("✅ 截图已生成。正在整理当前GTO建议...");
 
@@ -1873,6 +1922,12 @@ async function captureAndProceed(cropOptions) {
         (error.message || error.type || "未知错误"),
     );
     window.pendingSnapshotData = null;
+  } finally {
+    // 恢复控制台显示：显示 textarea，隐藏备用 div
+    if (consoleTextarea && consoleFallback) {
+      consoleTextarea.style.display = "block";
+      consoleFallback.style.display = "none";
+    }
   }
 }
 
