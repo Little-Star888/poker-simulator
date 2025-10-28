@@ -1285,6 +1285,7 @@ async function processNextAction() {
           gameState,
           currentPlayerId,
           actionRecords,
+          handActionHistory
         );
         console.log("[DEBUG] Raw result from getSuggestion:", result);
 

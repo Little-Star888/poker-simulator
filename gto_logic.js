@@ -92,3 +92,38 @@ export function calculateFlopActionSituation(gameState, currentPlayerId, actionH
     // 如果既不是第一个行动，也没面临下注，那说明是有人Check之后轮到自己
     return 'AFTER_CHECK';
 }
+
+/**
+ * 分析翻前的动态，找出是否存在跛入玩家（limpers）和第一个加注者（open-raiser）
+ * @param {Array} handActionHistory - 整个手牌的有序行动历史
+ * @param {Array} players - 包含玩家角色信息的玩家列表
+ * @returns {{hasLimpers: boolean, openRaiserPosition: string|null}}
+ */
+export function calculatePreflopDynamics(handActionHistory, players) {
+    let hasLimpers = false;
+    let openRaiserPosition = null;
+    let openRaiserFound = false;
+
+    const playerRoles = {};
+    players.forEach(p => {
+        playerRoles[p.id] = p.role;
+    });
+
+    // 只分析翻前动作
+    const preflopActions = handActionHistory.filter(event => event.round === 'preflop' && event.action && event.playerId);
+
+    for (const event of preflopActions) {
+        if (openRaiserFound) {
+            break; // We only care about events before the first raise
+        }
+
+        if (event.action === 'RAISE') {
+            openRaiserPosition = playerRoles[event.playerId] || null;
+            openRaiserFound = true;
+        } else if (event.action === 'CALL') {
+            hasLimpers = true;
+        }
+    }
+
+    return { hasLimpers, openRaiserPosition };
+}

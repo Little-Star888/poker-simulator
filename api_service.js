@@ -1,5 +1,5 @@
 import { Settings } from './setting.js';
-import { calculateHasPosition, calculateFlopActionSituation } from './gto_logic.js';
+import { calculateHasPosition, calculateFlopActionSituation, calculatePreflopDynamics } from './gto_logic.js';
 
 /**
  * 调用后端GTO建议API的服务模块
@@ -78,9 +78,10 @@ function calculatePotType(preflopRaiseCount) {
  * @param {object} gameState 
  * @param {string} currentPlayerId 
  * @param {object} actionHistory 
+ * @param {Array} handActionHistory
  * @returns {Promise<object>} - API返回的建议
  */
-export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
+export async function getSuggestion(gameState, currentPlayerId, actionHistory, handActionHistory) {
     console.log(`[DEBUG] getSuggestion called for ${currentPlayerId}. Received preflopRaiseCount: ${gameState.preflopRaiseCount}`);
     const player = gameState.players.find(p => p.id === currentPlayerId);
     if (!player) throw new Error('Player not found for suggestion');
@@ -90,6 +91,8 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
     const flopSitInt = flopSitString ? FLOP_ACTION_SITUATION_MAP[flopSitString] : 0;
     // 动态计算potType，而不是从Settings中写死
     const calculatedPotType = calculatePotType(gameState.preflopRaiseCount);
+
+    const { hasLimpers, openRaiserPosition } = calculatePreflopDynamics(handActionHistory, gameState.players);
 
     const requestDto = {
         myCards: player.holeCards.map(formatCardForAPI),
@@ -105,6 +108,8 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory) {
         flopActionSituation: flopSitInt, // 使用处理过的整数值
         phase: PHASE_MAP[gameState.currentRound.toUpperCase()],
         bigBlind: Settings.bb,
+        hasLimpers: hasLimpers,
+        openRaiserPosition: openRaiserPosition ? ROLE_MAP[openRaiserPosition] : null,
     };
 
     // 构建URL查询参数
