@@ -31,6 +31,7 @@ let actionRecords = {
   P6: { preflop: [], flop: [], turn: [], river: [] },
   P7: { preflop: [], flop: [], turn: [], river: [] },
   P8: { preflop: [], flop: [], turn: [], river: [] },
+  P9: { preflop: [], flop: [], turn: [], river: [] },
 };
 
 // 预设功能相关状态
@@ -1090,7 +1091,7 @@ function updatePlayerLayout() {
 
 function updatePlayerDisplay() {
   const playerCount = Settings.playerCount;
-  for (let i = 1; i <= 8; i++) {
+  for (let i = 1; i <= 9; i++) {
     const playerElement = document.querySelector(
       `.player[data-player="P${i}"]`,
     );
@@ -1163,9 +1164,11 @@ function getRoleOrder(playerCount) {
     case 6:
       return ["SB", "BB", "UTG", "HJ", "CO", "BTN"];
     case 7:
-      return ["SB", "BB", "UTG", "MP1", "HJ", "CO", "BTN"];
+      return ["SB", "BB", "UTG", "LJ", "HJ", "CO", "BTN"]; // Replaced MP1 with LJ
     case 8:
-      return ["SB", "BB", "UTG", "UTG+1", "MP1", "HJ", "CO", "BTN"];
+      return ["SB", "BB", "UTG", "UTG+1", "LJ", "HJ", "CO", "BTN"]; // Replaced MP1 with LJ
+    case 9: // New 9-player case
+      return ["SB", "BB", "UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO", "BTN"];
     default:
       const baseRoles = [
         "SB",
@@ -1173,8 +1176,7 @@ function getRoleOrder(playerCount) {
         "UTG",
         "UTG+1",
         "UTG+2",
-        "MP1",
-        "MP2",
+        "LJ", // Replaced MP1
         "HJ",
         "CO",
       ];
@@ -1222,6 +1224,24 @@ function stopGame() {
   hideAllActionPopups();
   game.reset(Settings);
   updateUI();
+
+  // 手动清除所有玩家的UI信息
+  for (let i = 1; i <= 9; i++) {
+    const playerElement = document.querySelector(`.player[data-player="P${i}"]`);
+    if (playerElement) {
+      const roleElement = playerElement.querySelector('.player-role');
+      if (roleElement) roleElement.textContent = '';
+
+      const stackElement = playerElement.querySelector('.stack');
+      if (stackElement) stackElement.textContent = '';
+
+      const holeCards = playerElement.querySelectorAll('.hole-card');
+      holeCards.forEach(card => {
+        card.style.backgroundImage = '';
+      });
+    }
+  }
+
   updatePlayerDisplay();
   renderActionSheet();
   document.getElementById("suggestion-display").innerHTML = "等待玩家行动...";

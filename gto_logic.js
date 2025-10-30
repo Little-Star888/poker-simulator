@@ -10,11 +10,10 @@ const ROLE_ORDER_VALUE = {
     'UTG': 2,
     'UTG+1': 3,
     'UTG+2': 4,
-    'MP1': 5,
-    'MP2': 6,
-    'HJ': 7, // Hijack
-    'CO': 8, // Cut-off
-    'BTN': 9, // Button (Dealer)
+    'LJ': 5, // Lowjack
+    'HJ': 6, // Hijack
+    'CO': 7, // Cut-off
+    'BTN': 8, // Button (Dealer)
 };
 
 /**

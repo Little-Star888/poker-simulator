@@ -105,16 +105,17 @@ export class PokerGame {
    */
   _getRoleOrder(playerCount) {
     // 顺序：SB, BB, UTG, UTG+1, ..., CO, BTN(Dealer)
-    const baseRoles = ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'MP1', 'MP2', 'HJ', 'CO', 'BTN'];
+    const baseRoles = ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'LJ', 'HJ', 'CO', 'BTN'];
     switch (playerCount) {
       case 2: return ['SB', 'BTN'];
       case 3: return ['SB', 'BB', 'BTN'];
       case 4: return ['SB', 'BB', 'CO', 'BTN'];
       case 5: return ['SB', 'BB', 'UTG', 'CO', 'BTN'];
       case 6: return ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
-      case 7: return ['SB', 'BB', 'UTG', 'MP1', 'HJ', 'CO', 'BTN'];
-      case 8: return ['SB', 'BB', 'UTG', 'UTG+1', 'MP1', 'HJ', 'CO', 'BTN'];
-      default: return baseRoles.slice(0, playerCount - 1).concat('BTN');
+      case 7: return ['SB', 'BB', 'UTG', 'LJ', 'HJ', 'CO', 'BTN']; // Replaced MP1 with LJ
+      case 8: return ['SB', 'BB', 'UTG', 'UTG+1', 'LJ', 'HJ', 'CO', 'BTN']; // Replaced MP1 with LJ
+      case 9: return ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'LJ', 'HJ', 'CO', 'BTN']; // New 9-player case
+      default: return baseRoles.slice(0, playerCount - 1).concat('BTN'); // Default should handle 9 players now
     }
   }
 

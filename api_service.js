@@ -8,7 +8,7 @@ import { calculateHasPosition, calculateFlopActionSituation, calculatePreflopDyn
 // --- Mappings to match backend enum integer values ---
 const ROLE_MAP = {
     'BTN': 0, 'SB': 1, 'BB': 2, 'UTG': 3, 'UTG+1': 4, 
-    'UTG+2': 5, 'MP1': 6, 'MP2': 7, 'HJ': 8, 'CO': 9,
+    'UTG+2': 5, 'LJ': 6, 'HJ': 7, 'CO': 8,
 };
 
 const POT_TYPE_MAP = {
