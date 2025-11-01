@@ -1360,7 +1360,11 @@ async function processNextAction() {
     } else {
       game.moveToNextPlayer();
       updateUI();
-      setTimeout(processNextAction, Settings.autoDelay);
+      if (Settings.mode === "auto") {
+        setTimeout(processNextAction, Settings.autoDelay);
+      } else {
+        processNextAction();
+      }
     }
   } catch (e) {
     log(`❌ ${currentPlayerId} 行动出错: ${e.message}`);
@@ -1397,7 +1401,11 @@ function advanceToNextStage() {
   game.startNewRound(nextRound);
   log(`➡️ 进入 ${nextRound} 阶段 | 公共牌: ${game.communityCards.join(" ")}`);
   updateUI();
-  setTimeout(processNextAction, Settings.autoDelay);
+  if (Settings.mode === "auto") {
+    setTimeout(processNextAction, Settings.autoDelay);
+  } else {
+    processNextAction();
+  }
 }
 
 function getNextRound(currentRound) {
