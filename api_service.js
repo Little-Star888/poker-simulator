@@ -12,10 +12,11 @@ const ROLE_MAP = {
 };
 
 const POT_TYPE_MAP = {
-    'single_raised': 0,
-    '3bet': 2,
-    '4bet': 3,
-    'unrestricted': 4, // Maps to UNOPENED_POT
+    'unopened': 0,      // UNOPENED_POT - 翻前无人入池
+    'limped': 1,        // LIMPED_POT - 有人limp但无人加注
+    'single_raised': 2, // OPEN_RAISED_POT - 有首次加注
+    '3bet': 3,          // THREE_BET_POT - 有3bet
+    '4bet': 4           // FOUR_BET_POT - 有4bet
 };
 
 const PHASE_MAP = {
@@ -56,20 +57,21 @@ function formatCardForAPI(cardString) {
 
 
 /**
- * 根据翻前加注次数，动态计算后端API所需的potType
+ * 根据翻前加注次数和是否有limper，动态计算后端API所需的potType
  * @param {number} preflopRaiseCount - 翻前加注次数
+ * @param {boolean} hasLimpers - 是否有limper玩家
  * @returns {number} - 对应后端的potType枚举值
  */
-function calculatePotType(preflopRaiseCount) {
+function calculatePotType(preflopRaiseCount, hasLimpers = false) {
     switch (preflopRaiseCount) {
         case 0:
-            return 4; // UNOPENED_POT (前端叫 unrestricted)
+            return hasLimpers ? 1 : 0; // 有limper返回LIMPED_POT(1)，无limper返回UNOPENED_POT(0)
         case 1:
-            return 0; // single_raised
+            return 2; // OPEN_RAISED_POT
         case 2:
-            return 2; // 3bet
+            return 3; // THREE_BET_POT
         default:
-            return 3; // 4bet and higher
+            return preflopRaiseCount >= 3 ? 4 : 0; // 4bet及以上返回FOUR_BET_POT(4)
     }
 }
 
@@ -89,27 +91,40 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory, h
     // 当不处于翻牌圈时，计算结果为null，但API需要一个值，我们提供一个默认值0
     const flopSitString = calculateFlopActionSituation(gameState, currentPlayerId, actionHistory);
     const flopSitInt = flopSitString ? FLOP_ACTION_SITUATION_MAP[flopSitString] : 0;
-    // 动态计算potType，而不是从Settings中写死
-    const calculatedPotType = calculatePotType(gameState.preflopRaiseCount);
 
-    const { hasLimpers, openRaiserPosition } = calculatePreflopDynamics(handActionHistory, gameState.players);
+    // 计算翻前动态信息，包括limpers和加注者位置信息
+    const preflopDynamics = calculatePreflopDynamics(handActionHistory, gameState.players, currentPlayerId);
+
+    // 使用计算出的hasLimpers信息来动态计算potType
+    const calculatedPotType = calculatePotType(gameState.preflopRaiseCount, preflopDynamics.hasLimpers);
 
     const requestDto = {
+        phase: PHASE_MAP[gameState.currentRound.toUpperCase()],
+        myRole: ROLE_MAP[player.role],
         myCards: player.holeCards.map(formatCardForAPI),
         boardCards: gameState.communityCards.map(formatCardForAPI),
-        myRole: ROLE_MAP[player.role],
-        myStack: player.stack,
+        opponents: gameState.players.filter(p => !p.isFolded && p.id !== currentPlayerId).length,
+        bigBlind: Settings.bb,
+        hasPosition: calculateHasPosition(gameState, currentPlayerId),
         potChips: gameState.pot,
         toCall: Math.max(0, gameState.highestBet - player.bet),
-        opponents: gameState.players.filter(p => !p.isFolded && p.id !== currentPlayerId).length,
-        preFlopRaisers: gameState.preflopRaiseCount, // 补充参数
-        potType: calculatedPotType, // 使用动态计算的值
-        hasPosition: calculateHasPosition(gameState, currentPlayerId),
+        myStack: player.stack,
+        potType: calculatedPotType, // 使用动态计算的值（考虑hasLimpers）
+        openRaiserPosition: preflopDynamics.openRaiserPosition ? ROLE_MAP[preflopDynamics.openRaiserPosition] : null,
+        threeBetPosition: preflopDynamics.threeBetPosition ? ROLE_MAP[preflopDynamics.threeBetPosition] : null,
+        fourBetPosition: preflopDynamics.fourBetPosition ? ROLE_MAP[preflopDynamics.fourBetPosition] : null,
+        hasLimpers: preflopDynamics.hasLimpers,
         flopActionSituation: flopSitInt, // 使用处理过的整数值
-        phase: PHASE_MAP[gameState.currentRound.toUpperCase()],
-        bigBlind: Settings.bb,
-        hasLimpers: hasLimpers,
-        openRaiserPosition: openRaiserPosition ? ROLE_MAP[openRaiserPosition] : null,
+        preFlopRaisers: gameState.preflopRaiseCount, // 补充参数
+        // 新增字段：翻前进攻者相关信息
+        wasPreFlopAggressor: preflopDynamics.wasPreFlopAggressor,
+        openRaiserRaiseAmount: preflopDynamics.openRaiserRaiseAmount,
+        threeBetAmount: preflopDynamics.threeBetAmount,
+        fourBetAmount: preflopDynamics.fourBetAmount,
+        // 最后一个进攻者信息
+        lastAggressorPosition: preflopDynamics.lastAggressorPosition ? ROLE_MAP[preflopDynamics.lastAggressorPosition] : null,
+        lastAggressorPositionRaiseAmount: preflopDynamics.lastAggressorPositionRaiseAmount,
+        lastAggressorPositionStack: preflopDynamics.lastAggressorPositionStack,
     };
 
     // 构建URL查询参数

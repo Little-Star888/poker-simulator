@@ -93,36 +93,110 @@ export function calculateFlopActionSituation(gameState, currentPlayerId, actionH
 }
 
 /**
- * 分析翻前的动态，找出是否存在跛入玩家（limpers）和第一个加注者（open-raiser）
+ * 分析翻前的动态，找出是否存在跛入玩家（limpers）和加注者信息
+ * 参照Java HandContext.java中的updateLimpersAndRaiserIncremental方法逻辑
  * @param {Array} handActionHistory - 整个手牌的有序行动历史
  * @param {Array} players - 包含玩家角色信息的玩家列表
- * @returns {{hasLimpers: boolean, openRaiserPosition: string|null}}
+ * @param {string} currentPlayerId - 当前玩家的ID，用于判断是否是翻前进攻者
+ * @returns {{hasLimpers: boolean, openRaiserPosition: string|null, threeBetPosition: string|null, fourBetPosition: string|null,
+ *          wasPreFlopAggressor: boolean, openRaiserRaiseAmount: number, threeBetAmount: number, fourBetAmount: number,
+ *          lastAggressorPosition: string|null, lastAggressorPositionRaiseAmount: number, lastAggressorPositionStack: number}}
  */
-export function calculatePreflopDynamics(handActionHistory, players) {
+export function calculatePreflopDynamics(handActionHistory, players, currentPlayerId) {
     let hasLimpers = false;
     let openRaiserPosition = null;
-    let openRaiserFound = false;
+    let threeBetPosition = null;
+    let fourBetPosition = null;
+    let openRaiserRaiseAmount = 0;
+    let threeBetAmount = 0;
+    let fourBetAmount = 0;
+    let lastAggressorPosition = null;
+    let lastAggressorPositionRaiseAmount = 0;
+    let lastAggressorPositionStack = 0;
 
     const playerRoles = {};
+    const playerStacks = {};
     players.forEach(p => {
         playerRoles[p.id] = p.role;
+        playerStacks[p.id] = p.stack;
     });
+
+    // 记录已弃牌的玩家
+    const hasFolded = {};
 
     // 只分析翻前动作
     const preflopActions = handActionHistory.filter(event => event.round === 'preflop' && event.action && event.playerId);
 
+    let raiseCount = 0;
+    let lastRaiserId = null;
+
+    // 统计加注次数并识别各个加注者
     for (const event of preflopActions) {
-        if (openRaiserFound) {
-            break; // We only care about events before the first raise
+        const playerId = event.playerId;
+        const action = event.action;
+
+        // 记录弃牌
+        if (action === 'FOLD') {
+            hasFolded[playerId] = true;
+            continue;
         }
 
-        if (event.action === 'RAISE') {
-            openRaiserPosition = playerRoles[event.playerId] || null;
-            openRaiserFound = true;
-        } else if (event.action === 'CALL') {
+        // 跳过已弃牌玩家的动作
+        if (hasFolded[playerId]) {
+            continue;
+        }
+
+        // 检测Limp：第一个RAISE之前的CALL大盲注
+        if (raiseCount === 0 && action === 'CALL') {
             hasLimpers = true;
+            continue;
+        }
+
+        // 检测加注动作
+        if (action === 'RAISE' || action === 'ALL_IN') {
+            raiseCount++;
+            lastRaiserId = playerId;
+
+            switch (raiseCount) {
+                case 1:
+                    // 第一个加注者（Open Raiser）
+                    openRaiserPosition = playerRoles[playerId] || null;
+                    openRaiserRaiseAmount = event.amount || 0;
+                    break;
+                case 2:
+                    // 第二个加注者（3bet）
+                    threeBetPosition = playerRoles[playerId] || null;
+                    threeBetAmount = event.amount || 0;
+                    break;
+                case 3:
+                    // 第三个加注者（4bet）
+                    fourBetPosition = playerRoles[playerId] || null;
+                    fourBetAmount = event.amount || 0;
+                    break;
+                // 更多加注暂不处理，因为后端模型只支持到4bet
+            }
+
+            // 更新最后一个进攻者信息
+            lastAggressorPosition = playerRoles[playerId] || null;
+            lastAggressorPositionRaiseAmount = event.amount || 0;
+            lastAggressorPositionStack = event.leftChips || playerStacks[playerId] || 0;
         }
     }
 
-    return { hasLimpers, openRaiserPosition };
+    // 判断当前玩家是否是翻前进攻者
+    const wasPreFlopAggressor = lastRaiserId === currentPlayerId;
+
+    return {
+        hasLimpers,
+        openRaiserPosition,
+        threeBetPosition,
+        fourBetPosition,
+        wasPreFlopAggressor,
+        openRaiserRaiseAmount,
+        threeBetAmount,
+        fourBetAmount,
+        lastAggressorPosition,
+        lastAggressorPositionRaiseAmount,
+        lastAggressorPositionStack
+    };
 }
