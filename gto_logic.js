@@ -52,6 +52,38 @@ export function calculateHasPosition(gameState, currentPlayerId) {
 }
 
 /**
+ * 根据行动历史计算在当前玩家行动前已经入池的对手数量
+ * 参照Java HandContext.java中的calculateActiveOpponentsInPot方法逻辑
+ * @param {Array} handActionHistory - 整个手牌的有序行动历史
+ * @param {string} currentPlayerId - 当前玩家的ID
+ * @returns {number} - 在当前玩家行动前，已经入池的对手数量
+ */
+export function calculateActiveOpponentsInPot(handActionHistory, currentPlayerId) {
+    const preflopActions = handActionHistory.filter(event => event.round === 'preflop' && event.action && event.playerId);
+
+    if (preflopActions.length === 0) {
+        return 0;
+    }
+
+    const activePlayerIds = new Set();
+    for (const event of preflopActions) {
+        const action = event.action;
+        const playerId = event.playerId;
+
+        // 任何非弃牌、非过牌的行动都意味着玩家入池
+        // 注意：前端的action可能是字符串，如"CALL", "RAISE", "BET", "FOLD", "CHECK"
+        if (action !== 'FOLD' && action !== 'CHECK') {
+            // 排除公共座位（如果存在）和我们自己（currentPlayerId），只关心对手
+            if (playerId !== 'PUB' && playerId !== currentPlayerId) {
+                activePlayerIds.add(playerId);
+            }
+        }
+    }
+
+    return activePlayerIds.size;
+}
+
+/**
  * 分析当前玩家在翻牌圈面临的局势 (flopActionSituation)
  * @param {object} gameState - 游戏状态
  * @param {string} currentPlayerId - 当前行动的玩家ID

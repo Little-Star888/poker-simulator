@@ -1,5 +1,5 @@
 import { Settings } from './setting.js';
-import { calculateHasPosition, calculateFlopActionSituation, calculatePreflopDynamics } from './gto_logic.js';
+import { calculateHasPosition, calculateFlopActionSituation, calculatePreflopDynamics, calculateActiveOpponentsInPot } from './gto_logic.js';
 
 /**
  * 调用后端GTO建议API的服务模块
@@ -98,6 +98,9 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory, h
     // 使用计算出的hasLimpers信息来动态计算potType
     const calculatedPotType = calculatePotType(gameState.preflopRaiseCount, preflopDynamics.hasLimpers);
 
+    // 计算活跃对手数量
+    const activeOpponents = calculateActiveOpponentsInPot(handActionHistory, currentPlayerId);
+
     const requestDto = {
         phase: PHASE_MAP[gameState.currentRound.toUpperCase()],
         myRole: ROLE_MAP[player.role],
@@ -126,6 +129,7 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory, h
         lastAggressorPosition: preflopDynamics.lastAggressorPosition ? ROLE_MAP[preflopDynamics.lastAggressorPosition] : null,
         lastAggressorPositionRaiseAmount: preflopDynamics.lastAggressorPositionRaiseAmount,
         lastAggressorPositionStack: preflopDynamics.lastAggressorPositionStack,
+        activeOpponentsInPot: activeOpponents, // 新增：已入池的对手数量
     };
 
     // 构建URL查询参数
