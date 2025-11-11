@@ -98,12 +98,13 @@ export function calculateFlopActionSituation(gameState, currentPlayerId, actionH
  * @param {Array} handActionHistory - 整个手牌的有序行动历史
  * @param {Array} players - 包含玩家角色信息的玩家列表
  * @param {string} currentPlayerId - 当前玩家的ID，用于判断是否是翻前进攻者
- * @returns {{hasLimpers: boolean, openRaiserPosition: string|null, threeBetPosition: string|null, fourBetPosition: string|null,
+ * @returns {{hasLimpers: boolean, limperCount: number, openRaiserPosition: string|null, threeBetPosition: string|null, fourBetPosition: string|null,
  *          wasPreFlopAggressor: boolean, openRaiserRaiseAmount: number, threeBetAmount: number, fourBetAmount: number,
  *          lastAggressorPosition: string|null, lastAggressorPositionRaiseAmount: number, lastAggressorPositionStack: number}}
  */
 export function calculatePreflopDynamics(handActionHistory, players, currentPlayerId) {
     let hasLimpers = false;
+    let limperCount = 0;
     let openRaiserPosition = null;
     let threeBetPosition = null;
     let fourBetPosition = null;
@@ -149,6 +150,7 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
         // 检测Limp：第一个RAISE之前的CALL大盲注
         if (raiseCount === 0 && action === 'CALL') {
             hasLimpers = true;
+            limperCount++;
             continue;
         }
 
@@ -188,6 +190,7 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
 
     return {
         hasLimpers,
+        limperCount,
         openRaiserPosition,
         threeBetPosition,
         fourBetPosition,
