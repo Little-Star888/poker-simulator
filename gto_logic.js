@@ -58,25 +58,46 @@ export function calculateHasPosition(gameState, currentPlayerId) {
  * @param {string} currentPlayerId - 当前玩家的ID
  * @returns {number} - 在当前玩家行动前，已经入池的对手数量
  */
-export function calculateActiveOpponentsInPot(handActionHistory, currentPlayerId) {
+export function calculateActiveOpponentsInPot(handActionHistory, currentPlayerId, bigBlind) {
     const preflopActions = handActionHistory.filter(event => event.round === 'preflop' && event.action && event.playerId);
 
-    if (preflopActions.length === 0) {
+    if (preflopActions.length === 0 || !bigBlind || bigBlind <= 0) {
         return 0;
     }
 
+    const smallBlind = bigBlind / 2;
     const activePlayerIds = new Set();
+    let sbPostFound = false;
+    let bbPostFound = false;
+    const VPIP_ACTIONS = ['CALL', 'RAISE', 'BET', 'ALL_IN']; // 主动入池动作
+
     for (const event of preflopActions) {
         const action = event.action;
         const playerId = event.playerId;
+        const amount = event.amount || 0;
 
-        // 任何非弃牌、非过牌的行动都意味着玩家入池
-        // 注意：前端的action可能是字符串，如"CALL", "RAISE", "BET", "FOLD", "CHECK"
-        if (action !== 'FOLD' && action !== 'CHECK') {
-            // 排除公共座位（如果存在）和我们自己（currentPlayerId），只关心对手
-            if (playerId !== 'PUB' && playerId !== currentPlayerId) {
-                activePlayerIds.add(playerId);
+        // 只关心对手
+        if (playerId === 'PUB' || playerId === currentPlayerId) {
+            continue;
+        }
+
+        // 识别并跳过盲注的 "BET"
+        if (action === 'BET') {
+            // 检查是否为小盲注的自动下注
+            if (!sbPostFound && Math.abs(amount - smallBlind) < 0.01) {
+                sbPostFound = true;
+                continue; // 跳过，因为这是SB的自动下注
             }
+            // 检查是否为大盲注的自动下注
+            if (!bbPostFound && Math.abs(amount - bigBlind) < 0.01) {
+                bbPostFound = true;
+                continue; // 跳过，因为这是BB的自动下注
+            }
+        }
+
+        // 如果是其他VPIP动作，则计入
+        if (VPIP_ACTIONS.includes(action)) {
+            activePlayerIds.add(playerId);
         }
     }
 

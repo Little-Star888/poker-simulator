@@ -98,8 +98,8 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory, h
     // 使用计算出的hasLimpers信息来动态计算potType
     const calculatedPotType = calculatePotType(gameState.preflopRaiseCount, preflopDynamics.hasLimpers);
 
-    // 计算活跃对手数量
-    const activeOpponents = calculateActiveOpponentsInPot(handActionHistory, currentPlayerId);
+    // 计算活跃对手数量，并传入BB金额以排除盲注
+    const activeOpponents = calculateActiveOpponentsInPot(handActionHistory, currentPlayerId, Settings.bb);
 
     const requestDto = {
         phase: PHASE_MAP[gameState.currentRound.toUpperCase()],
