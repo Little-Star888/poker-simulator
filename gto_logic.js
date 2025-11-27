@@ -153,11 +153,13 @@ export function calculateFlopActionSituation(gameState, currentPlayerId, actionH
  * @param {string} currentPlayerId - 当前玩家的ID，用于判断是否是翻前进攻者
  * @returns {{hasLimpers: boolean, limperCount: number, openRaiserPosition: string|null, threeBetPosition: string|null, fourBetPosition: string|null,
  *          wasPreFlopAggressor: boolean, openRaiserRaiseAmount: number, threeBetAmount: number, fourBetAmount: number,
- *          lastAggressorPosition: string|null, lastAggressorPositionRaiseAmount: number, lastAggressorPositionStack: number}}
+ *          lastAggressorPosition: string|null, lastAggressorPositionRaiseAmount: number, lastAggressorPositionStack: number,
+ *          heroIsLimper: boolean}}
  */
 export function calculatePreflopDynamics(handActionHistory, players, currentPlayerId) {
     let hasLimpers = false;
     let limperCount = 0;
+    let heroIsLimper = false;
     let openRaiserPosition = null;
     let threeBetPosition = null;
     let fourBetPosition = null;
@@ -204,6 +206,12 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
         if (raiseCount === 0 && action === 'CALL') {
             hasLimpers = true;
             limperCount++;
+
+            // 检测是否是当前玩家limp
+            if (playerId === currentPlayerId && !heroIsLimper) {
+                heroIsLimper = true;
+                console.log(`[GTO Logic] 检测到当前玩家 ${currentPlayerId} 是limper，已标记`);
+            }
             continue;
         }
 
@@ -244,6 +252,7 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
     return {
         hasLimpers,
         limperCount,
+        heroIsLimper,
         openRaiserPosition,
         threeBetPosition,
         fourBetPosition,
