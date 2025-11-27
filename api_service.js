@@ -119,6 +119,8 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory, h
         hasLimpers: preflopDynamics.hasLimpers,
         limperCount: preflopDynamics.limperCount, // 新增：limp玩家具体人数
         heroIsLimper: preflopDynamics.heroIsLimper, // 新增：当前玩家是否是limper
+        heroIsIsoRaiser: preflopDynamics.heroIsIsoRaiser, // 新增：自己是否是隔离加注者（用于iso_vs_limp3bet场景判断）
+        threeBettorIsLimper: preflopDynamics.threeBettorIsLimper, // 新增：3bet者是否是原limper（用于iso_vs_limp3bet场景判断）
         flopActionSituation: flopSitInt, // 使用处理过的整数值
         preFlopRaisers: gameState.preflopRaiseCount, // 补充参数
         // 新增字段：翻前进攻者相关信息

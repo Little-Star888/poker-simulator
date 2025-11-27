@@ -154,12 +154,14 @@ export function calculateFlopActionSituation(gameState, currentPlayerId, actionH
  * @returns {{hasLimpers: boolean, limperCount: number, openRaiserPosition: string|null, threeBetPosition: string|null, fourBetPosition: string|null,
  *          wasPreFlopAggressor: boolean, openRaiserRaiseAmount: number, threeBetAmount: number, fourBetAmount: number,
  *          lastAggressorPosition: string|null, lastAggressorPositionRaiseAmount: number, lastAggressorPositionStack: number,
- *          heroIsLimper: boolean}}
+ *          heroIsLimper: boolean, heroIsIsoRaiser: boolean, threeBettorIsLimper: boolean}}
  */
 export function calculatePreflopDynamics(handActionHistory, players, currentPlayerId) {
     let hasLimpers = false;
     let limperCount = 0;
     let heroIsLimper = false;
+    let heroIsIsoRaiser = false; // 新增：自己是否是隔离加注者（用于iso_vs_limp3bet场景判断）
+    let threeBettorIsLimper = false; // 新增：3bet者是否是原limper（用于iso_vs_limp3bet场景判断）
     let openRaiserPosition = null;
     let threeBetPosition = null;
     let fourBetPosition = null;
@@ -169,6 +171,9 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
     let lastAggressorPosition = null;
     let lastAggressorPositionRaiseAmount = 0;
     let lastAggressorPositionStack = 0;
+
+    // 新增：用于记录具体的limper座位列表（用于精确判断3bet者是否是原limper）
+    const limperSeats = [];
 
     const playerRoles = {};
     const playerStacks = {};
@@ -207,6 +212,9 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
             hasLimpers = true;
             limperCount++;
 
+            // 记录具体的limper座位（用于精确判断3bet者是否是原limper）
+            limperSeats.push(playerId);
+
             // 检测是否是当前玩家limp
             if (playerId === currentPlayerId && !heroIsLimper) {
                 heroIsLimper = true;
@@ -225,11 +233,28 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
                     // 第一个加注者（Open Raiser）
                     openRaiserPosition = playerRoles[playerId] || null;
                     openRaiserRaiseAmount = event.amount || 0;
+
+                    // 检测是否是Hero的隔离加注（在有limper的情况下）
+                    if (hasLimpers && playerId === currentPlayerId && !heroIsIsoRaiser) {
+                        heroIsIsoRaiser = true;
+                        console.log(`[GTO Logic] 检测到Hero ${currentPlayerId} 是隔离加注者（iso_vs_limp3bet），已标记`);
+                    }
                     break;
                 case 2:
                     // 第二个加注者（3bet）
                     threeBetPosition = playerRoles[playerId] || null;
                     threeBetAmount = event.amount || 0;
+
+                    // 检测3bet者是否是原limper（使用更精确的判断）
+                    if (hasLimpers) {
+                        // 使用更精确的判断：3bet者必须是原limper之一
+                        threeBettorIsLimper = limperSeats.includes(playerId);
+                        if (threeBettorIsLimper) {
+                            console.log(`[GTO Logic] 检测到3bet玩家 ${playerId} 是原limper，iso_vs_limp3bet场景成立`);
+                        } else {
+                            console.log(`[GTO Logic] 检测到3bet玩家 ${playerId} 不是原limper，不是iso_vs_limp3bet场景`);
+                        }
+                    }
                     break;
                 case 3:
                     // 第三个加注者（4bet）
@@ -253,6 +278,8 @@ export function calculatePreflopDynamics(handActionHistory, players, currentPlay
         hasLimpers,
         limperCount,
         heroIsLimper,
+        heroIsIsoRaiser, // 新增：自己是否是隔离加注者（用于iso_vs_limp3bet场景判断）
+        threeBettorIsLimper, // 新增：3bet者是否是原limper（用于iso_vs_limp3bet场景判断）
         openRaiserPosition,
         threeBetPosition,
         fourBetPosition,
