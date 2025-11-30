@@ -5,10 +5,17 @@ import { calculateHasPosition, calculateFlopActionSituation, calculatePreflopDyn
  * 调用后端GTO建议API的服务模块
  */
 
-// --- Mappings to match backend enum integer values ---
+// --- Mappings to match backend enum names ---
 const ROLE_MAP = {
-    'BTN': 0, 'SB': 1, 'BB': 2, 'UTG': 3, 'UTG+1': 4, 
-    'UTG+2': 5, 'LJ': 6, 'HJ': 7, 'CO': 8,
+    'BTN': 'DEALER',
+    'SB': 'SMALL_BLIND',
+    'BB': 'BIG_BLIND',
+    'UTG': 'UNDER_THE_GUN',
+    'UTG+1': 'UNDER_THE_GUN_PLUS_1',
+    'UTG+2': 'UNDER_THE_GUN_PLUS_2',
+    'LJ': 'LOW_JACK',
+    'HJ': 'HIJACK',
+    'CO': 'CUT_OFF',
 };
 
 const POT_TYPE_MAP = {
@@ -20,10 +27,10 @@ const POT_TYPE_MAP = {
 };
 
 const PHASE_MAP = {
-    'PREFLOP': 1,
-    'FLOP': 2,
-    'TURN': 3,
-    'RIVER': 4,
+    'PREFLOP': 'PRE_FLOP',  // 确保与后端 StrategyPhase 枚举匹配
+    'FLOP': 'FLOP',
+    'TURN': 'TURN',
+    'RIVER': 'RIVER',
 };
 
 const FLOP_ACTION_SITUATION_MAP = {
@@ -76,10 +83,72 @@ function calculatePotType(preflopRaiseCount, hasLimpers = false) {
 }
 
 /**
+     * 转换 actionHistory 为新的 DTO 结构
+     * @param {Array} handActionHistory - 手牌动作历史
+     * @param {Array} players - 玩家信息
+     * @returns {Map} - 按阶段分组的动作历史
+     */
+    function convertActionHistoryToDto(handActionHistory, players) {
+        const actionHistoryMap = {};
+
+        // 初始化各阶段的动作历史 - 使用后端枚举的准确值
+        ['PRE_FLOP', 'FLOP', 'TURN', 'RIVER'].forEach(phase => {
+            actionHistoryMap[phase] = [];
+        });
+
+        // 过滤并转换动作历史
+        handActionHistory.forEach(event => {
+            if (!event.action || !event.playerId || event.type === 'initialState' || event.type === 'dealCommunity') {
+                return;
+            }
+
+            const player = players.find(p => p.id === event.playerId);
+            if (!player) return;
+
+            const phaseMap = {
+                'preflop': 'PRE_FLOP',  // 修正为与后端枚举匹配
+                'flop': 'FLOP',
+                'turn': 'TURN',
+                'river': 'RIVER'
+            };
+
+            const targetPhase = phaseMap[event.round];
+            if (!targetPhase) return;
+
+            // 映射动作到后端枚举 - 对应后端 Action.java 中的枚举名称
+            const actionMap = {
+                'fold': 'FOLD',
+                'check': 'CHECK',
+                'call': 'CALL',
+                'bet': 'BET',
+                'raise': 'RAISE',
+                'allin': 'ALL_IN'
+            };
+
+            const action = actionMap[event.action.toLowerCase()];
+            if (!action) return;
+
+            // 注意：player.role 可能已经是正确的枚举名称，需要确认映射
+            const roleEnum = ROLE_MAP[player.role] || player.role;
+
+            actionHistoryMap[targetPhase].push({
+                role: roleEnum,
+                action: action,
+                amount: event.amount || 0,
+                stack: player.stack || 0,
+                imageName: '', // 前端暂不需要图片名
+                timestamp: event.timestamp || Date.now()
+            });
+        });
+
+        return actionHistoryMap;
+    }
+
+/**
  * 获取GTO建议
- * @param {object} gameState 
- * @param {string} currentPlayerId 
- * @param {object} actionHistory 
+ * @param {object} gameState
+ * @param {string} currentPlayerId
+ * @param {object} actionHistory
  * @param {Array} handActionHistory
  * @returns {Promise<object>} - API返回的建议
  */
@@ -88,70 +157,41 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory, h
     const player = gameState.players.find(p => p.id === currentPlayerId);
     if (!player) throw new Error('Player not found for suggestion');
 
-    // 当不处于翻牌圈时，计算结果为null，但API需要一个值，我们提供一个默认值0
-    const flopSitString = calculateFlopActionSituation(gameState, currentPlayerId, actionHistory);
-    const flopSitInt = flopSitString ? FLOP_ACTION_SITUATION_MAP[flopSitString] : 0;
-
-    // 计算翻前动态信息，包括limpers和加注者位置信息
-    const preflopDynamics = calculatePreflopDynamics(handActionHistory, gameState.players, currentPlayerId);
-
-    // 使用计算出的hasLimpers信息来动态计算potType
-    const calculatedPotType = calculatePotType(gameState.preflopRaiseCount, preflopDynamics.hasLimpers);
-
-    // 计算活跃对手数量，并传入BB金额以排除盲注
-    const activeOpponents = calculateActiveOpponentsInPot(handActionHistory, currentPlayerId, Settings.bb);
+    // 注意：以下变量在新 DTO 中不再需要，暂时注释保留以备后用
+    // const flopSitString = calculateFlopActionSituation(gameState, currentPlayerId, actionHistory);
+    // const flopSitInt = flopSitString ? FLOP_ACTION_SITUATION_MAP[flopSitString] : 0;
+    // const preflopDynamics = calculatePreflopDynamics(handActionHistory, gameState.players, currentPlayerId);
+    // const calculatedPotType = calculatePotType(gameState.preflopRaiseCount, preflopDynamics.hasLimpers);
+    // const activeOpponents = calculateActiveOpponentsInPot(handActionHistory, currentPlayerId, Settings.bb);
 
     const requestDto = {
+        handId: gameState.handId || `hand_${Date.now()}`, // 添加 handId
         phase: PHASE_MAP[gameState.currentRound.toUpperCase()],
         myRole: ROLE_MAP[player.role],
         myCards: player.holeCards.map(formatCardForAPI),
         boardCards: gameState.communityCards.map(formatCardForAPI),
-        opponents: gameState.players.filter(p => !p.isFolded && p.id !== currentPlayerId).length,
         bigBlind: Settings.bb,
-        hasPosition: calculateHasPosition(gameState, currentPlayerId),
+        ante: Settings.ante || 0, // 添加 ante 字段，默认为 0
+        opponents: gameState.players.filter(p => !p.isFolded && p.id !== currentPlayerId).length,
+        myStack: player.stack,
         potChips: gameState.pot,
         toCall: Math.max(0, gameState.highestBet - player.bet),
-        myStack: player.stack,
-        potType: calculatedPotType, // 使用动态计算的值（考虑hasLimpers）
-        openRaiserPosition: preflopDynamics.openRaiserPosition ? ROLE_MAP[preflopDynamics.openRaiserPosition] : null,
-        threeBetPosition: preflopDynamics.threeBetPosition ? ROLE_MAP[preflopDynamics.threeBetPosition] : null,
-        fourBetPosition: preflopDynamics.fourBetPosition ? ROLE_MAP[preflopDynamics.fourBetPosition] : null,
-        hasLimpers: preflopDynamics.hasLimpers,
-        limperCount: preflopDynamics.limperCount, // 新增：limp玩家具体人数
-        heroIsLimper: preflopDynamics.heroIsLimper, // 新增：当前玩家是否是limper
-        heroIsIsoRaiser: preflopDynamics.heroIsIsoRaiser, // 新增：自己是否是隔离加注者（用于iso_vs_limp3bet场景判断）
-        threeBettorIsLimper: preflopDynamics.threeBettorIsLimper, // 新增：3bet者是否是原limper（用于iso_vs_limp3bet场景判断）
-        flopActionSituation: flopSitInt, // 使用处理过的整数值
-        preFlopRaisers: gameState.preflopRaiseCount, // 补充参数
-        // 新增字段：翻前进攻者相关信息
-        wasPreFlopAggressor: preflopDynamics.wasPreFlopAggressor,
-        openRaiserRaiseAmount: preflopDynamics.openRaiserRaiseAmount,
-        threeBetAmount: preflopDynamics.threeBetAmount,
-        fourBetAmount: preflopDynamics.fourBetAmount,
-        // 最后一个进攻者信息
-        lastAggressorPosition: preflopDynamics.lastAggressorPosition ? ROLE_MAP[preflopDynamics.lastAggressorPosition] : null,
-        lastAggressorPositionRaiseAmount: preflopDynamics.lastAggressorPositionRaiseAmount,
-        lastAggressorPositionStack: preflopDynamics.lastAggressorPositionStack,
-        activeOpponentsInPot: activeOpponents, // 新增：已入池的对手数量
+        actionHistory: convertActionHistoryToDto(handActionHistory, gameState.players) // 转换为新的 DTO 格式
     };
 
-    // 构建URL查询参数
-    const params = new URLSearchParams();
-    for (const key in requestDto) {
-        const value = requestDto[key];
-        if (value === null || value === undefined) continue;
+    // 移除 URL 参数构建，改用 POST JSON body 请求
 
-        if (Array.isArray(value)) {
-            value.forEach(v => params.append(key, v));
-        } else {
-            params.append(key, value);
-        }
-    }
+    console.log(`[DEBUG] For ${currentPlayerId} (preflopRaiseCount: ${gameState.preflopRaiseCount}) -> Sending new DTO format via POST`);
+    console.log(`Requesting suggestion for ${currentPlayerId}: /poker/suggestion`);
+    console.log('Request body:', JSON.stringify(requestDto, null, 2));
 
-    console.log(`[DEBUG] For ${currentPlayerId} (preflopRaiseCount: ${gameState.preflopRaiseCount}) -> Sending potType: ${calculatedPotType}`);
-    console.log(`Requesting suggestion for ${currentPlayerId}: /poker/suggestion?${params.toString()}`);
-
-    const response = await fetch(`/poker/suggestion?${params.toString()}`);
+    const response = await fetch(`/poker/suggestion`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestDto)
+    });
 
     if (!response.ok) {
         const errorText = await response.text();
