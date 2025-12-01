@@ -153,6 +153,10 @@ export async function getDecision(gameState, playerId, gtoSuggestionFilter) {
       let raiseAmount = Math.floor(Math.random() * (maxRaiseTarget - minRaiseTarget + 1)) + minRaiseTarget;
       return { action: 'RAISE', amount: raiseAmount };
     }
+    case 'CALL':
+      // 计算实际的call金额（考虑All-in情况）
+      const actualCallAmount = Math.min(toCall, stack);
+      return { action: 'CALL', amount: actualCallAmount };
     default:
       return { action: selectedAction };
   }

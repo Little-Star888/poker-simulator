@@ -3302,10 +3302,16 @@ function submitManualAction(playerId, action, amount) {
   try {
     const player = game.players.find((p) => p.id === playerId);
     let displayAction = action;
-    let actionAmount =
-      action === "CALL" || action === "CHECK" || action === "FOLD"
-        ? undefined
-        : amount;
+    // 为CALL动作计算实际的跟注金额
+    let actionAmount;
+    if (action === "CALL") {
+      const toCall = game.highestBet - player.bet;
+      actionAmount = Math.min(toCall, player.stack);
+    } else if (action === "CHECK" || action === "FOLD") {
+      actionAmount = undefined;
+    } else {
+      actionAmount = amount;
+    }
     if (player && actionAmount !== undefined) {
       if (player.stack + player.bet === actionAmount) {
         displayAction = "ALLIN";
@@ -3313,7 +3319,7 @@ function submitManualAction(playerId, action, amount) {
     } else if (player && action === "ALLIN" && actionAmount === undefined) {
       actionAmount = player.stack + player.bet;
     }
-    game.executeAction(currentPlayerId, action, amount);
+    game.executeAction(currentPlayerId, action, actionAmount);
     log(
       `[${game.currentRound}] ${currentPlayerId} ${displayAction}${actionAmount ? " " + actionAmount : ""}`,
     );

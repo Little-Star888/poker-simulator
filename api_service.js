@@ -105,6 +105,11 @@ function calculatePotType(preflopRaiseCount, hasLimpers = false) {
             const player = players.find(p => p.id === event.playerId);
             if (!player) return;
 
+            // 添加调试日志
+            if (event.action === 'CALL') {
+                console.log(`[DEBUG] CALL动作转换: 玩家=${event.playerId}, 原始amount=${event.amount}, 转换后amount=${event.amount || 0}`);
+            }
+
             const phaseMap = {
                 'preflop': 'PRE_FLOP',  // 修正为与后端枚举匹配
                 'flop': 'FLOP',
