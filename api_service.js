@@ -5,17 +5,17 @@ import { calculateHasPosition, calculateFlopActionSituation, calculatePreflopDyn
  * 调用后端GTO建议API的服务模块
  */
 
-// --- Mappings to match backend enum names ---
+// --- Mappings to match backend enum values ---
 const ROLE_MAP = {
-    'BTN': 'DEALER',
-    'SB': 'SMALL_BLIND',
-    'BB': 'BIG_BLIND',
-    'UTG': 'UNDER_THE_GUN',
-    'UTG+1': 'UNDER_THE_GUN_PLUS_1',
-    'UTG+2': 'UNDER_THE_GUN_PLUS_2',
-    'LJ': 'LOW_JACK',
-    'HJ': 'HIJACK',
-    'CO': 'CUT_OFF',
+    'BTN': 0,      // DEALER
+    'SB': 1,       // SMALL_BLIND
+    'BB': 2,       // BIG_BLIND
+    'UTG': 3,      // UNDER_THE_GUN
+    'UTG+1': 4,    // UNDER_THE_GUN_PLUS_1
+    'UTG+2': 5,    // UNDER_THE_GUN_PLUS_2
+    'LJ': 6,       // LOW_JACK
+    'HJ': 7,       // HIJACK
+    'CO': 8,       // CUT_OFF
 };
 
 const POT_TYPE_MAP = {
@@ -27,10 +27,10 @@ const POT_TYPE_MAP = {
 };
 
 const PHASE_MAP = {
-    'PREFLOP': 'PRE_FLOP',  // 确保与后端 StrategyPhase 枚举匹配
-    'FLOP': 'FLOP',
-    'TURN': 'TURN',
-    'RIVER': 'RIVER',
+    'PREFLOP': 1,  // PRE_FLOP - 确保与后端 StrategyPhase 枚举值匹配 (1-4)
+    'FLOP': 2,
+    'TURN': 3,
+    'RIVER': 4,
 };
 
 const FLOP_ACTION_SITUATION_MAP = {
@@ -46,7 +46,7 @@ const FLOP_ACTION_SITUATION_MAP = {
  * @returns {string} - 后端API格式的牌
  */
 function formatCardForAPI(cardString) {
-    if (!cardString || cardString.length < 2) return '';
+    if (!cardString || cardString.length < 2) return "";
 
     const suitSymbol = cardString[0];
     let rank = cardString.slice(1);
@@ -83,71 +83,73 @@ function calculatePotType(preflopRaiseCount, hasLimpers = false) {
 }
 
 /**
-     * 转换 actionHistory 为新的 DTO 结构
-     * @param {Array} handActionHistory - 手牌动作历史
-     * @param {Array} players - 玩家信息
-     * @returns {Map} - 按阶段分组的动作历史
-     */
-    function convertActionHistoryToDto(handActionHistory, players) {
-        const actionHistoryMap = {};
+ * 转换 actionHistory 为新的 DTO 结构
+ * @param {Array} handActionHistory - 手牌动作历史
+ * @param {Array} players - 玩家信息
+ * @returns {Map} - 按阶段分组的动作历史
+ */
+function convertActionHistoryToDto(handActionHistory, players) {
+    const actionHistoryMap = {};
 
-        // 初始化各阶段的动作历史 - 使用后端枚举的准确值
-        ['PRE_FLOP', 'FLOP', 'TURN', 'RIVER'].forEach(phase => {
-            actionHistoryMap[phase] = [];
+    // 初始化各阶段的动作历史 - 使用后端枚举的数值作为键
+    [1, 2, 3, 4].forEach(phase => {
+        actionHistoryMap[phase] = [];
+    });
+
+    // 过滤并转换动作历史
+    handActionHistory.forEach(event => {
+        if (!event.action || !event.playerId || event.type === 'initialState' || event.type === 'dealCommunity') {
+            return;
+        }
+
+        const player = players.find(p => p.id === event.playerId);
+        if (!player) return;
+
+        // 添加调试日志
+        if (event.action === 'CALL') {
+            console.log(`[DEBUG] CALL动作转换: 玩家=${event.playerId}, 原始amount=${event.amount}, 转换后amount=${event.amount || 0}`);
+        }
+
+        // 使用数值映射阶段 - 对应后端 StrategyPhase 枚举值
+        const phaseMap = {
+            'preflop': 1,  // PRE_FLOP
+            'flop': 2,     // FLOP
+            'turn': 3,     // TURN
+            'river': 4     // RIVER
+        };
+
+        const targetPhase = phaseMap[event.round];
+        if (targetPhase === undefined) return;
+
+        // 映射动作到后端枚举数值 - 对应后端 Action.java 中的枚举值 (0-5)
+        const actionMap = {
+            'fold': 0,    // FOLD
+            'check': 1,   // CHECK
+            'call': 2,    // CALL
+            'bet': 3,     // BET
+            'raise': 4,   // RAISE
+            'allin': 5    // ALL_IN
+        };
+
+        const action = actionMap[event.action.toLowerCase()];
+        if (action === undefined) return;
+
+        // 获取角色枚举值 (0-8)
+        const roleValue = ROLE_MAP[player.role || ''];
+        if (roleValue === undefined) return;
+
+        actionHistoryMap[targetPhase].push({
+            role: roleValue,
+            action: action,
+            amount: event.amount || 0,
+            stack: player.stack || 0,
+            imageName: '', // 前端暂不需要图片名
+            timestamp: event.timestamp || Date.now()
         });
+    });
 
-        // 过滤并转换动作历史
-        handActionHistory.forEach(event => {
-            if (!event.action || !event.playerId || event.type === 'initialState' || event.type === 'dealCommunity') {
-                return;
-            }
-
-            const player = players.find(p => p.id === event.playerId);
-            if (!player) return;
-
-            // 添加调试日志
-            if (event.action === 'CALL') {
-                console.log(`[DEBUG] CALL动作转换: 玩家=${event.playerId}, 原始amount=${event.amount}, 转换后amount=${event.amount || 0}`);
-            }
-
-            const phaseMap = {
-                'preflop': 'PRE_FLOP',  // 修正为与后端枚举匹配
-                'flop': 'FLOP',
-                'turn': 'TURN',
-                'river': 'RIVER'
-            };
-
-            const targetPhase = phaseMap[event.round];
-            if (!targetPhase) return;
-
-            // 映射动作到后端枚举 - 对应后端 Action.java 中的枚举名称
-            const actionMap = {
-                'fold': 'FOLD',
-                'check': 'CHECK',
-                'call': 'CALL',
-                'bet': 'BET',
-                'raise': 'RAISE',
-                'allin': 'ALL_IN'
-            };
-
-            const action = actionMap[event.action.toLowerCase()];
-            if (!action) return;
-
-            // 注意：player.role 可能已经是正确的枚举名称，需要确认映射
-            const roleEnum = ROLE_MAP[player.role] || player.role;
-
-            actionHistoryMap[targetPhase].push({
-                role: roleEnum,
-                action: action,
-                amount: event.amount || 0,
-                stack: player.stack || 0,
-                imageName: '', // 前端暂不需要图片名
-                timestamp: event.timestamp || Date.now()
-            });
-        });
-
-        return actionHistoryMap;
-    }
+    return actionHistoryMap;
+}
 
 /**
  * 获取GTO建议
@@ -171,8 +173,8 @@ export async function getSuggestion(gameState, currentPlayerId, actionHistory, h
 
     const requestDto = {
         handId: gameState.handId || `hand_${Date.now()}`, // 添加 handId
-        phase: PHASE_MAP[gameState.currentRound.toUpperCase()],
-        myRole: ROLE_MAP[player.role],
+        phase: PHASE_MAP[gameState.currentRound?.toUpperCase() || 'PREFLOP'],
+        myRole: ROLE_MAP[player.role || ''],
         myCards: player.holeCards.map(formatCardForAPI),
         boardCards: gameState.communityCards.map(formatCardForAPI),
         bigBlind: Settings.bb,
